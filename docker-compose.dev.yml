@@ -1,47 +1,47 @@
-# ==================== DOCKER COMPOSE (PRODUCTION) ====================
-# Production-ready full-stack application with all services
+# ==================== DOCKER COMPOSE (DEVELOPMENT) ====================
+# Development environment with hot reload and debugging
 
 version: '3.8'
 
 services:
-  # ==================== FRONTEND ====================
+  # ==================== FRONTEND (DEV) ====================
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
-      target: production
+      target: builder
     ports:
-      - "80:80"
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
     environment:
-      - NODE_ENV=production
-      - VITE_API_URL=https://api.omnilife.com
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:8001/api
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     networks:
       - omnilife-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    command: npm run dev
 
-  # ==================== BACKEND ====================
+  # ==================== BACKEND (DEV) ====================
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: production
+      target: builder
     ports:
-      - "8000:8000"
+      - "8001:8000"
+    volumes:
+      - ./backend:/app
+      - backend_data:/app/data
     environment:
-      - ENVIRONMENT=production
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/omnilife_dev
       - REDIS_URL=redis://redis:6379
       - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - SECRET_KEY=${SECRET_KEY}
+      - SECRET_KEY=dev-secret-key-change-in-production
       - FORCE_SQLITE=0
     depends_on:
       db:
@@ -53,26 +53,17 @@ services:
     networks:
       - omnilife-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    volumes:
-      - backend_data:/app/data
-      - backend_logs:/app/logs
-      - backend_uploads:/app/uploads
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
-  # ==================== DATABASE ====================
+  # ==================== DATABASE (DEV) ====================
   db:
     image: postgres:15-alpine
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_DB=${POSTGRES_DB:-omnilife_prod}
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=omnilife_dev
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -80,12 +71,12 @@ services:
       - omnilife-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # ==================== REDIS ====================
+  # ==================== REDIS (DEV) ====================
   redis:
     image: redis:7-alpine
     ports:
@@ -101,7 +92,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # ==================== ELASTICSEARCH ====================
+  # ==================== ELASTICSEARCH (DEV) ====================
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
     ports:
@@ -122,16 +113,18 @@ services:
       retries: 5
       start_period: 60s
 
-  # ==================== CELERY WORKER ====================
+  # ==================== CELERY WORKER (DEV) ====================
   celery_worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: production
+      target: builder
     command: celery -A app.celery worker --loglevel=info
+    volumes:
+      - ./backend:/app
     environment:
-      - ENVIRONMENT=production
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/omnilife_dev
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -141,20 +134,19 @@ services:
     networks:
       - omnilife-network
     restart: unless-stopped
-    volumes:
-      - backend_data:/app/data
-      - backend_logs:/app/logs
 
-  # ==================== CELERY BEAT ====================
+  # ==================== CELERY BEAT (DEV) ====================
   celery_beat:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: production
+      target: builder
     command: celery -A app.celery beat --loglevel=info
+    volumes:
+      - ./backend:/app
     environment:
-      - ENVIRONMENT=production
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/omnilife_dev
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -164,11 +156,8 @@ services:
     networks:
       - omnilife-network
     restart: unless-stopped
-    volumes:
-      - backend_data:/app/data
-      - backend_logs:/app/logs
 
-  # ==================== MONITORING ====================
+  # ==================== MONITORING (DEV) ====================
   prometheus:
     image: prom/prometheus:latest
     ports:
@@ -192,13 +181,39 @@ services:
     ports:
       - "3001:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
     depends_on:
       - prometheus
+    networks:
+      - omnilife-network
+    restart: unless-stopped
+
+  # ==================== REVERSE PROXY (DEV) ====================
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - omnilife-network
+    restart: unless-stopped
+
+  # ==================== MAILHOG (EMAIL TESTING) ====================
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
     networks:
       - omnilife-network
     restart: unless-stopped
@@ -212,10 +227,6 @@ volumes:
   elasticsearch_data:
     driver: local
   backend_data:
-    driver: local
-  backend_logs:
-    driver: local
-  backend_uploads:
     driver: local
   prometheus_data:
     driver: local

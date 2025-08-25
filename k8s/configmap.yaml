@@ -1,0 +1,24 @@
+# ==================== KUBERNETES CONFIGMAPS ====================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: omnilife-config
+  namespace: omnilife
+data:
+  # ==================== FRONTEND CONFIG ====================
+  VITE_API_URL: "https://api.omnilife.com"
+  NODE_ENV: "production"
+  
+  # ==================== BACKEND CONFIG ====================
+  ENVIRONMENT: "production"
+  DATABASE_URL: "postgresql://postgres:$(POSTGRES_PASSWORD)@omnilife-postgres:5432/omnilife_prod"
+  REDIS_URL: "redis://omnilife-redis:6379"
+  ELASTICSEARCH_URL: "http://omnilife-elasticsearch:9200"
+  FORCE_SQLITE: "0"
+  
+  # ==================== DATABASE CONFIG ====================
+  POSTGRES_DB: "omnilife_prod"
+  POSTGRES_USER: "postgres"
+  
+  # ==================== MONITORING CONFIG ====================
+  GRAFANA_PASSWORD: "admin"

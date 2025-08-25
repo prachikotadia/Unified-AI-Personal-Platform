@@ -1,0 +1,80 @@
+# ==================== KUBERNETES INGRESS ====================
+# Ingress with TLS termination for external access
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: omnilife-ingress
+  namespace: omnilife
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "16m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header Referrer-Policy "no-referrer-when-downgrade" always;
+spec:
+  tls:
+  - hosts:
+    - omnilife.com
+    - www.omnilife.com
+    - api.omnilife.com
+    secretName: omnilife-tls
+  rules:
+  # ==================== FRONTEND ROUTES ====================
+  - host: omnilife.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: omnilife-frontend-service
+            port:
+              number: 80
+  - host: www.omnilife.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: omnilife-frontend-service
+            port:
+              number: 80
+  # ==================== BACKEND API ROUTES ====================
+  - host: api.omnilife.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: omnilife-backend-service
+            port:
+              number: 8000
+  # ==================== MONITORING ROUTES ====================
+  - host: monitoring.omnilife.com
+    http:
+      paths:
+      - path: /prometheus
+        pathType: Prefix
+        backend:
+          service:
+            name: omnilife-prometheus
+            port:
+              number: 9090
+      - path: /grafana
+        pathType: Prefix
+        backend:
+          service:
+            name: omnilife-grafana
+            port:
+              number: 3000

@@ -10,6 +10,7 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import EmailVerificationPage from './pages/auth/EmailVerificationPage';
 import ProfilePage from './pages/auth/ProfilePage';
 import DevOpsDashboard from './pages/DevOpsDashboard';
+import ContainerManagement from './pages/ContainerManagement';
 import SettingsPage from './pages/SettingsPage';
 
 // Finance pages
@@ -81,6 +82,7 @@ function App() {
         <Route path="/" element={<Layout><DashboardPage /></Layout>} />
         <Route path="/dashboard" element={<Layout><DashboardPage /></Layout>} />
         <Route path="/devops" element={<Layout><DevOpsDashboard /></Layout>} />
+        <Route path="/containers" element={<Layout><ContainerManagement /></Layout>} />
         <Route path="/settings" element={<Layout><SettingsPage /></Layout>} />
 
         {/* Finance routes */}

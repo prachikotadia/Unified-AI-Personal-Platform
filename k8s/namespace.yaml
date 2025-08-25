@@ -1,0 +1,8 @@
+# ==================== KUBERNETES NAMESPACE ====================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: omnilife
+  labels:
+    name: omnilife
+    app: omnilife

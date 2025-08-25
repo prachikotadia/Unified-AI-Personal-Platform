@@ -1,0 +1,154 @@
+# ==================== KUBERNETES SERVICES ====================
+# Network services for inter-pod communication
+
+# ==================== FRONTEND SERVICE ====================
+apiVersion: v1
+kind: Service
+metadata:
+  name: omnilife-frontend-service
+  namespace: omnilife
+spec:
+  selector:
+    app: omnilife-frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# ==================== BACKEND SERVICE ====================
+apiVersion: v1
+kind: Service
+metadata:
+  name: omnilife-backend-service
+  namespace: omnilife
+spec:
+  selector:
+    app: omnilife-backend
+  ports:
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000
+  type: ClusterIP
+
+---
+# ==================== POSTGRES SERVICE ====================
+apiVersion: v1
+kind: Service
+metadata:
+  name: omnilife-postgres
+  namespace: omnilife
+spec:
+  selector:
+    app: omnilife-postgres
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+  type: ClusterIP
+
+---
+# ==================== REDIS SERVICE ====================
+apiVersion: v1
+kind: Service
+metadata:
+  name: omnilife-redis
+  namespace: omnilife
+spec:
+  selector:
+    app: omnilife-redis
+  ports:
+  - protocol: TCP
+    port: 6379
+    targetPort: 6379
+  type: ClusterIP
+
+---
+# ==================== ELASTICSEARCH SERVICE ====================
+apiVersion: v1
+kind: Service
+metadata:
+  name: omnilife-elasticsearch
+  namespace: omnilife
+spec:
+  selector:
+    app: omnilife-elasticsearch
+  ports:
+  - protocol: TCP
+    port: 9200
+    targetPort: 9200
+  type: ClusterIP
+
+---
+# ==================== PROMETHEUS SERVICE ====================
+apiVersion: v1
+kind: Service
+metadata:
+  name: omnilife-prometheus
+  namespace: omnilife
+spec:
+  selector:
+    app: omnilife-prometheus
+  ports:
+  - protocol: TCP
+    port: 9090
+    targetPort: 9090
+  type: ClusterIP
+
+---
+# ==================== GRAFANA SERVICE ====================
+apiVersion: v1
+kind: Service
+metadata:
+  name: omnilife-grafana
+  namespace: omnilife
+spec:
+  selector:
+    app: omnilife-grafana
+  ports:
+  - protocol: TCP
+    port: 3000
+    targetPort: 3000
+  type: ClusterIP
+
+---
+# ==================== LOAD BALANCER SERVICES ====================
+# External access services
+
+# ==================== FRONTEND LOAD BALANCER ====================
+apiVersion: v1
+kind: Service
+metadata:
+  name: omnilife-frontend-lb
+  namespace: omnilife
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+spec:
+  selector:
+    app: omnilife-frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  type: LoadBalancer
+
+---
+# ==================== BACKEND LOAD BALANCER ====================
+apiVersion: v1
+kind: Service
+metadata:
+  name: omnilife-backend-lb
+  namespace: omnilife
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+spec:
+  selector:
+    app: omnilife-backend
+  ports:
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000
+  type: LoadBalancer
