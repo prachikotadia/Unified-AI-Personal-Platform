@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import uuid
 
 # Import routers
-from app.routers import health, travel, chat, finance
+from app.routers import health, travel, chat, finance, auth
 from app.routers import marketplace_db as marketplace
 from app.routers import search, analytics, notifications, security
 
@@ -113,6 +113,12 @@ async def root():
     }
 
 # Include routers
+app.include_router(
+    auth.router,
+    prefix="/api",
+    tags=["Authentication"]
+)
+
 app.include_router(
     health.router,
     prefix="/api/health",
