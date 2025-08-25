@@ -1,68 +1,84 @@
+# ==================== DOCKER COMPOSE FOR LOCAL DEVELOPMENT ====================
 version: '3.8'
 
 services:
-  # Frontend React Application
+  # ==================== FRONTEND ====================
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
+      target: builder
     ports:
-      - "3000:80"
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
     environment:
-      - VITE_API_BASE_URL=http://localhost:8001/api
-      - VITE_WS_URL=ws://localhost:8001/ws
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:8001/api
     depends_on:
       - backend
     networks:
       - omnilife-network
+    restart: unless-stopped
 
-  # Backend FastAPI Application
+  # ==================== BACKEND ====================
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: builder
     ports:
       - "8001:8000"
+    volumes:
+      - ./backend:/app
+      - backend_data:/app/data
     environment:
-      - DATABASE_URL=postgresql://omnilife_user:omnilife_pass@postgres:5432/omnilife_db
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - ELASTICSEARCH_HOST=elasticsearch
-      - ELASTICSEARCH_PORT=9200
-      - JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production
-      - ENVIRONMENT=production
-      - FRONTEND_URL=http://localhost:3000
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/omnilife_dev
+      - REDIS_URL=redis://redis:6379
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - FORCE_SQLITE=0
     depends_on:
-      - postgres
-      - redis
-      - elasticsearch
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     networks:
       - omnilife-network
-    volumes:
-      - ./backend/uploads:/app/uploads
-      - ./backend/logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  # PostgreSQL Database
+  # ==================== DATABASE ====================
   postgres:
     image: postgres:15-alpine
-    environment:
-      - POSTGRES_DB=omnilife_db
-      - POSTGRES_USER=omnilife_user
-      - POSTGRES_PASSWORD=omnilife_pass
     ports:
       - "5432:5432"
+    environment:
+      - POSTGRES_DB=omnilife_dev
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - omnilife-network
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U omnilife_user -d omnilife_db"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Redis Cache
+  # ==================== REDIS ====================
   redis:
     image: redis:7-alpine
     ports:
@@ -71,79 +87,79 @@ services:
       - redis_data:/data
     networks:
       - omnilife-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Elasticsearch Search Engine
+  # ==================== ELASTICSEARCH ====================
   elasticsearch:
-    image: elasticsearch:8.11.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    ports:
+      - "9200:9200"
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ports:
-      - "9200:9200"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     networks:
       - omnilife-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 60s
 
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl
-    depends_on:
-      - frontend
-      - backend
-    networks:
-      - omnilife-network
-
-  # Celery Worker (for background tasks)
+  # ==================== CELERY WORKER ====================
   celery_worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: builder
     command: celery -A app.celery worker --loglevel=info
+    volumes:
+      - ./backend:/app
     environment:
-      - DATABASE_URL=postgresql://omnilife_user:omnilife_pass@postgres:5432/omnilife_db
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/omnilife_dev
+      - REDIS_URL=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
       - postgres
       - redis
     networks:
       - omnilife-network
+    restart: unless-stopped
 
-  # Celery Beat (for scheduled tasks)
+  # ==================== CELERY BEAT ====================
   celery_beat:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: builder
     command: celery -A app.celery beat --loglevel=info
+    volumes:
+      - ./backend:/app
     environment:
-      - DATABASE_URL=postgresql://omnilife_user:omnilife_pass@postgres:5432/omnilife_db
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/omnilife_dev
+      - REDIS_URL=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
       - postgres
       - redis
     networks:
       - omnilife-network
+    restart: unless-stopped
 
-  # Monitoring - Prometheus
+  # ==================== MONITORING ====================
   prometheus:
     image: prom/prometheus:latest
     ports:
@@ -151,10 +167,17 @@ services:
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
     networks:
       - omnilife-network
+    restart: unless-stopped
 
-  # Monitoring - Grafana
   grafana:
     image: grafana/grafana:latest
     ports:
@@ -163,18 +186,56 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
     depends_on:
       - prometheus
     networks:
       - omnilife-network
+    restart: unless-stopped
 
+  # ==================== REVERSE PROXY ====================
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - omnilife-network
+    restart: unless-stopped
+
+  # ==================== MAILHOG (EMAIL TESTING) ====================
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - omnilife-network
+    restart: unless-stopped
+
+# ==================== VOLUMES ====================
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
   elasticsearch_data:
+    driver: local
+  backend_data:
+    driver: local
   prometheus_data:
+    driver: local
   grafana_data:
+    driver: local
 
+# ==================== NETWORKS ====================
 networks:
   omnilife-network:
     driver: bridge
