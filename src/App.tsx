@@ -5,7 +5,10 @@ import AuthLayout from './components/layout/AuthLayout';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
-import ProfilePage from './pages/ProfilePage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import EmailVerificationPage from './pages/auth/EmailVerificationPage';
+import ProfilePage from './pages/auth/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 
 // Finance pages
@@ -51,14 +54,31 @@ import ReturnsPage from './pages/marketplace/ReturnsPage';
 function App() {
   return (
     <Router future={{ v7_relativeSplatPath: true }}>
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '12px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+          },
+        }}
+      />
       <Routes>
         {/* Auth routes */}
-        <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
-        <Route path="/signup" element={<AuthLayout><SignupPage /></AuthLayout>} />
+        <Route path="/auth/login" element={<LoginPage />} />
+        <Route path="/auth/signup" element={<SignupPage />} />
+        <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/auth/verify-email" element={<EmailVerificationPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
 
         {/* Main app routes */}
         <Route path="/" element={<Layout><DashboardPage /></Layout>} />
-        <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />
+        <Route path="/dashboard" element={<Layout><DashboardPage /></Layout>} />
         <Route path="/settings" element={<Layout><SettingsPage /></Layout>} />
 
         {/* Finance routes */}
