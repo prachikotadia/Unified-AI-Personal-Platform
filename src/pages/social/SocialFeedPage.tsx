@@ -8,7 +8,7 @@ const SocialFeedPage = () => {
       id: 1,
       user: {
         name: 'Sarah M.',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
+        avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
         status: 'online'
       },
       content: 'Just completed my monthly budget review! Feeling great about my spending habits this month.',

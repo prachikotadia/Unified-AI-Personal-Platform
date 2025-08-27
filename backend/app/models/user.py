@@ -3,6 +3,11 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
 import re
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON
+from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
+from app.database import Base
+import bcrypt
 
 class ThemeEnum(str, Enum):
     light = "light"
@@ -237,3 +242,86 @@ class UserSettings(BaseModel):
     preferences: Optional[UserPreferences] = None
     privacy: Optional[PrivacySettings] = None
     notifications: Optional[NotificationPreferences] = None
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, index=True, nullable=False)
+    email = Column(String(100), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    first_name = Column(String(50))
+    last_name = Column(String(50))
+    phone = Column(String(20))
+    is_active = Column(Boolean, default=True)
+    is_verified = Column(Boolean, default=False)
+    email_verified_at = Column(DateTime)
+    phone_verified_at = Column(DateTime)
+    profile_picture = Column(String(255))
+    date_of_birth = Column(DateTime)
+    gender = Column(String(10))
+    address = Column(JSON)  # Store address as JSON
+    preferences = Column(JSON)  # Store user preferences
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    last_login = Column(DateTime)
+    
+    # Relationships
+    orders = relationship("Order", back_populates="user")
+    cart_items = relationship("CartItem", back_populates="user")
+    wishlist_items = relationship("WishlistItem", back_populates="user")
+    reviews = relationship("Review", back_populates="user")
+    price_alerts = relationship("PriceAlert", back_populates="user")
+    product_comparisons = relationship("ProductComparison", back_populates="user")
+    recently_viewed = relationship("RecentlyViewed", back_populates="user")
+    product_questions = relationship("ProductQuestion", back_populates="user")
+    product_answers = relationship("ProductAnswer", back_populates="user")
+    payment_methods = relationship("PaymentMethod", back_populates="user")
+    addresses = relationship("Address", back_populates="user")
+    ai_recommendations = relationship("AIRecommendation", back_populates="user")
+    
+    def set_password(self, password: str):
+        """Hash password using bcrypt"""
+        salt = bcrypt.gensalt()
+        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+    
+    def verify_password(self, password: str) -> bool:
+        """Verify password against hash"""
+        return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
+    
+    def to_dict(self):
+        """Convert user to dictionary (excluding sensitive data)"""
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "phone": self.phone,
+            "is_active": self.is_active,
+            "is_verified": self.is_verified,
+            "profile_picture": self.profile_picture,
+            "date_of_birth": self.date_of_birth.isoformat() if self.date_of_birth else None,
+            "gender": self.gender,
+            "address": self.address,
+            "preferences": self.preferences,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "last_login": self.last_login.isoformat() if self.last_login else None
+        }
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False)
+    token = Column(String(255), unique=True, index=True, nullable=False)
+    refresh_token = Column(String(255), unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    is_active = Column(Boolean, default=True)
+    ip_address = Column(String(45))
+    user_agent = Column(Text)
+    created_at = Column(DateTime, default=func.now())
+    
+    def is_expired(self) -> bool:
+        """Check if session is expired"""
+        return datetime.utcnow() > self.expires_at

@@ -43,7 +43,7 @@ const SharedItemsPage = () => {
         content: 'Just completed my monthly budget review! Feeling great about my spending habits this month.',
         author: {
           name: 'Sarah Johnson',
-          avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face'
+          avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face'
         },
         likes: 24,
         comments: 8,

@@ -20,7 +20,7 @@ import AIAssistant from '../../components/ai/AIAssistant'
 const SocialPage = () => {
   // Mock social data
   const connections = [
-    { id: 1, name: 'Sarah M.', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face', status: 'online' },
+    { id: 1, name: 'Sarah M.', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face', status: 'online' },
     { id: 2, name: 'Mike R.', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face', status: 'offline' },
     { id: 3, name: 'Emma L.', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face', status: 'online' },
   ]

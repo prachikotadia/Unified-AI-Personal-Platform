@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { 
   Star, 
   Heart, 
-  ShoppingCart, 
   Truck, 
   Shield, 
   ArrowLeft,
@@ -13,13 +12,8 @@ import {
   Share2,
   MessageCircle,
   Package,
-  CreditCard,
-  RefreshCw,
   Check,
   X,
-  Minus,
-  Plus,
-  Eye,
   ThumbsUp,
   ThumbsDown,
   Calendar,
@@ -27,9 +21,12 @@ import {
   User,
   Clock
 } from 'lucide-react';
+import AIRecommendations from '../../components/marketplace/AIRecommendations';
+import ProductQA from '../../components/marketplace/ProductQA';
+import ProductActionButtons from '../../components/marketplace/ProductActionButtons';
 
 interface Product {
-  id: string;
+  id: number;
   name: string;
   price: number;
   originalPrice?: number;
@@ -71,7 +68,6 @@ const ProductPage = () => {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [quantity, setQuantity] = useState(1);
   const [selectedTab, setSelectedTab] = useState<'description' | 'specifications' | 'reviews'>('description');
   const [loading, setLoading] = useState(true);
   const [showImageModal, setShowImageModal] = useState(false);
@@ -80,7 +76,7 @@ const ProductPage = () => {
     // Mock data loading
     setTimeout(() => {
       const mockProduct: Product = {
-        id: '1',
+        id: 1,
         name: 'Apple iPhone 15 Pro Max - 256GB - Natural Titanium',
         price: 1199.99,
         originalPrice: 1299.99,
@@ -130,7 +126,7 @@ const ProductPage = () => {
             id: '1',
             user: {
               name: 'Sarah Johnson',
-              avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
+              avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
               verified: true
             },
             rating: 5,
@@ -167,27 +163,14 @@ const ProductPage = () => {
             helpful: 8
           }
         ],
-        relatedProducts: ['2', '5', '8']
+        relatedProducts: [2, 5, 8]
       };
       setProduct(mockProduct);
       setLoading(false);
     }, 1000);
   }, [id]);
 
-  const handleQuantityChange = (change: number) => {
-    const newQuantity = Math.max(1, quantity + change);
-    setQuantity(newQuantity);
-  };
 
-  const handleAddToCart = () => {
-    // Add to cart logic
-    console.log(`Added ${quantity} ${product?.name} to cart`);
-  };
-
-  const handleBuyNow = () => {
-    // Buy now logic
-    console.log(`Buying ${quantity} ${product?.name} now`);
-  };
 
   if (loading) {
     return (
@@ -374,44 +357,22 @@ const ProductPage = () => {
               </ul>
             </div>
 
-            {/* Quantity */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Quantity:</label>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => handleQuantityChange(-1)}
-                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  <Minus size={16} />
-                </button>
-                <span className="w-16 text-center py-2 border border-gray-300 rounded-lg">
-                  {quantity}
-                </span>
-                <button
-                  onClick={() => handleQuantityChange(1)}
-                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  <Plus size={16} />
-                </button>
-              </div>
-            </div>
+
 
             {/* Action Buttons */}
-            <div className="space-y-3">
-              <button
-                onClick={handleAddToCart}
-                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
-              >
-                <ShoppingCart size={20} />
-                <span>Add to Cart</span>
-              </button>
-              <button
-                onClick={handleBuyNow}
-                className="w-full bg-orange-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-orange-700 transition-colors"
-              >
-                Buy Now
-              </button>
-            </div>
+            <ProductActionButtons
+              product={{
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                originalPrice: product.originalPrice,
+                image: product.image,
+                brand: product.brand,
+                inStock: product.inStock
+              }}
+              quantity={1}
+              showQuantitySelector={true}
+            />
 
             {/* Delivery Info */}
             <div className="bg-gray-50 rounded-lg p-4 space-y-3">
@@ -608,6 +569,44 @@ const ProductPage = () => {
             )}
           </div>
         </div>
+
+                  {/* Q&A Section */}
+          <div className="mt-8">
+            <ProductQA 
+              productId={id || ''}
+              productName={product?.name || ''}
+            />
+          </div>
+
+          {/* AI Recommendations */}
+          <div className="mt-8 space-y-8">
+            {/* Customers Also Bought */}
+            <AIRecommendations 
+              type="customers-also-bought"
+              productId={id}
+              limit={6}
+              title="Customers Also Bought"
+              showReason={true}
+            />
+
+            {/* Similar Products */}
+            <AIRecommendations 
+              type="similar-products"
+              productId={id}
+              category={product?.category}
+              limit={6}
+              title="Similar Products You Might Like"
+              showConfidence={true}
+            />
+
+            {/* Trending in Category */}
+            <AIRecommendations 
+              type="trending"
+              category={product?.category}
+              limit={4}
+              title="Trending in Electronics"
+            />
+          </div>
       </div>
 
       {/* Image Modal */}

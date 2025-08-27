@@ -192,11 +192,6 @@ const OrderDetailsPage: React.FC = () => {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Placed on {formatDateTime(order.created_at)}
               </p>
-              {order.estimated_delivery && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Estimated delivery: {formatDateTime(order.estimated_delivery)}
-                </p>
-              )}
             </div>
           </div>
           

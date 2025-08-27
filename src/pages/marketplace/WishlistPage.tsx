@@ -12,84 +12,46 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { marketplaceAPI, Product } from '../../services/api';
-import { useNotifications } from '../../contexts/NotificationContext';
+import { useWishlistStore } from '../../store/wishlist';
+import { useCartStore } from '../../store/cart';
+import { useToastHelpers } from '../../components/ui/Toast';
 
 const WishlistPage: React.FC = () => {
-  const [wishlistItems, setWishlistItems] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [removingItems, setRemovingItems] = useState<Set<number>>(new Set());
-  const [addingToCart, setAddingToCart] = useState<Set<number>>(new Set());
-  const { addNotification } = useNotifications();
+  const { success, error: showError } = useToastHelpers();
+  
+  // Store hooks
+  const { 
+    items: wishlistItems, 
+    fetchWishlist, 
+    removeFromWishlist, 
+    moveToCart,
+    isLoading: wishlistLoading,
+    error: wishlistError
+  } = useWishlistStore();
+  
+  const { 
+    isLoading: cartLoading 
+  } = useCartStore();
 
   useEffect(() => {
     fetchWishlist();
-  }, []);
+  }, [fetchWishlist]);
 
-  const fetchWishlist = async () => {
+  const handleRemoveFromWishlist = async (productId: number) => {
     try {
-      setLoading(true);
-      const items = await marketplaceAPI.getWishlist();
-      setWishlistItems(items);
-    } catch (error) {
-      console.error('Error fetching wishlist:', error);
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to load wishlist items'
-      });
-    } finally {
-      setLoading(false);
+      await removeFromWishlist(productId);
+      success('Removed', 'Item removed from wishlist');
+    } catch (err) {
+      showError('Remove Failed', 'Failed to remove item from wishlist');
     }
   };
 
-  const removeFromWishlist = async (productId: number) => {
+  const handleMoveToCart = async (productId: number) => {
     try {
-      setRemovingItems(prev => new Set(prev).add(productId));
-      await marketplaceAPI.removeFromWishlist(productId);
-      setWishlistItems(prev => prev.filter(item => item.id !== productId));
-      addNotification({
-        type: 'success',
-        title: 'Removed',
-        message: 'Item removed from wishlist'
-      });
-    } catch (error) {
-      console.error('Error removing from wishlist:', error);
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to remove item from wishlist'
-      });
-    } finally {
-      setRemovingItems(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(productId);
-        return newSet;
-      });
-    }
-  };
-
-  const addToCart = async (productId: number) => {
-    try {
-      setAddingToCart(prev => new Set(prev).add(productId));
-      await marketplaceAPI.addToCart(productId, 1);
-      addNotification({
-        type: 'success',
-        title: 'Added to Cart',
-        message: 'Item added to your cart'
-      });
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to add item to cart'
-      });
-    } finally {
-      setAddingToCart(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(productId);
-        return newSet;
-      });
+      await moveToCart(productId, 1);
+      success('Moved to Cart', 'Item moved to your cart');
+    } catch (err) {
+      showError('Move Failed', 'Failed to move item to cart');
     }
   };
 
@@ -103,7 +65,7 @@ const WishlistPage: React.FC = () => {
     ));
   };
 
-  if (loading) {
+  if (wishlistLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -175,77 +137,66 @@ const WishlistPage: React.FC = () => {
                 exit={{ opacity: 0, y: -20 }}
                 className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 dark:border-gray-700 overflow-hidden group"
               >
-                <Link to={`/marketplace/product/${product.id}`}>
+                <Link to={`/marketplace/product/${product.product.id}`}>
                   <div className="relative aspect-square overflow-hidden">
                     <img
-                      src={product.images[0]}
-                      alt={product.name}
+                      src={product.product.image}
+                      alt={product.product.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    {product.discount_percentage && (
+                    {product.product.originalPrice && product.product.originalPrice > product.product.price && (
                       <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-                        -{product.discount_percentage}%
-                      </div>
-                    )}
-                    {product.prime_eligible && (
-                      <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1">
-                        <Crown size={12} />
-                        Prime
-                      </div>
-                    )}
-                    {product.free_shipping && (
-                      <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
-                        Free Shipping
+                        -{Math.round(((product.product.originalPrice - product.product.price) / product.product.originalPrice) * 100)}%
                       </div>
                     )}
                   </div>
                 </Link>
                 
                 <div className="p-4">
-                  <Link to={`/marketplace/product/${product.id}`}>
+                  <Link to={`/marketplace/product/${product.product.id}`}>
                     <h3 className="font-semibold text-gray-900 dark:text-white text-sm line-clamp-2 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                      {product.name}
+                      {product.product.name}
                     </h3>
                   </Link>
                   
                   <div className="flex items-center gap-1 mb-2">
-                    {renderStars(product.rating)}
+                    {renderStars(product.product.rating)}
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      ({product.review_count})
+                      ({product.product.reviewCount})
                     </span>
                   </div>
                   
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-lg font-bold text-gray-900 dark:text-white">
-                      ${product.price.toFixed(2)}
+                      ${product.product.price.toFixed(2)}
                     </span>
-                    {product.original_price && (
+                    {product.product.originalPrice && (
                       <span className="text-sm text-gray-500 line-through">
-                        ${product.original_price.toFixed(2)}
+                        ${product.product.originalPrice.toFixed(2)}
                       </span>
                     )}
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => addToCart(product.id)}
-                      disabled={addingToCart.has(product.id)}
+                                        <button 
+                      onClick={() => handleMoveToCart(product.productId)}
+                      disabled={cartLoading || wishlistLoading}
                       className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-medium py-2 px-3 rounded-md transition-colors flex items-center justify-center gap-2"
                     >
-                      {addingToCart.has(product.id) ? (
+                      {cartLoading || wishlistLoading ? (
                         <Loader2 size={16} className="animate-spin" />
                       ) : (
                         <ShoppingCart size={16} />
                       )}
-                      {addingToCart.has(product.id) ? 'Adding...' : 'Add to Cart'}
+                      {cartLoading || wishlistLoading ? 'Adding...' : 'Add to Cart'}
                     </button>
                     <button 
-                      onClick={() => removeFromWishlist(product.id)}
-                      disabled={removingItems.has(product.id)}
+                      onClick={() => handleRemoveFromWishlist(product.productId)}
+                      disabled={wishlistLoading}
                       className="p-2 text-gray-400 hover:text-red-500 disabled:text-gray-300 transition-colors"
                       title="Remove from wishlist"
                     >
-                      {removingItems.has(product.id) ? (
+                      {wishlistLoading ? (
                         <Loader2 size={18} className="animate-spin" />
                       ) : (
                         <Trash2 size={18} />

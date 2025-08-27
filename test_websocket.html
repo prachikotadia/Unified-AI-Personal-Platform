@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitness WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .container {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .connected { background: #4CAF50; }
+        .disconnected { background: #f44336; }
+        .connecting { background: #ff9800; }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #1976D2; }
+        .log {
+            background: #333;
+            padding: 10px;
+            border-radius: 5px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .device-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .device-card {
+            background: #3a3a3a;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #555;
+        }
+        .device-card.connected {
+            border-color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏃‍♂️ Fitness WebSocket Test</h1>
+    
+    <div class="container">
+        <h2>Connection Status</h2>
+        <div id="status" class="status disconnected">Disconnected</div>
+        <button onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+    </div>
+
+    <div class="container">
+        <h2>Device Management</h2>
+        <button onclick="connectDevice('iphone')">Connect iPhone</button>
+        <button onclick="connectDevice('android')">Connect Android</button>
+        <button onclick="connectDevice('smartwatch')">Connect Smartwatch</button>
+        <button onclick="syncData()">Sync Data</button>
+        <button onclick="disconnectAll()">Disconnect All</button>
+    </div>
+
+    <div class="container">
+        <h2>Connected Devices</h2>
+        <div id="devices" class="device-list"></div>
+    </div>
+
+    <div class="container">
+        <h2>Event Log</h2>
+        <div id="log" class="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script>
+        let ws = null;
+        let connectedDevices = new Map();
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(status, className) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = status;
+            statusDiv.className = `status ${className}`;
+        }
+
+        function updateDevices() {
+            const devicesDiv = document.getElementById('devices');
+            devicesDiv.innerHTML = '';
+            
+            connectedDevices.forEach((device, id) => {
+                const deviceCard = document.createElement('div');
+                deviceCard.className = `device-card ${device.connected ? 'connected' : ''}`;
+                deviceCard.innerHTML = `
+                    <h3>${device.name}</h3>
+                    <p>Type: ${device.type}</p>
+                    <p>Battery: ${device.battery_level}%</p>
+                    <p>Last Sync: ${new Date(device.last_sync).toLocaleString()}</p>
+                    <p>Status: ${device.connected ? 'Connected' : 'Disconnected'}</p>
+                `;
+                devicesDiv.appendChild(deviceCard);
+            });
+        }
+
+        function connect() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('Already connected');
+                return;
+            }
+
+            updateStatus('Connecting...', 'connecting');
+            log('Connecting to WebSocket...');
+
+            ws = new WebSocket('ws://localhost:8000/ws/fitness');
+
+            ws.onopen = function(event) {
+                updateStatus('Connected', 'connected');
+                log('WebSocket connected successfully');
+            };
+
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                log(`Received: ${JSON.stringify(data, null, 2)}`);
+                
+                if (data.type === 'device_connected') {
+                    connectedDevices.set(data.device.id, data.device);
+                    updateDevices();
+                } else if (data.type === 'device_disconnected') {
+                    connectedDevices.delete(data.deviceId);
+                    updateDevices();
+                } else if (data.type === 'sync_progress') {
+                    log(`Sync Progress: ${data.progress.progress}% - ${data.progress.message}`);
+                }
+            };
+
+            ws.onclose = function(event) {
+                updateStatus('Disconnected', 'disconnected');
+                log('WebSocket disconnected');
+            };
+
+            ws.onerror = function(error) {
+                updateStatus('Error', 'disconnected');
+                log('WebSocket error: ' + error);
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function connectDevice(type) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('WebSocket not connected');
+                return;
+            }
+
+            const deviceId = `device_${type}_${Date.now()}`;
+            const deviceInfo = {
+                id: deviceId,
+                name: `${type.charAt(0).toUpperCase() + type.slice(1)} Device`,
+                type: type,
+                connection_method: type === 'iphone' ? 'healthkit' : type === 'android' ? 'googlefit' : 'bluetooth',
+                supported_data_types: ['steps', 'heart_rate', 'sleep', 'workouts', 'calories'],
+                battery_level: Math.floor(Math.random() * 100) + 1
+            };
+
+            const message = {
+                type: 'connect_device',
+                device: deviceInfo
+            };
+
+            ws.send(JSON.stringify(message));
+            log(`Connecting device: ${deviceInfo.name}`);
+        }
+
+        function syncData() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('WebSocket not connected');
+                return;
+            }
+
+            connectedDevices.forEach((device, deviceId) => {
+                const message = {
+                    type: 'sync_request',
+                    deviceId: deviceId,
+                    dataTypes: device.supported_data_types
+                };
+
+                ws.send(JSON.stringify(message));
+                log(`Requesting sync for device: ${device.name}`);
+            });
+        }
+
+        function disconnectAll() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('WebSocket not connected');
+                return;
+            }
+
+            connectedDevices.forEach((device, deviceId) => {
+                const message = {
+                    type: 'disconnect_device',
+                    deviceId: deviceId
+                };
+
+                ws.send(JSON.stringify(message));
+                log(`Disconnecting device: ${device.name}`);
+            });
+
+            connectedDevices.clear();
+            updateDevices();
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Auto-connect on page load
+        window.onload = function() {
+            log('Page loaded. Click "Connect" to start testing.');
+        };
+    </script>
+</body>
+</html>

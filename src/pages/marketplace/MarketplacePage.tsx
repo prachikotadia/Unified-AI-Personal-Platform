@@ -1,312 +1,463 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
-  Search, Filter, Grid, List, Star, ShoppingCart, Heart, 
-  Eye, TrendingUp, Sparkles, Package, Truck, Shield, 
-  CreditCard, Zap, ChevronDown, X, Sliders, SortAsc,
-  SortDesc, Filter as FilterIcon, RefreshCw, Loader2
+  Search, 
+  Filter, 
+  Grid, 
+  List, 
+  Star, 
+  ShoppingCart, 
+  Heart,
+  ChevronDown,
+  SlidersHorizontal,
+  Sparkles,
+  TrendingUp,
+  Zap,
+  Crown,
+  AlertCircle,
+  Loader2,
+  Brain
 } from 'lucide-react';
-import { marketplaceAPI, Product as APIProduct, Category as APICategory } from '../../services/api';
-import { useTheme } from '../../store/theme';
+import { motion } from 'framer-motion';
+import { marketplaceAPI, Product as APIProduct, Category as APICategory, SearchRequest } from '../../services/api';
+import { useNotifications } from '../../contexts/NotificationContext';
+import AIRecommendations from '../../components/marketplace/AIRecommendations';
+import PersonalizedDashboard from '../../components/marketplace/PersonalizedDashboard';
+import RecentlyViewed from '../../components/marketplace/RecentlyViewed';
 
-interface Product {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  original_price?: number;
-  discount_percentage?: number;
-  images: string[];
-  rating: number;
-  review_count: number;
-  stock_quantity: number;
-  brand: string;
-  category: string;
-  is_featured: boolean;
-  is_deal: boolean;
-  is_trending: boolean;
-}
-
-interface Category {
-  id: number;
-  name: string;
-  slug: string;
-  icon: string;
-  color: string;
-}
+// Use API types directly
+type Product = APIProduct;
+type Category = APICategory;
 
 const MarketplacePage: React.FC = () => {
-  const { theme } = useTheme();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000]);
+  const [sortBy, setSortBy] = useState('relevance');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [sortBy, setSortBy] = useState('created_at');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 });
   const [showFilters, setShowFilters] = useState(false);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
-  const [dealProducts, setDealProducts] = useState<Product[]>([]);
   const [trendingProducts, setTrendingProducts] = useState<Product[]>([]);
-  const [cartCount, setCartCount] = useState(0);
-  const [wishlistCount, setWishlistCount] = useState(0);
+  const [deals, setDeals] = useState<Product[]>([]);
 
-  // Load data on component mount
+  // Mock data for development (will be replaced with API calls)
+  const mockProducts: Product[] = [
+    {
+      id: 1,
+      name: "iPhone 15 Pro Max",
+      description: "The most advanced iPhone ever with A17 Pro chip, titanium design, and pro camera system.",
+      price: 1199.99,
+      original_price: 1299.99,
+      discount_percentage: 7.7,
+      category: "electronics",
+      subcategory: "smartphones",
+      brand: "Apple",
+      sku: "IPH15PM-256",
+      stock_quantity: 50,
+      images: [
+        "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=500",
+        "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=500"
+      ],
+      specifications: {
+        storage: "256GB",
+        color: "Natural Titanium",
+        screen: "6.7 inch Super Retina XDR",
+        camera: "48MP Main + 12MP Ultra Wide + 12MP Telephoto"
+      },
+      features: [
+        "A17 Pro chip",
+        "Titanium design",
+        "Pro camera system",
+        "Action button",
+        "USB-C connector"
+      ],
+      tags: ["iphone", "smartphone", "apple", "5g", "camera"],
+      rating: 4.8,
+      review_count: 1250,
+      featured: true,
+      trending: true,
+      prime_eligible: true,
+      free_shipping: true,
+      status: "active",
+      created_at: "2024-01-15T10:00:00Z"
+    },
+    {
+      id: 2,
+      name: "MacBook Air M2",
+      description: "Supercharged by M2, MacBook Air combines incredible performance and up to 18 hours of battery life.",
+      price: 1099.99,
+      original_price: 1199.99,
+      discount_percentage: 8.3,
+      category: "electronics",
+      subcategory: "laptops",
+      brand: "Apple",
+      sku: "MBA-M2-256",
+      stock_quantity: 30,
+      images: [
+        "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=500",
+        "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=500"
+      ],
+      specifications: {
+        processor: "M2 chip",
+        memory: "8GB unified memory",
+        storage: "256GB SSD",
+        display: "13.6 inch Liquid Retina"
+      },
+      features: [
+        "M2 chip",
+        "18-hour battery life",
+        "Liquid Retina display",
+        "MagSafe charging",
+        "Touch ID"
+      ],
+      tags: ["macbook", "laptop", "apple", "m2", "ultrabook"],
+      rating: 4.9,
+      review_count: 890,
+      featured: true,
+      trending: true,
+      prime_eligible: true,
+      free_shipping: true,
+      status: "active",
+      created_at: "2024-01-10T10:00:00Z"
+    },
+    {
+      id: 3,
+      name: "Sony WH-1000XM5 Wireless Headphones",
+      description: "Industry-leading noise canceling with Dual Noise Sensor technology and 30-hour battery life.",
+      price: 349.99,
+      original_price: 399.99,
+      discount_percentage: 12.5,
+      category: "electronics",
+      subcategory: "headphones",
+      brand: "Sony",
+      sku: "SONY-WH1000XM5",
+      stock_quantity: 75,
+      images: [
+        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500",
+        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500"
+      ],
+      specifications: {
+        driver: "30mm",
+        frequency: "4Hz-40,000Hz",
+        battery: "30 hours",
+        weight: "250g"
+      },
+      features: [
+        "Industry-leading noise canceling",
+        "Dual Noise Sensor technology",
+        "30-hour battery life",
+        "Quick Charge (3 min = 3 hours)",
+        "Touch controls"
+      ],
+      tags: ["headphones", "wireless", "noise-canceling", "sony", "bluetooth"],
+      rating: 4.7,
+      review_count: 2100,
+      featured: false,
+      trending: true,
+      prime_eligible: true,
+      free_shipping: true,
+      status: "active",
+      created_at: "2024-01-05T10:00:00Z"
+    },
+    {
+      id: 4,
+      name: "Nike Air Max 270",
+      description: "The Nike Air Max 270 delivers unrivaled, all-day comfort with the Air unit that's the tallest ever.",
+      price: 129.99,
+      original_price: 150.00,
+      discount_percentage: 13.3,
+      category: "fashion",
+      subcategory: "shoes",
+      brand: "Nike",
+      sku: "NIKE-AM270-BLK",
+      stock_quantity: 120,
+      images: [
+        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500",
+        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500"
+      ],
+      specifications: {
+        material: "Mesh and synthetic",
+        sole: "Rubber",
+        closure: "Lace-up",
+        weight: "340g"
+      },
+      features: [
+        "Tallest Air unit ever",
+        "Breathable mesh upper",
+        "Foam midsole",
+        "Rubber outsole",
+        "All-day comfort"
+      ],
+      tags: ["nike", "shoes", "sneakers", "air-max", "running"],
+      rating: 4.6,
+      review_count: 3400,
+      featured: false,
+      trending: true,
+      prime_eligible: true,
+      free_shipping: true,
+      status: "active",
+      created_at: "2024-01-12T10:00:00Z"
+    },
+    {
+      id: 5,
+      name: "Instant Pot Duo 7-in-1",
+      description: "7-in-1 electric pressure cooker that slow cooks, pressure cooks, rice cooks, steams, sautés, and keeps warm.",
+      price: 89.99,
+      original_price: 119.99,
+      discount_percentage: 25.0,
+      category: "home",
+      subcategory: "kitchen",
+      brand: "Instant Pot",
+      sku: "INSTANT-DUO-6QT",
+      stock_quantity: 200,
+      images: [
+        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500",
+        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500"
+      ],
+      specifications: {
+        capacity: "6 quarts",
+        power: "1000W",
+        material: "Stainless steel",
+        dimensions: "13.4 x 12.2 x 12.5 inches"
+      },
+      features: [
+        "7-in-1 functionality",
+        "Pressure cooking",
+        "Slow cooking",
+        "Rice cooking",
+        "Steaming",
+        "Sautéing",
+        "Keep warm"
+      ],
+      tags: ["instant-pot", "pressure-cooker", "kitchen", "cooking", "appliance"],
+      rating: 4.8,
+      review_count: 15600,
+      featured: true,
+      trending: false,
+      prime_eligible: true,
+      free_shipping: true,
+      status: "active",
+      created_at: "2024-01-08T10:00:00Z"
+    }
+  ];
+
+  const mockCategories: Category[] = [
+    {
+      id: 1,
+      name: "Electronics",
+      slug: "electronics",
+      description: "Latest gadgets and electronic devices",
+      icon: "smartphone",
+      color: "#3B82F6",
+      sort_order: 1,
+      is_active: true,
+      created_at: "2024-01-01T10:00:00Z"
+    },
+    {
+      id: 2,
+      name: "Fashion",
+      slug: "fashion",
+      description: "Trendy clothing and accessories",
+      icon: "shirt",
+      color: "#EC4899",
+      sort_order: 2,
+      is_active: true,
+      created_at: "2024-01-01T10:00:00Z"
+    },
+    {
+      id: 3,
+      name: "Home & Garden",
+      slug: "home-garden",
+      description: "Home improvement and garden supplies",
+      icon: "home",
+      color: "#10B981",
+      sort_order: 3,
+      is_active: true,
+      created_at: "2024-01-01T10:00:00Z"
+    },
+    {
+      id: 4,
+      name: "Sports & Outdoors",
+      slug: "sports-outdoors",
+      description: "Sports equipment and outdoor gear",
+      icon: "dumbbell",
+      color: "#F59E0B",
+      sort_order: 4,
+      is_active: true,
+      created_at: "2024-01-01T10:00:00Z"
+    },
+    {
+      id: 5,
+      name: "Books",
+      slug: "books",
+      description: "Books for all ages and interests",
+      icon: "book-open",
+      color: "#8B5CF6",
+      sort_order: 5,
+      is_active: true,
+      created_at: "2024-01-01T10:00:00Z"
+    },
+    {
+      id: 6,
+      name: "Beauty & Personal Care",
+      slug: "beauty-personal-care",
+      description: "Beauty products and personal care items",
+      icon: "sparkles",
+      color: "#EF4444",
+      sort_order: 6,
+      is_active: true,
+      created_at: "2024-01-01T10:00:00Z"
+    }
+  ];
+
+  const { addNotification } = useNotifications();
+
   useEffect(() => {
-    loadInitialData();
-  }, []);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch all data in parallel
+        const [productsData, categoriesData, featuredData, trendingData, dealsData] = await Promise.all([
+          marketplaceAPI.getProducts(),
+          marketplaceAPI.getCategories(),
+          marketplaceAPI.getFeaturedProducts(),
+          marketplaceAPI.getTrendingProducts(),
+          marketplaceAPI.getDeals()
+        ]);
 
-  const loadInitialData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [productsData, categoriesData, featuredData, dealsData, trendingData] = await Promise.all([
-        marketplaceAPI.getProducts(),
-        marketplaceAPI.getCategories(),
-        marketplaceAPI.getFeaturedProducts(),
-        marketplaceAPI.getDealProducts(),
-        marketplaceAPI.getTrendingProducts()
-      ]);
-
-      setProducts(productsData.products || []);
-      setCategories(categoriesData || []);
-      setFeaturedProducts(featuredData || []);
-      setDealProducts(dealsData || []);
-      setTrendingProducts(trendingData || []);
-    } catch (error) {
-      console.error('Error loading marketplace data:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Filter and sort products
-  const filteredAndSortedProducts = useMemo(() => {
-    let filtered = products.filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           product.brand.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesCategory = !selectedCategory || product.category === selectedCategory.toString();
-      
-      const matchesPrice = product.price >= priceRange.min && product.price <= priceRange.max;
-      
-      return matchesSearch && matchesCategory && matchesPrice;
-    });
-
-    // Sort products
-    filtered.sort((a, b) => {
-      let aValue: any, bValue: any;
-      
-      switch (sortBy) {
-        case 'price':
-          aValue = a.price;
-          bValue = b.price;
-          break;
-        case 'rating':
-          aValue = a.rating;
-          bValue = b.rating;
-          break;
-        case 'name':
-          aValue = a.name;
-          bValue = b.name;
-          break;
-        default:
-          aValue = a.id;
-          bValue = b.id;
+        setProducts(productsData.products);
+        setCategories(categoriesData);
+        setFeaturedProducts(featuredData);
+        setTrendingProducts(trendingData);
+        setDeals(dealsData);
+      } catch (error) {
+        console.error('Error fetching marketplace data:', error);
+        addNotification({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to load marketplace data. Using mock data instead.'
+        });
+        
+        // Fallback to mock data
+        setProducts(mockProducts);
+        setCategories(mockCategories);
+        setFeaturedProducts(mockProducts.filter(p => p.featured));
+        setTrendingProducts(mockProducts.filter(p => p.trending));
+        setDeals(mockProducts.filter(p => p.discount_percentage && p.discount_percentage > 0));
+      } finally {
+        setLoading(false);
       }
-      
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
+    };
 
-    return filtered;
-  }, [products, searchQuery, selectedCategory, priceRange, sortBy, sortOrder]);
+    fetchData();
+  }, [addNotification]);
 
-  const handleSearch = useCallback((query: string) => {
-    setSearchQuery(query);
-  }, []);
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         product.brand.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !selectedCategory || product.category === selectedCategory;
+    const matchesSubcategory = !selectedSubcategory || product.subcategory === selectedSubcategory;
+    const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
+    
+    return matchesSearch && matchesCategory && matchesSubcategory && matchesPrice;
+  });
 
-  const handleCategorySelect = useCallback((categoryId: number | null) => {
-    setSelectedCategory(categoryId);
-  }, []);
-
-  const handleAddToCart = useCallback(async (productId: number) => {
-    try {
-      await marketplaceAPI.addToCart({
-        user_id: 'user_123', // Mock user ID
-        product_id: productId,
-        quantity: 1
-      });
-      setCartCount(prev => prev + 1);
-    } catch (error) {
-      console.error('Error adding to cart:', error);
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    switch (sortBy) {
+      case 'price-low':
+        return a.price - b.price;
+      case 'price-high':
+        return b.price - a.price;
+      case 'rating':
+        return b.rating - a.rating;
+      case 'newest':
+                 return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      default:
+        return 0;
     }
-  }, []);
+  });
 
-  const handleAddToWishlist = useCallback(async (productId: number) => {
-    try {
-      await marketplaceAPI.addToWishlist({
-        user_id: 'user_123', // Mock user ID
-        product_id: productId
-      });
-      setWishlistCount(prev => prev + 1);
-    } catch (error) {
-      console.error('Error adding to wishlist:', error);
-    }
-  }, []);
-
-  const handleViewProduct = useCallback(async (productId: number) => {
-    try {
-      await marketplaceAPI.addRecentlyViewed({
-        user_id: 'user_123',
-        product_id: productId
-      });
-    } catch (error) {
-      console.error('Error recording view:', error);
-    }
-  }, []);
-
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.3
-      }
-    }
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star
+        key={i}
+        size={14}
+        className={`${i < Math.floor(rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+      />
+    ));
   };
 
   const ProductCard: React.FC<{ product: Product }> = ({ product }) => (
     <motion.div
-      variants={itemVariants}
-      className={`group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden ${
-        theme === 'dark' ? 'border border-gray-700' : 'border border-gray-200'
-      }`}
-      whileHover={{ y: -4 }}
-      onClick={() => handleViewProduct(product.id)}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 dark:border-gray-700 overflow-hidden group"
     >
-      {/* Product Image */}
-      <div className="relative aspect-square overflow-hidden">
-        <img
-          src={product.images[0] || '/placeholder-product.jpg'}
-          alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-        />
-        
-        {/* Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
-          {product.is_featured && (
-            <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-              <Sparkles size={12} />
-              Featured
-            </span>
-          )}
-          {product.is_deal && (
-            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-              {product.discount_percentage}% OFF
-            </span>
-          )}
-          {product.is_trending && (
-            <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-              <TrendingUp size={12} />
-              Trending
-            </span>
-          )}
+      <Link to={`/marketplace/product/${product.id}`}>
+        <div className="relative aspect-square overflow-hidden">
+          <img
+            src={product.images[0]}
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+                     {product.discount_percentage && (
+             <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+               -{product.discount_percentage}%
+             </div>
+           )}
+           {product.prime_eligible && (
+             <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1">
+               <Crown size={12} />
+               Prime
+             </div>
+           )}
+           {product.free_shipping && (
+             <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
+               Free Shipping
+             </div>
+           )}
         </div>
-
-        {/* Stock Status */}
-        <div className="absolute top-2 right-2">
-          {product.stock_quantity === 0 ? (
-            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-              Out of Stock
-            </span>
-          ) : product.stock_quantity <= 5 ? (
-            <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
-              Low Stock
-            </span>
-          ) : null}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="absolute bottom-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleAddToWishlist(product.id);
-            }}
-            className="bg-white dark:bg-gray-800 p-2 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            aria-label="Add to wishlist"
-          >
-            <Heart size={16} className="text-gray-600 dark:text-gray-300" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleAddToCart(product.id);
-            }}
-            className="bg-blue-500 p-2 rounded-full shadow-lg hover:bg-blue-600 transition-colors"
-            aria-label="Add to cart"
-          >
-            <ShoppingCart size={16} className="text-white" />
-          </button>
-        </div>
-      </div>
-
-      {/* Product Info */}
+      </Link>
+      
       <div className="p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs text-gray-500 dark:text-gray-400">{product.brand}</span>
-          <div className="flex items-center gap-1">
-            <Star size={14} className="text-yellow-400 fill-current" />
-            <span className="text-sm text-gray-600 dark:text-gray-300">
-              {product.rating} ({product.review_count})
-            </span>
-          </div>
-        </div>
-
-        <h3 className="font-medium text-gray-900 dark:text-white mb-2 line-clamp-2">
-          {product.name}
-        </h3>
-
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-lg font-bold text-gray-900 dark:text-white">
-            ${product.price.toFixed(2)}
-          </span>
-          {product.original_price && product.original_price > product.price && (
-            <span className="text-sm text-gray-500 line-through">
-              ${product.original_price.toFixed(2)}
-            </span>
-          )}
-        </div>
-
-        {/* Features */}
-        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-          <div className="flex items-center gap-1">
-            <Package size={12} />
-            <span>Free Shipping</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Shield size={12} />
-            <span>Warranty</span>
-          </div>
+        <Link to={`/marketplace/product/${product.id}`}>
+          <h3 className="font-semibold text-gray-900 dark:text-white text-sm line-clamp-2 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            {product.name}
+          </h3>
+        </Link>
+        
+                 <div className="flex items-center gap-1 mb-2">
+           {renderStars(product.rating)}
+           <span className="text-xs text-gray-500 dark:text-gray-400">
+             ({product.review_count})
+           </span>
+         </div>
+         
+         <div className="flex items-center gap-2 mb-3">
+           <span className="text-lg font-bold text-gray-900 dark:text-white">
+             ${product.price.toFixed(2)}
+           </span>
+           {product.original_price && (
+             <span className="text-sm text-gray-500 line-through">
+               ${product.original_price.toFixed(2)}
+             </span>
+           )}
+         </div>
+        
+        <div className="flex items-center justify-between">
+          <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-md transition-colors mr-2">
+            Add to Cart
+          </button>
+          <button className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+            <Heart size={18} />
+          </button>
         </div>
       </div>
     </motion.div>
@@ -314,10 +465,20 @@ const MarketplacePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <Loader2 className="animate-spin" size={24} />
-          <span className="text-gray-600 dark:text-gray-300">Loading marketplace...</span>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-8"></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-4">
+                  <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -325,345 +486,179 @@ const MarketplacePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <div className={`sticky top-0 z-50 ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b shadow-sm`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Marketplace
-            </h1>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                OmniLife Marketplace
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Discover amazing products with AI-powered recommendations
+              </p>
+            </div>
+            <Link
+              to="/marketplace/recommendations"
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Brain className="w-5 h-5" />
+              <span>AI Recommendations</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Personalized Dashboard */}
+        <PersonalizedDashboard />
+
+        {/* Recently Viewed */}
+        <RecentlyViewed limit={6} />
+
+        {/* Search and Filters */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-8">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search Bar */}
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                             <form onSubmit={(e) => {
+                 e.preventDefault();
+                 if (searchQuery.trim()) {
+                   window.location.href = `/marketplace/search?q=${encodeURIComponent(searchQuery.trim())}`;
+                 }
+               }}>
+                 <input
+                   type="text"
+                   placeholder="Search products..."
+                   value={searchQuery}
+                   onChange={(e) => setSearchQuery(e.target.value)}
+                   className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                 />
+               </form>
+            </div>
             
-            <div className="flex items-center gap-4">
-              {/* Search Bar */}
-              <div className="relative hidden md:block">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className={`pl-10 pr-4 py-2 w-80 rounded-lg border ${
-                    theme === 'dark' 
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                  } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                />
-              </div>
-
-              {/* View Mode Toggle */}
-              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === 'grid' 
-                      ? 'bg-white dark:bg-gray-600 text-blue-500' 
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}
-                  aria-label="Grid view"
-                >
-                  <Grid size={16} />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === 'list' 
-                      ? 'bg-white dark:bg-gray-600 text-blue-500' 
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}
-                  aria-label="List view"
-                >
-                  <List size={16} />
-                </button>
-              </div>
-
-              {/* Filter Button */}
+            {/* Category Filter */}
+                         <select
+               value={selectedCategory}
+               onChange={(e) => {
+                 if (e.target.value) {
+                   window.location.href = `/marketplace/category/${e.target.value}`;
+                 }
+               }}
+               className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+             >
+               <option value="">All Categories</option>
+               {categories.map(category => (
+                 <option key={category.id} value={category.slug}>
+                   {category.name}
+                 </option>
+               ))}
+             </select>
+            
+            {/* Sort */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            >
+              <option value="relevance">Relevance</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="rating">Customer Rating</option>
+              <option value="newest">Newest Arrivals</option>
+            </select>
+            
+            {/* View Mode */}
+            <div className="flex border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
               <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`p-2 rounded-lg border ${
-                  theme === 'dark' 
-                    ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
-                    : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                } transition-colors`}
-                aria-label="Toggle filters"
+                onClick={() => setViewMode('grid')}
+                className={`px-3 py-3 ${viewMode === 'grid' ? 'bg-blue-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400'}`}
               >
-                <Filter size={20} />
+                <Grid size={20} />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-3 ${viewMode === 'list' ? 'bg-blue-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400'}`}
+              >
+                <List size={20} />
               </button>
             </div>
           </div>
+        </div>
 
-          {/* Mobile Search */}
-          <div className="mt-4 md:hidden">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                className={`pl-10 pr-4 py-2 w-full rounded-lg border ${
-                  theme === 'dark' 
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-              />
+        {/* Featured Sections */}
+        {featuredProducts.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="text-yellow-500" size={24} />
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Featured Products</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {featuredProducts.slice(0, 4).map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
             </div>
           </div>
-        </div>
-      </div>
+        )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar Filters */}
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ opacity: 0, x: -300 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -300 }}
-                className={`lg:w-64 lg:block ${showFilters ? 'block' : 'hidden'}`}
-              >
-                <div className={`p-4 rounded-lg ${
-                  theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
-                }`}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Filters</h3>
-                    <button
-                      onClick={() => setShowFilters(false)}
-                      className="lg:hidden p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-
-                  {/* Categories */}
-                  <div className="mb-6">
-                    <h4 className="font-medium text-gray-900 dark:text-white mb-3">Categories</h4>
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => handleCategorySelect(null)}
-                        className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
-                          selectedCategory === null
-                            ? 'bg-blue-500 text-white'
-                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        All Categories
-                      </button>
-                      {categories.map((category) => (
-                        <button
-                          key={category.id}
-                          onClick={() => handleCategorySelect(category.id)}
-                          className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
-                            selectedCategory === category.id
-                              ? 'bg-blue-500 text-white'
-                              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
-                        >
-                          {category.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Price Range */}
-                  <div className="mb-6">
-                    <h4 className="font-medium text-gray-900 dark:text-white mb-3">Price Range</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          placeholder="Min"
-                          value={priceRange.min}
-                          onChange={(e) => setPriceRange(prev => ({ ...prev, min: Number(e.target.value) }))}
-                          className={`w-full px-3 py-2 rounded-md border ${
-                            theme === 'dark' 
-                              ? 'bg-gray-700 border-gray-600 text-white' 
-                              : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                        />
-                        <span className="text-gray-500">-</span>
-                        <input
-                          type="number"
-                          placeholder="Max"
-                          value={priceRange.max}
-                          onChange={(e) => setPriceRange(prev => ({ ...prev, max: Number(e.target.value) }))}
-                          className={`w-full px-3 py-2 rounded-md border ${
-                            theme === 'dark' 
-                              ? 'bg-gray-700 border-gray-600 text-white' 
-                              : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Sort Options */}
-                  <div className="mb-6">
-                    <h4 className="font-medium text-gray-900 dark:text-white mb-3">Sort By</h4>
-                    <div className="space-y-2">
-                      {[
-                        { value: 'created_at', label: 'Newest' },
-                        { value: 'price', label: 'Price' },
-                        { value: 'rating', label: 'Rating' },
-                        { value: 'name', label: 'Name' }
-                      ].map((option) => (
-                        <button
-                          key={option.value}
-                          onClick={() => setSortBy(option.value)}
-                          className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
-                            sortBy === option.value
-                              ? 'bg-blue-500 text-white'
-                              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Sort Order */}
-                  <div className="mb-6">
-                    <h4 className="font-medium text-gray-900 dark:text-white mb-3">Order</h4>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setSortOrder('asc')}
-                        className={`flex-1 px-3 py-2 rounded-md transition-colors ${
-                          sortOrder === 'asc'
-                            ? 'bg-blue-500 text-white'
-                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        <SortAsc size={16} className="inline mr-1" />
-                        Asc
-                      </button>
-                      <button
-                        onClick={() => setSortOrder('desc')}
-                        className={`flex-1 px-3 py-2 rounded-md transition-colors ${
-                          sortOrder === 'desc'
-                            ? 'bg-blue-500 text-white'
-                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        <SortDesc size={16} className="inline mr-1" />
-                        Desc
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Main Content */}
-          <div className="flex-1">
-            {/* Featured Sections */}
-            {featuredProducts.length > 0 && (
-              <section className="mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Sparkles className="text-blue-500" size={20} />
-                    Featured Products
-                  </h2>
-                </div>
-                <motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-                >
-                  {featuredProducts.slice(0, 4).map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </motion.div>
-              </section>
-            )}
-
-            {dealProducts.length > 0 && (
-              <section className="mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Zap className="text-orange-500" size={20} />
-                    Deals & Discounts
-                  </h2>
-                </div>
-                <motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-                >
-                  {dealProducts.slice(0, 4).map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </motion.div>
-              </section>
-            )}
-
-            {trendingProducts.length > 0 && (
-              <section className="mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <TrendingUp className="text-green-500" size={20} />
-                    Trending Now
-                  </h2>
-                </div>
-                <motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-                >
-                  {trendingProducts.slice(0, 4).map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </motion.div>
-              </section>
-            )}
-
-            {/* All Products */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  All Products ({filteredAndSortedProducts.length})
-                </h2>
-                <button
-                  onClick={loadInitialData}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-                >
-                  <RefreshCw size={16} />
-                  Refresh
-                </button>
-              </div>
-
-              {filteredAndSortedProducts.length === 0 ? (
-                <div className="text-center py-12">
-                  <Package size={48} className="mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    No products found
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Try adjusting your search or filter criteria
-                  </p>
-                </div>
-              ) : (
-                <motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className={`grid gap-4 ${
-                    viewMode === 'grid'
-                      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-                      : 'grid-cols-1'
-                  }`}
-                >
-                  {filteredAndSortedProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </motion.div>
-              )}
-            </section>
+        {deals.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="text-orange-500" size={24} />
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Today's Deals</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {deals.slice(0, 4).map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
           </div>
+        )}
+
+        {trendingProducts.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="text-green-500" size={24} />
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Trending Now</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {trendingProducts.slice(0, 4).map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* All Products */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              All Products ({sortedProducts.length})
+            </h2>
+          </div>
+          
+          {sortedProducts.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-400 dark:text-gray-600 mb-4">
+                <Search size={64} className="mx-auto" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                No products found
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400">
+                Try adjusting your search or filter criteria
+              </p>
+            </div>
+          ) : (
+            <div className={`grid gap-6 ${
+              viewMode === 'grid' 
+                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' 
+                : 'grid-cols-1'
+            }`}>
+              {sortedProducts.map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

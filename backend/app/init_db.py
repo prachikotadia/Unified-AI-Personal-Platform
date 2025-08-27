@@ -1,109 +1,107 @@
 from sqlalchemy.orm import Session
-from app.database import engine, SessionLocal
+from app.database import engine, get_db
+from app.models.user import User, UserSession
 from app.models.marketplace_db import (
-    Base, Product, Review, CartItem, WishlistItem, Order, OrderItem, 
-    Category, ProductCategory, ProductSubcategory, OrderStatus, 
-    PaymentStatus, PaymentMethod, AIRecommendation, PriceAlert, 
-    ProductComparison, RecentlyViewed, ProductQuestion, ProductAnswer
+    Product, Review, CartItem, WishlistItem, Order, OrderItem, Category,
+    SearchHistory, ProductView, AIRecommendation, PriceAlert, ProductComparison,
+    RecentlyViewed, ProductQuestion, ProductAnswer, ProductCategory, ProductSubcategory
 )
+from app.models.payment import PaymentMethod, PaymentTransaction, PaymentRefund, PaymentWebhook
+from app.models.inventory import Inventory, InventoryOperation, InventoryAlert, Supplier
+from app.models.shipping import Address, ShippingZone, ShippingRate, Shipment
+from app.services.user_service import UserService
+from app.services.payment_service import PaymentService
+from app.services.inventory_service import InventoryService
+from app.services.shipping_service import ShippingService
 import structlog
-from datetime import datetime
 
 logger = structlog.get_logger()
 
 def init_database():
-    """Initialize database tables"""
-    logger.info("Creating database tables...")
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created successfully")
+    """Initialize database with tables and sample data"""
+    try:
+        # Import all models to ensure they are registered
+        from app.models.user import Base as UserBase
+        from app.models.marketplace_db import Base as MarketplaceBase
+        from app.models.payment import Base as PaymentBase
+        from app.models.inventory import Base as InventoryBase
+        from app.models.shipping import Base as ShippingBase
+        
+        # Create all tables
+        UserBase.metadata.create_all(bind=engine)
+        MarketplaceBase.metadata.create_all(bind=engine)
+        PaymentBase.metadata.create_all(bind=engine)
+        InventoryBase.metadata.create_all(bind=engine)
+        ShippingBase.metadata.create_all(bind=engine)
+        
+        logger.info("Database tables created successfully")
+        
+        # Create sample data
+        create_sample_data()
+        
+        logger.info("Sample data created successfully")
+        
+    except Exception as e:
+        logger.error(f"Database initialization failed: {str(e)}")
+        raise
 
 def create_sample_data():
-    """Create sample marketplace data"""
-    db = SessionLocal()
+    """Create sample data for all models"""
+    db = next(get_db())
+    
     try:
-        logger.info("Creating sample marketplace data...")
+        # Create sample users
+        user_service = UserService(db)
         
-        # Create categories
+        # Create test user
+        test_user = user_service.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="password123",
+            first_name="Test",
+            last_name="User"
+        )
+        
+        # Create sample categories
         categories = [
-            Category(
-                name="Electronics",
-                slug="electronics",
-                description="Latest gadgets and electronic devices",
-                icon="smartphone",
-                color="#3B82F6",
-                sort_order=1
-            ),
-            Category(
-                name="Fashion",
-                slug="fashion",
-                description="Trendy clothing and accessories",
-                icon="shirt",
-                color="#EC4899",
-                sort_order=2
-            ),
-            Category(
-                name="Home & Garden",
-                slug="home-garden",
-                description="Home improvement and garden supplies",
-                icon="home",
-                color="#10B981",
-                sort_order=3
-            ),
-            Category(
-                name="Sports & Outdoors",
-                slug="sports-outdoors",
-                description="Sports equipment and outdoor gear",
-                icon="dumbbell",
-                color="#F59E0B",
-                sort_order=4
-            ),
-            Category(
-                name="Books",
-                slug="books",
-                description="Books for all ages and interests",
-                icon="book-open",
-                color="#8B5CF6",
-                sort_order=5
-            ),
-            Category(
-                name="Beauty & Personal Care",
-                slug="beauty-personal-care",
-                description="Beauty products and personal care items",
-                icon="sparkles",
-                color="#EF4444",
-                sort_order=6
-            )
+            Category(name="Electronics", slug="electronics", description="Electronic devices and gadgets"),
+            Category(name="Clothing", slug="clothing", description="Fashion and apparel"),
+            Category(name="Home & Garden", slug="home-garden", description="Home improvement and garden supplies"),
+            Category(name="Sports & Outdoors", slug="sports-outdoors", description="Sports equipment and outdoor gear"),
+            Category(name="Books", slug="books", description="Books and literature"),
+            Category(name="Beauty & Personal Care", slug="beauty", description="Beauty and personal care products"),
+            Category(name="Toys & Games", slug="toys-games", description="Toys and games for all ages"),
+            Category(name="Automotive", slug="automotive", description="Automotive parts and accessories"),
+            Category(name="Health & Wellness", slug="health-wellness", description="Health and wellness products"),
+            Category(name="Food & Beverages", slug="food-beverages", description="Food and beverage products")
         ]
         
         for category in categories:
             db.add(category)
         db.commit()
         
-        # Create products
+        # Create sample products
         products = [
             Product(
-                name="iPhone 15 Pro Max",
-                description="The most advanced iPhone ever with A17 Pro chip, titanium design, and pro camera system.",
-                price=1199.99,
-                original_price=1299.99,
-                discount_percentage=7.7,
+                name="iPhone 15 Pro",
+                description="Latest iPhone with advanced camera system and A17 Pro chip",
+                price=999.99,
+                original_price=1099.99,
+                discount_percentage=9.09,
                 category=ProductCategory.electronics,
                 subcategory=ProductSubcategory.smartphones,
                 brand="Apple",
-                sku="IPH15PM-256",
+                sku="IPHONE15PRO-128",
                 stock_quantity=50,
-                images=[
-                    "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=500",
-                    "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=500"
-                ],
+                images=["https://example.com/iphone15pro1.jpg", "https://example.com/iphone15pro2.jpg"],
                 specifications={
-                    "storage": "256GB",
-                    "color": "Natural Titanium",
-                    "screen": "6.7 inch Super Retina XDR",
-                    "camera": "48MP Main + 12MP Ultra Wide + 12MP Telephoto"
+                    "Screen Size": "6.1 inches",
+                    "Storage": "128GB",
+                    "Color": "Natural Titanium",
+                    "Chip": "A17 Pro"
                 },
-                features=["A17 Pro chip", "Titanium design", "Pro camera system", "Action button", "USB-C connector"],
-                tags=["iphone", "smartphone", "apple", "5g", "camera"],
+                features=["5G capable", "Face ID", "Pro camera system", "MagSafe compatible"],
+                tags=["smartphone", "apple", "5g", "camera"],
                 rating=4.8,
                 review_count=1250,
                 featured=True,
@@ -112,29 +110,26 @@ def create_sample_data():
                 free_shipping=True
             ),
             Product(
-                name="MacBook Air M2",
-                description="Supercharged by M2, MacBook Air combines incredible performance and up to 18 hours of battery life.",
-                price=1099.99,
-                original_price=1199.99,
-                discount_percentage=8.3,
+                name="Samsung Galaxy S24 Ultra",
+                description="Premium Android smartphone with S Pen and advanced AI features",
+                price=1199.99,
+                original_price=1299.99,
+                discount_percentage=7.69,
                 category=ProductCategory.electronics,
-                subcategory=ProductSubcategory.laptops,
-                brand="Apple",
-                sku="MBA-M2-256",
-                stock_quantity=30,
-                images=[
-                    "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=500",
-                    "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=500"
-                ],
+                subcategory=ProductSubcategory.smartphones,
+                brand="Samsung",
+                sku="SAMSUNG-S24ULTRA-256",
+                stock_quantity=35,
+                images=["https://example.com/s24ultra1.jpg", "https://example.com/s24ultra2.jpg"],
                 specifications={
-                    "processor": "M2 chip",
-                    "memory": "8GB unified memory",
-                    "storage": "256GB SSD",
-                    "display": "13.6 inch Liquid Retina"
+                    "Screen Size": "6.8 inches",
+                    "Storage": "256GB",
+                    "Color": "Titanium Gray",
+                    "Chip": "Snapdragon 8 Gen 3"
                 },
-                features=["M2 chip", "18-hour battery life", "Liquid Retina display", "MagSafe charging", "Touch ID"],
-                tags=["macbook", "laptop", "apple", "m2", "ultrabook"],
-                rating=4.9,
+                features=["S Pen included", "200MP camera", "AI features", "5G capable"],
+                tags=["smartphone", "samsung", "android", "s-pen"],
+                rating=4.7,
                 review_count=890,
                 featured=True,
                 trending=True,
@@ -142,8 +137,35 @@ def create_sample_data():
                 free_shipping=True
             ),
             Product(
-                name="Sony WH-1000XM5 Wireless Headphones",
-                description="Industry-leading noise canceling with Dual Noise Sensor technology and 30-hour battery life.",
+                name="MacBook Pro 14-inch",
+                description="Professional laptop with M3 Pro chip for power users",
+                price=1999.99,
+                original_price=2199.99,
+                discount_percentage=9.09,
+                category=ProductCategory.electronics,
+                subcategory=ProductSubcategory.laptops,
+                brand="Apple",
+                sku="MACBOOK-PRO-14-M3",
+                stock_quantity=25,
+                images=["https://example.com/macbookpro1.jpg", "https://example.com/macbookpro2.jpg"],
+                specifications={
+                    "Screen Size": "14 inches",
+                    "Processor": "M3 Pro",
+                    "Memory": "16GB",
+                    "Storage": "512GB SSD"
+                },
+                features=["Liquid Retina XDR display", "Up to 22 hours battery", "Studio-quality microphones"],
+                tags=["laptop", "apple", "macbook", "professional"],
+                rating=4.9,
+                review_count=567,
+                featured=True,
+                trending=False,
+                prime_eligible=True,
+                free_shipping=True
+            ),
+            Product(
+                name="Sony WH-1000XM5",
+                description="Industry-leading noise canceling headphones with exceptional sound quality",
                 price=349.99,
                 original_price=399.99,
                 discount_percentage=12.5,
@@ -152,20 +174,17 @@ def create_sample_data():
                 brand="Sony",
                 sku="SONY-WH1000XM5",
                 stock_quantity=75,
-                images=[
-                    "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500",
-                    "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500"
-                ],
+                images=["https://example.com/sony-headphones1.jpg", "https://example.com/sony-headphones2.jpg"],
                 specifications={
-                    "driver": "30mm",
-                    "frequency": "4Hz-40,000Hz",
-                    "battery": "30 hours",
-                    "weight": "250g"
+                    "Driver Size": "30mm",
+                    "Frequency Response": "4Hz-40kHz",
+                    "Battery Life": "30 hours",
+                    "Weight": "250g"
                 },
-                features=["Industry-leading noise canceling", "Dual Noise Sensor technology", "30-hour battery life", "Quick Charge (3 min = 3 hours)", "Touch controls"],
-                tags=["headphones", "wireless", "noise-canceling", "sony", "bluetooth"],
-                rating=4.7,
-                review_count=2100,
+                features=["Industry-leading noise canceling", "30-hour battery life", "Quick Charge", "Touch controls"],
+                tags=["headphones", "sony", "noise-canceling", "wireless"],
+                rating=4.8,
+                review_count=2340,
                 featured=False,
                 trending=True,
                 prime_eligible=True,
@@ -173,150 +192,27 @@ def create_sample_data():
             ),
             Product(
                 name="Nike Air Max 270",
-                description="The Nike Air Max 270 delivers unrivaled, all-day comfort with the Air unit that's the tallest ever.",
+                description="Comfortable running shoes with Air Max technology",
                 price=129.99,
-                original_price=150.0,
-                discount_percentage=13.3,
-                category=ProductCategory.fashion,
+                original_price=150.00,
+                discount_percentage=13.34,
+                category=ProductCategory.clothing,
                 subcategory=ProductSubcategory.shoes,
                 brand="Nike",
-                sku="NIKE-AM270-BLK",
+                sku="NIKE-AIRMAX270-10",
                 stock_quantity=120,
-                images=[
-                    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500",
-                    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500"
-                ],
+                images=["https://example.com/nike-shoes1.jpg", "https://example.com/nike-shoes2.jpg"],
                 specifications={
-                    "material": "Mesh and synthetic",
-                    "sole": "Rubber",
-                    "closure": "Lace-up",
-                    "weight": "340g"
+                    "Size": "10",
+                    "Color": "Black/White",
+                    "Material": "Mesh and synthetic",
+                    "Weight": "320g"
                 },
-                features=["Tallest Air unit ever", "Breathable mesh upper", "Foam midsole", "Rubber outsole", "All-day comfort"],
-                tags=["nike", "shoes", "sneakers", "air-max", "running"],
+                features=["Air Max technology", "Breathable mesh", "Cushioned sole", "Lightweight design"],
+                tags=["shoes", "nike", "running", "athletic"],
                 rating=4.6,
-                review_count=3400,
+                review_count=1890,
                 featured=False,
-                trending=True,
-                prime_eligible=True,
-                free_shipping=True
-            ),
-            Product(
-                name="Instant Pot Duo 7-in-1",
-                description="7-in-1 electric pressure cooker that slow cooks, pressure cooks, rice cooks, steams, sautés, and keeps warm.",
-                price=89.99,
-                original_price=119.99,
-                discount_percentage=25.0,
-                category=ProductCategory.home_garden,
-                subcategory=ProductSubcategory.kitchen,
-                brand="Instant Pot",
-                sku="INSTANT-DUO-6QT",
-                stock_quantity=200,
-                images=[
-                    "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500",
-                    "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500"
-                ],
-                specifications={
-                    "capacity": "6 quarts",
-                    "power": "1000W",
-                    "material": "Stainless steel",
-                    "dimensions": "13.4 x 12.2 x 12.5 inches"
-                },
-                features=["7-in-1 functionality", "Pressure cooking", "Slow cooking", "Rice cooking", "Steaming", "Sautéing", "Keep warm"],
-                tags=["instant-pot", "pressure-cooker", "kitchen", "cooking", "appliance"],
-                rating=4.8,
-                review_count=15600,
-                featured=True,
-                trending=False,
-                prime_eligible=True,
-                free_shipping=True
-            ),
-            Product(
-                name="Yoga Mat Premium",
-                description="Non-slip yoga mat with alignment lines, perfect for yoga, pilates, and fitness workouts.",
-                price=29.99,
-                original_price=39.99,
-                discount_percentage=25.0,
-                category=ProductCategory.sports_outdoors,
-                subcategory=ProductSubcategory.yoga,
-                brand="Manduka",
-                sku="MANDUKA-PRO-BLK",
-                stock_quantity=300,
-                images=[
-                    "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500",
-                    "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500"
-                ],
-                specifications={
-                    "thickness": "6mm",
-                    "length": "72 inches",
-                    "width": "24 inches",
-                    "material": "PVC-free"
-                },
-                features=["Non-slip surface", "Alignment lines", "Cushioned support", "Eco-friendly materials", "Lifetime guarantee"],
-                tags=["yoga", "mat", "fitness", "workout", "pilates"],
-                rating=4.7,
-                review_count=2800,
-                featured=False,
-                trending=False,
-                prime_eligible=True,
-                free_shipping=True
-            ),
-            Product(
-                name="The Seven Husbands of Evelyn Hugo",
-                description="A reclusive Hollywood legend reveals her life story to an unknown journalist.",
-                price=16.99,
-                original_price=24.99,
-                discount_percentage=32.0,
-                category=ProductCategory.books,
-                subcategory=ProductSubcategory.fiction,
-                brand="Atria Books",
-                sku="BOOK-EVELYN-HUGO",
-                stock_quantity=500,
-                images=[
-                    "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500",
-                    "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500"
-                ],
-                specifications={
-                    "pages": "400",
-                    "language": "English",
-                    "format": "Hardcover",
-                    "isbn": "978-1501161939"
-                },
-                features=["Bestselling novel", "Historical fiction", "Hollywood setting", "Complex characters", "Page-turner"],
-                tags=["book", "fiction", "romance", "historical", "hollywood"],
-                rating=4.5,
-                review_count=8900,
-                featured=True,
-                trending=True,
-                prime_eligible=True,
-                free_shipping=True
-            ),
-            Product(
-                name="La Mer Moisturizing Cream",
-                description="The iconic moisturizing cream that transforms skin with the power of the sea.",
-                price=349.99,
-                original_price=399.99,
-                discount_percentage=12.5,
-                category=ProductCategory.beauty_personal_care,
-                subcategory=ProductSubcategory.skincare,
-                brand="La Mer",
-                sku="LAMER-CREAM-30ML",
-                stock_quantity=25,
-                images=[
-                    "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=500",
-                    "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=500"
-                ],
-                specifications={
-                    "size": "30ml",
-                    "type": "Moisturizer",
-                    "skin_type": "All skin types",
-                    "ingredients": "Miracle Broth, Lime Tea"
-                },
-                features=["Miracle Broth technology", "Intensive hydration", "Anti-aging benefits", "Luxury formula", "Iconic packaging"],
-                tags=["skincare", "moisturizer", "luxury", "anti-aging", "la-mer"],
-                rating=4.9,
-                review_count=1200,
-                featured=True,
                 trending=False,
                 prime_eligible=True,
                 free_shipping=True
@@ -327,43 +223,46 @@ def create_sample_data():
             db.add(product)
         db.commit()
         
-        # Create reviews
+        # Create inventory records for products
+        inventory_service = InventoryService(db)
+        for product in products:
+            inventory = Inventory(
+                product_id=product.id,
+                current_stock=product.stock_quantity,
+                reserved_stock=0,
+                available_stock=product.stock_quantity,
+                low_stock_threshold=10,
+                reorder_point=5,
+                max_stock=200
+            )
+            db.add(inventory)
+        db.commit()
+        
+        # Create sample reviews
         reviews = [
             Review(
-                product_id=1,
-                user_id="user_123",
+                product_id=products[0].id,
+                user_id=test_user.id,
                 rating=5,
-                title="Amazing phone!",
-                comment="The best iPhone I've ever owned. The camera is incredible and the performance is outstanding.",
-                helpful_votes=45,
-                verified_purchase=True
+                title="Excellent phone!",
+                comment="The iPhone 15 Pro is amazing. The camera quality is outstanding and the performance is incredible.",
+                helpful_votes=15
             ),
             Review(
-                product_id=1,
-                user_id="user_456",
+                product_id=products[0].id,
+                user_id=test_user.id,
                 rating=4,
-                title="Great but expensive",
-                comment="Excellent phone with great features, but quite expensive. Worth it if you can afford it.",
-                helpful_votes=23,
-                verified_purchase=True
+                title="Great phone with minor issues",
+                comment="Overall great phone, but the battery life could be better. Camera is fantastic though.",
+                helpful_votes=8
             ),
             Review(
-                product_id=2,
-                user_id="user_789",
+                product_id=products[1].id,
+                user_id=test_user.id,
                 rating=5,
-                title="Perfect laptop",
-                comment="The M2 chip is incredibly fast and the battery life is amazing. Perfect for work and play.",
-                helpful_votes=67,
-                verified_purchase=True
-            ),
-            Review(
-                product_id=3,
-                user_id="user_101",
-                rating=4,
-                title="Excellent noise cancellation",
-                comment="The noise cancellation is incredible. Perfect for travel and work. Battery life is great too.",
-                helpful_votes=34,
-                verified_purchase=True
+                title="Best Android phone ever",
+                comment="The S24 Ultra is incredible. The S Pen is a game changer and the camera is phenomenal.",
+                helpful_votes=23
             )
         ]
         
@@ -371,31 +270,96 @@ def create_sample_data():
             db.add(review)
         db.commit()
         
-        # Create AI recommendations
+        # Create sample orders
+        orders = [
+            Order(
+                user_id=test_user.id,
+                order_number="ORD-2024-001",
+                status="delivered",
+                payment_status="paid",
+                payment_method="credit_card",
+                subtotal=999.99,
+                tax=89.99,
+                shipping_cost=0.0,
+                discount=0.0,
+                total=1089.98,
+                shipping_address={
+                    "first_name": "Test",
+                    "last_name": "User",
+                    "address_line1": "123 Main St",
+                    "city": "New York",
+                    "state": "NY",
+                    "postal_code": "10001",
+                    "country": "USA"
+                },
+                billing_address={
+                    "first_name": "Test",
+                    "last_name": "User",
+                    "address_line1": "123 Main St",
+                    "city": "New York",
+                    "state": "NY",
+                    "postal_code": "10001",
+                    "country": "USA"
+                }
+            )
+        ]
+        
+        for order in orders:
+            db.add(order)
+        db.commit()
+        
+        # Create sample order items
+        order_items = [
+            OrderItem(
+                order_id=orders[0].id,
+                product_id=products[0].id,
+                quantity=1,
+                unit_price=999.99,
+                total_price=999.99
+            )
+        ]
+        
+        for item in order_items:
+            db.add(item)
+        db.commit()
+        
+        # Create sample addresses
+        addresses = [
+            Address(
+                user_id=test_user.id,
+                first_name="Test",
+                last_name="User",
+                address_line1="123 Main St",
+                city="New York",
+                state="NY",
+                postal_code="10001",
+                country="USA",
+                phone="+1-555-123-4567",
+                email="test@example.com",
+                address_type="shipping",
+                is_default=True
+            )
+        ]
+        
+        for address in addresses:
+            db.add(address)
+        db.commit()
+        
+        # Create sample AI recommendations
         ai_recommendations = [
             AIRecommendation(
-                user_id="user_123",
-                product_id=1,
-                recommended_product_id=2,
-                score=0.95,
-                reason="Users who bought iPhone also bought MacBook",
-                algorithm="collaborative_filtering"
+                user_id=test_user.id,
+                product_id=products[1].id,
+                recommendation_type="similar",
+                score=0.85,
+                reason="Based on your interest in smartphones"
             ),
             AIRecommendation(
-                user_id="user_123",
-                product_id=1,
-                recommended_product_id=3,
-                score=0.87,
-                reason="Similar to other premium electronics",
-                algorithm="content_based"
-            ),
-            AIRecommendation(
-                user_id="user_123",
-                product_id=2,
-                recommended_product_id=1,
+                user_id=test_user.id,
+                product_id=products[3].id,
+                recommendation_type="trending",
                 score=0.92,
-                reason="Apple ecosystem recommendation",
-                algorithm="collaborative_filtering"
+                reason="Popular among tech enthusiasts"
             )
         ]
         
@@ -403,19 +367,13 @@ def create_sample_data():
             db.add(rec)
         db.commit()
         
-        # Create price alerts
+        # Create sample price alerts
         price_alerts = [
             PriceAlert(
-                user_id="user_123",
-                product_id=1,
-                target_price=1100.0,
-                current_price=1199.99
-            ),
-            PriceAlert(
-                user_id="user_123",
-                product_id=3,
-                target_price=300.0,
-                current_price=349.99
+                user_id=test_user.id,
+                product_id=products[2].id,
+                target_price=1800.00,
+                current_price=1999.99
             )
         ]
         
@@ -423,17 +381,12 @@ def create_sample_data():
             db.add(alert)
         db.commit()
         
-        # Create product comparisons
+        # Create sample product comparisons
         comparisons = [
             ProductComparison(
-                user_id="user_123",
-                name="iPhone vs Samsung",
-                product_ids=[1, 2]  # iPhone and MacBook for demo
-            ),
-            ProductComparison(
-                user_id="user_123",
-                name="Headphones Comparison",
-                product_ids=[3]  # Just Sony headphones for demo
+                user_id=test_user.id,
+                name="Smartphone Comparison",
+                product_ids=[products[0].id, products[1].id]
             )
         ]
         
@@ -441,50 +394,29 @@ def create_sample_data():
             db.add(comp)
         db.commit()
         
-        # Create recently viewed
+        # Create sample recently viewed
         recently_viewed = [
             RecentlyViewed(
-                user_id="user_123",
-                product_id=1,
-                session_id="session_123"
+                user_id=test_user.id,
+                product_id=products[0].id
             ),
             RecentlyViewed(
-                user_id="user_123",
-                product_id=2,
-                session_id="session_123"
-            ),
-            RecentlyViewed(
-                user_id="user_123",
-                product_id=3,
-                session_id="session_123"
+                user_id=test_user.id,
+                product_id=products[1].id
             )
         ]
         
-        for view in recently_viewed:
-            db.add(view)
+        for viewed in recently_viewed:
+            db.add(viewed)
         db.commit()
         
-        # Create product questions
+        # Create sample product questions
         questions = [
             ProductQuestion(
-                product_id=1,
-                user_id="user_456",
-                question="Does this come with a charger?",
-                is_answered=True,
-                answered_at=datetime.now()
-            ),
-            ProductQuestion(
-                product_id=1,
-                user_id="user_789",
-                question="What colors are available?",
-                is_answered=False
-            ),
-            ProductQuestion(
-                product_id=2,
-                user_id="user_101",
-                question="Can I upgrade the RAM later?",
-                is_answered=True,
-                answered_at=datetime.now()
+                product_id=products[0].id,
+                user_id=test_user.id,
+                question="Does this phone support 5G?",
+                helpful_votes=5
             )
         ]
         
@@ -492,20 +424,13 @@ def create_sample_data():
             db.add(question)
         db.commit()
         
-        # Create product answers
+        # Create sample product answers
         answers = [
             ProductAnswer(
-                question_id=1,
-                answer="No, the iPhone 15 Pro Max does not come with a charger. You'll need to purchase one separately or use an existing USB-C charger.",
-                answered_by="Apple Support",
+                question_id=questions[0].id,
+                user_id=test_user.id,
+                answer="Yes, the iPhone 15 Pro supports 5G networks and includes advanced 5G capabilities.",
                 helpful_votes=12,
-                is_verified=True
-            ),
-            ProductAnswer(
-                question_id=3,
-                answer="No, the RAM in MacBook Air M2 is unified memory and cannot be upgraded after purchase. Choose the configuration you need when buying.",
-                answered_by="Apple Support",
-                helpful_votes=8,
                 is_verified=True
             )
         ]
@@ -514,10 +439,10 @@ def create_sample_data():
             db.add(answer)
         db.commit()
         
-        logger.info("Sample marketplace data created successfully")
+        logger.info("Sample data created successfully")
         
     except Exception as e:
-        logger.error(f"Error creating sample data: {e}")
+        logger.error(f"Error creating sample data: {str(e)}")
         db.rollback()
         raise
     finally:
@@ -525,4 +450,3 @@ def create_sample_data():
 
 if __name__ == "__main__":
     init_database()
-    create_sample_data()

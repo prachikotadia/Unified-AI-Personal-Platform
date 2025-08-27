@@ -1,223 +1,200 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func, desc
-from app.models.marketplace_db import (
-    Product, Review, CartItem, WishlistItem, Order, OrderItem, 
-    Category, AIRecommendation, PriceAlert, ProductComparison, 
-    RecentlyViewed, ProductQuestion, ProductAnswer, InventoryLog,
-    Return, ShippingZone, ShippingRate, TaxRate, LoyaltyProgram,
-    LoyaltyTransaction
-)
-from app.models.marketplace_db import (
-    OrderStatus, PaymentStatus, PaymentMethod, ShippingMethod,
-    ReturnStatus, InventoryStatus
-)
-import structlog
+from sqlalchemy import and_, or_, desc, asc, func
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import uuid
-import json
+import structlog
+from app.models.marketplace_db import (
+    Product, Review, CartItem, WishlistItem, Order, OrderItem, 
+    Category, SearchHistory, ProductView, ProductCategory, 
+    ProductSubcategory, OrderStatus, PaymentStatus, PaymentMethod,
+    AIRecommendation, PriceAlert, ProductComparison, RecentlyViewed,
+    ProductQuestion, ProductAnswer
+)
 
 logger = structlog.get_logger()
 
 class MarketplaceService:
     def __init__(self, db: Session):
         self.db = db
-
-    # Product Management
-    def get_products(self, skip: int = 0, limit: int = 20, category_id: int = None, 
-                    search: str = None, min_price: float = None, max_price: float = None,
-                    sort_by: str = "created_at", sort_order: str = "desc"):
-        """Get products with filtering and sorting"""
-        query = self.db.query(Product).filter(Product.is_active == True)
+    
+    # Product Operations
+    def get_products(self, category: Optional[str] = None, subcategory: Optional[str] = None,
+                    min_price: Optional[float] = None, max_price: Optional[float] = None,
+                    brand: Optional[str] = None, rating: Optional[float] = None,
+                    in_stock: Optional[bool] = None, sort_by: str = "relevance",
+                    sort_order: str = "desc", page: int = 1, limit: int = 20) -> Dict[str, Any]:
+        """Get products with advanced filtering and sorting"""
+        query = self.db.query(Product)
         
-        if category_id:
-            query = query.filter(Product.category_id == category_id)
-        
-        if search:
-            search_term = f"%{search}%"
-            query = query.filter(
-                or_(
-                    Product.name.ilike(search_term),
-                    Product.description.ilike(search_term),
-                    Product.brand.ilike(search_term)
-                )
-            )
-        
+        # Apply filters
+        if category:
+            query = query.filter(Product.category == category)
+        if subcategory:
+            query = query.filter(Product.subcategory == subcategory)
         if min_price is not None:
             query = query.filter(Product.price >= min_price)
-        
         if max_price is not None:
             query = query.filter(Product.price <= max_price)
+        if brand:
+            query = query.filter(Product.brand.ilike(f"%{brand}%"))
+        if rating is not None:
+            query = query.filter(Product.rating >= rating)
+        if in_stock is not None:
+            if in_stock:
+                query = query.filter(Product.stock_quantity > 0)
+            else:
+                query = query.filter(Product.stock_quantity == 0)
         
-        # Sorting
+        # Apply sorting
         if sort_by == "price":
-            order_col = Product.price
+            query = query.order_by(asc(Product.price) if sort_order == "asc" else desc(Product.price))
         elif sort_by == "rating":
-            order_col = Product.rating
-        elif sort_by == "name":
-            order_col = Product.name
-        else:
-            order_col = Product.created_at
+            query = query.order_by(desc(Product.rating) if sort_order == "desc" else asc(Product.rating))
+        elif sort_by == "newest":
+            query = query.order_by(desc(Product.created_at))
+        elif sort_by == "featured":
+            query = query.order_by(desc(Product.featured), desc(Product.rating))
+        else:  # relevance - default sorting
+            query = query.order_by(desc(Product.featured), desc(Product.trending), desc(Product.rating))
         
-        if sort_order == "asc":
-            query = query.order_by(order_col.asc())
-        else:
-            query = query.order_by(order_col.desc())
-        
+        # Pagination
         total = query.count()
-        products = query.offset(skip).limit(limit).all()
+        products = query.offset((page - 1) * limit).limit(limit).all()
         
         return {
             "products": products,
             "total": total,
-            "skip": skip,
-            "limit": limit
+            "page": page,
+            "limit": limit,
+            "pages": (total + limit - 1) // limit
         }
-
-    def get_product(self, product_id: int):
-        """Get a single product by ID"""
-        return self.db.query(Product).filter(Product.id == product_id).first()
-
-    def get_featured_products(self, limit: int = 10):
-        """Get featured products"""
-        return self.db.query(Product).filter(
-            Product.is_active == True,
-            Product.is_featured == True
-        ).limit(limit).all()
-
-    def get_deal_products(self, limit: int = 10):
-        """Get products with deals"""
-        return self.db.query(Product).filter(
-            Product.is_active == True,
-            Product.is_deal == True,
-            Product.discount_percentage > 0
-        ).limit(limit).all()
-
-    def get_trending_products(self, limit: int = 10):
-        """Get trending products based on views and sales"""
-        return self.db.query(Product).filter(
-            Product.is_active == True,
-            Product.is_trending == True
-        ).order_by(desc(Product.view_count)).limit(limit).all()
-
-    # Inventory Management
-    def update_inventory(self, product_id: int, quantity: int, action: str, 
-                        user_id: str = None, reason: str = None):
-        """Update product inventory with logging"""
-        product = self.get_product(product_id)
-        if not product:
-            return None
-        
-        previous_quantity = product.stock_quantity
-        
-        if action == "stock_in":
-            product.stock_quantity += quantity
-        elif action == "stock_out":
-            product.stock_quantity = max(0, product.stock_quantity - quantity)
-        elif action == "adjustment":
-            product.stock_quantity = quantity
-        elif action == "reserved":
-            # For reserved inventory (in cart but not purchased)
-            pass
-        
-        # Log inventory change
-        inventory_log = InventoryLog(
-            product_id=product_id,
-            user_id=user_id,
-            action=action,
-            quantity=quantity,
-            previous_quantity=previous_quantity,
-            new_quantity=product.stock_quantity,
-            reason=reason
+    
+    def search_products(self, query: str, filters: Optional[Dict] = None,
+                       sort_by: str = "relevance", sort_order: str = "desc",
+                       page: int = 1, limit: int = 20) -> Dict[str, Any]:
+        """Search products with advanced filtering"""
+        search_query = self.db.query(Product).filter(
+            or_(
+                Product.name.ilike(f"%{query}%"),
+                Product.description.ilike(f"%{query}%"),
+                Product.brand.ilike(f"%{query}%"),
+                Product.tags.contains([query])
+            )
         )
         
-        self.db.add(inventory_log)
-        self.db.commit()
+        # Apply additional filters
+        if filters:
+            if filters.get("category"):
+                search_query = search_query.filter(Product.category == filters["category"])
+            if filters.get("min_price"):
+                search_query = search_query.filter(Product.price >= filters["min_price"])
+            if filters.get("max_price"):
+                search_query = search_query.filter(Product.price <= filters["max_price"])
+            if filters.get("rating"):
+                search_query = search_query.filter(Product.rating >= filters["rating"])
+            if filters.get("in_stock"):
+                search_query = search_query.filter(Product.stock_quantity > 0)
         
-        return product
-
-    def get_inventory_status(self, product_id: int):
-        """Get current inventory status"""
-        product = self.get_product(product_id)
-        if not product:
-            return None
+        # Apply sorting
+        if sort_by == "price":
+            search_query = search_query.order_by(asc(Product.price) if sort_order == "asc" else desc(Product.price))
+        elif sort_by == "rating":
+            search_query = search_query.order_by(desc(Product.rating) if sort_order == "desc" else asc(Product.rating))
+        elif sort_by == "newest":
+            search_query = search_query.order_by(desc(Product.created_at))
+        else:  # relevance
+            search_query = search_query.order_by(desc(Product.featured), desc(Product.rating))
         
-        if product.stock_quantity == 0:
-            status = InventoryStatus.out_of_stock
-        elif product.stock_quantity <= product.min_stock_threshold:
-            status = InventoryStatus.low_stock
-        else:
-            status = InventoryStatus.in_stock
+        # Pagination
+        total = search_query.count()
+        products = search_query.offset((page - 1) * limit).limit(limit).all()
+        
+        # Record search history
+        self.record_search_history("user_123", query, total)
         
         return {
-            "product_id": product_id,
-            "current_stock": product.stock_quantity,
-            "min_threshold": product.min_stock_threshold,
-            "status": status,
-            "last_updated": datetime.utcnow()
+            "products": products,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "pages": (total + limit - 1) // limit,
+            "query": query
         }
-
-    def get_inventory_logs(self, product_id: int, limit: int = 50):
-        """Get inventory change logs"""
-        return self.db.query(InventoryLog).filter(
-            InventoryLog.product_id == product_id
-        ).order_by(desc(InventoryLog.created_at)).limit(limit).all()
-
-    # Cart Management
-    def get_cart(self, user_id: str):
-        """Get user's cart items"""
+    
+    def get_product_by_id(self, product_id: int) -> Optional[Product]:
+        """Get product by ID"""
+        return self.db.query(Product).filter(Product.id == product_id).first()
+    
+    def get_featured_products(self, limit: int = 8) -> List[Product]:
+        """Get featured products"""
+        return self.db.query(Product).filter(Product.featured == True).limit(limit).all()
+    
+    def get_trending_products(self, limit: int = 8) -> List[Product]:
+        """Get trending products"""
+        return self.db.query(Product).filter(Product.trending == True).limit(limit).all()
+    
+    def get_deals(self, limit: int = 8) -> List[Product]:
+        """Get products with discounts"""
+        return self.db.query(Product).filter(
+            and_(Product.discount_percentage > 0, Product.discount_percentage <= 50)
+        ).limit(limit).all()
+    
+    def get_prime_products(self, limit: int = 8) -> List[Product]:
+        """Get prime eligible products"""
+        return self.db.query(Product).filter(Product.prime_eligible == True).limit(limit).all()
+    
+    def get_popular_products(self, limit: int = 8) -> List[Product]:
+        """Get popular products based on views and ratings"""
+        return self.db.query(Product).order_by(
+            desc(Product.rating), desc(Product.review_count)
+        ).limit(limit).all()
+    
+    # Cart Operations
+    def get_cart(self, user_id: str) -> List[CartItem]:
+        """Get user's cart"""
         return self.db.query(CartItem).filter(CartItem.user_id == user_id).all()
-
-    def add_to_cart(self, user_id: str, product_id: int, quantity: int = 1):
-        """Add item to cart"""
-        # Check if item already in cart
+    
+    def add_to_cart(self, user_id: str, product_id: int, quantity: int = 1) -> CartItem:
+        """Add product to cart"""
         existing_item = self.db.query(CartItem).filter(
-            CartItem.user_id == user_id,
-            CartItem.product_id == product_id
+            and_(CartItem.user_id == user_id, CartItem.product_id == product_id)
         ).first()
         
         if existing_item:
             existing_item.quantity += quantity
             self.db.commit()
             return existing_item
-        
-        # Check inventory
-        product = self.get_product(product_id)
-        if not product or product.stock_quantity < quantity:
-            return None
-        
-        cart_item = CartItem(
-            user_id=user_id,
-            product_id=product_id,
-            quantity=quantity
-        )
-        
-        self.db.add(cart_item)
-        self.db.commit()
-        return cart_item
-
-    def update_cart_item(self, user_id: str, product_id: int, quantity: int):
+        else:
+            cart_item = CartItem(
+                user_id=user_id,
+                product_id=product_id,
+                quantity=quantity
+            )
+            self.db.add(cart_item)
+            self.db.commit()
+            self.db.refresh(cart_item)
+            return cart_item
+    
+    def update_cart_item(self, user_id: str, product_id: int, quantity: int) -> Optional[CartItem]:
         """Update cart item quantity"""
         cart_item = self.db.query(CartItem).filter(
-            CartItem.user_id == user_id,
-            CartItem.product_id == product_id
+            and_(CartItem.user_id == user_id, CartItem.product_id == product_id)
         ).first()
         
-        if not cart_item:
-            return None
-        
-        if quantity <= 0:
-            self.db.delete(cart_item)
-        else:
-            cart_item.quantity = quantity
-        
-        self.db.commit()
-        return cart_item
-
-    def remove_from_cart(self, user_id: str, product_id: int):
-        """Remove item from cart"""
+        if cart_item:
+            if quantity <= 0:
+                self.db.delete(cart_item)
+            else:
+                cart_item.quantity = quantity
+            self.db.commit()
+            return cart_item
+        return None
+    
+    def remove_from_cart(self, user_id: str, product_id: int) -> bool:
+        """Remove product from cart"""
         cart_item = self.db.query(CartItem).filter(
-            CartItem.user_id == user_id,
-            CartItem.product_id == product_id
+            and_(CartItem.user_id == user_id, CartItem.product_id == product_id)
         ).first()
         
         if cart_item:
@@ -225,23 +202,24 @@ class MarketplaceService:
             self.db.commit()
             return True
         return False
-
-    def clear_cart(self, user_id: str):
-        """Clear user's entire cart"""
-        self.db.query(CartItem).filter(CartItem.user_id == user_id).delete()
+    
+    def clear_cart(self, user_id: str) -> bool:
+        """Clear user's cart"""
+        cart_items = self.db.query(CartItem).filter(CartItem.user_id == user_id).all()
+        for item in cart_items:
+            self.db.delete(item)
         self.db.commit()
         return True
-
-    # Wishlist Management
-    def get_wishlist(self, user_id: str):
+    
+    # Wishlist Operations
+    def get_wishlist(self, user_id: str) -> List[WishlistItem]:
         """Get user's wishlist"""
         return self.db.query(WishlistItem).filter(WishlistItem.user_id == user_id).all()
-
-    def add_to_wishlist(self, user_id: str, product_id: int):
-        """Add item to wishlist"""
+    
+    def add_to_wishlist(self, user_id: str, product_id: int) -> WishlistItem:
+        """Add product to wishlist"""
         existing_item = self.db.query(WishlistItem).filter(
-            WishlistItem.user_id == user_id,
-            WishlistItem.product_id == product_id
+            and_(WishlistItem.user_id == user_id, WishlistItem.product_id == product_id)
         ).first()
         
         if existing_item:
@@ -251,16 +229,15 @@ class MarketplaceService:
             user_id=user_id,
             product_id=product_id
         )
-        
         self.db.add(wishlist_item)
         self.db.commit()
+        self.db.refresh(wishlist_item)
         return wishlist_item
-
-    def remove_from_wishlist(self, user_id: str, product_id: int):
-        """Remove item from wishlist"""
+    
+    def remove_from_wishlist(self, user_id: str, product_id: int) -> bool:
+        """Remove product from wishlist"""
         wishlist_item = self.db.query(WishlistItem).filter(
-            WishlistItem.user_id == user_id,
-            WishlistItem.product_id == product_id
+            and_(WishlistItem.user_id == user_id, WishlistItem.product_id == product_id)
         ).first()
         
         if wishlist_item:
@@ -268,321 +245,201 @@ class MarketplaceService:
             self.db.commit()
             return True
         return False
-
-    # Order Management
-    def create_order(self, user_id: str, cart_items: list, shipping_address: dict,
-                    billing_address: dict, payment_method: PaymentMethod,
-                    shipping_method: ShippingMethod = ShippingMethod.standard):
+    
+    # Order Operations
+    def create_order(self, user_id: str, cart_items: List[CartItem], 
+                    shipping_address: Dict, billing_address: Dict,
+                    payment_method: PaymentMethod) -> Order:
         """Create a new order"""
         # Calculate totals
-        subtotal = 0
-        order_items = []
-        
-        for item in cart_items:
-            product = self.get_product(item.product_id)
-            if not product or product.stock_quantity < item.quantity:
-                return None
-            
-            item_total = product.price * item.quantity
-            subtotal += item_total
-            
-            order_items.append({
-                "product_id": item.product_id,
-                "product_name": product.name,
-                "product_sku": product.sku,
-                "quantity": item.quantity,
-                "unit_price": product.price,
-                "total_price": item_total
-            })
-        
-        # Calculate shipping
-        shipping_amount = self.calculate_shipping(shipping_address, shipping_method, subtotal)
-        
-        # Calculate tax
-        tax_amount = self.calculate_tax(billing_address, subtotal)
-        
-        # Calculate total
-        total_amount = subtotal + shipping_amount + tax_amount
+        subtotal = sum(item.product.price * item.quantity for item in cart_items)
+        tax = subtotal * 0.08  # 8% tax
+        shipping = 0.0 if subtotal > 50 else 5.99  # Free shipping over $50
+        total = subtotal + tax + shipping
         
         # Create order
         order = Order(
             user_id=user_id,
-            order_number=f"ORD-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:8].upper()}",
+            order_number=f"ORD-{uuid.uuid4().hex[:8].upper()}",
             status=OrderStatus.pending,
             payment_status=PaymentStatus.pending,
             payment_method=payment_method,
             subtotal=subtotal,
-            tax_amount=tax_amount,
-            shipping_amount=shipping_amount,
-            total_amount=total_amount,
+            tax=tax,
+            shipping=shipping,
+            total=total,
             shipping_address=shipping_address,
-            billing_address=billing_address,
-            shipping_method=shipping_method
+            billing_address=billing_address
         )
-        
         self.db.add(order)
-        self.db.flush()  # Get the order ID
+        self.db.commit()
+        self.db.refresh(order)
         
         # Create order items
-        for item_data in order_items:
+        for cart_item in cart_items:
             order_item = OrderItem(
                 order_id=order.id,
-                **item_data
+                product_id=cart_item.product_id,
+                quantity=cart_item.quantity,
+                price=cart_item.product.price
             )
             self.db.add(order_item)
-            
-            # Update inventory
-            self.update_inventory(
-                item_data["product_id"],
-                item_data["quantity"],
-                "stock_out",
-                user_id,
-                "Order purchase"
-            )
         
         # Clear cart
         self.clear_cart(user_id)
         
-        # Add loyalty points
-        self.add_loyalty_points(user_id, int(subtotal), f"Order {order.order_number}")
-        
         self.db.commit()
         return order
-
-    def get_orders(self, user_id: str, skip: int = 0, limit: int = 20):
+    
+    def get_user_orders(self, user_id: str) -> List[Order]:
         """Get user's orders"""
-        query = self.db.query(Order).filter(Order.user_id == user_id)
-        total = query.count()
-        orders = query.order_by(desc(Order.created_at)).offset(skip).limit(limit).all()
-        
-        return {
-            "orders": orders,
-            "total": total,
-            "skip": skip,
-            "limit": limit
-        }
-
-    def get_order(self, order_id: int, user_id: str = None):
-        """Get a specific order"""
-        query = self.db.query(Order).filter(Order.id == order_id)
-        if user_id:
-            query = query.filter(Order.user_id == user_id)
-        return query.first()
-
-    def update_order_status(self, order_id: int, status: OrderStatus):
+        return self.db.query(Order).filter(Order.user_id == user_id).order_by(desc(Order.created_at)).all()
+    
+    def get_order_by_id(self, order_id: int) -> Optional[Order]:
+        """Get order by ID"""
+        return self.db.query(Order).filter(Order.id == order_id).first()
+    
+    def update_order_status(self, order_id: int, status: OrderStatus) -> Optional[Order]:
         """Update order status"""
-        order = self.db.query(Order).filter(Order.id == order_id).first()
+        order = self.get_order_by_id(order_id)
         if order:
             order.status = status
-            order.updated_at = datetime.utcnow()
             self.db.commit()
-            return order
-        return None
-
-    # Shipping Calculator
-    def calculate_shipping(self, shipping_address: dict, shipping_method: ShippingMethod, 
-                          subtotal: float) -> float:
-        """Calculate shipping cost based on address and method"""
-        # Mock shipping calculation
-        base_rate = 0
+            self.db.refresh(order)
+        return order
+    
+    # Review Operations
+    def get_product_reviews(self, product_id: int, page: int = 1, limit: int = 10) -> Dict[str, Any]:
+        """Get product reviews with pagination"""
+        query = self.db.query(Review).filter(Review.product_id == product_id)
+        total = query.count()
+        reviews = query.order_by(desc(Review.created_at)).offset((page - 1) * limit).limit(limit).all()
         
-        if shipping_method == ShippingMethod.standard:
-            base_rate = 5.99
-        elif shipping_method == ShippingMethod.express:
-            base_rate = 12.99
-        elif shipping_method == ShippingMethod.overnight:
-            base_rate = 24.99
-        elif shipping_method == ShippingMethod.same_day:
-            base_rate = 34.99
-        elif shipping_method == ShippingMethod.international:
-            base_rate = 29.99
-        
-        # Free shipping for orders over $50
-        if subtotal >= 50 and shipping_method == ShippingMethod.standard:
-            return 0
-        
-        return base_rate
-
-    # Tax Calculator
-    def calculate_tax(self, billing_address: dict, subtotal: float) -> float:
-        """Calculate tax based on billing address"""
-        # Mock tax calculation
-        state = billing_address.get("state", "")
-        
-        # Sample tax rates
-        tax_rates = {
-            "CA": 0.0825,  # 8.25%
-            "NY": 0.085,   # 8.5%
-            "TX": 0.0625,  # 6.25%
-            "FL": 0.06,    # 6%
-            "WA": 0.065    # 6.5%
+        return {
+            "reviews": reviews,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "pages": (total + limit - 1) // limit
         }
-        
-        rate = tax_rates.get(state, 0.07)  # Default 7%
-        return subtotal * rate
-
-    # Return/Refund System
-    def create_return(self, user_id: str, order_id: int, reason: str, 
-                     description: str = None, return_method: str = "shipping"):
-        """Create a return request"""
-        order = self.get_order(order_id, user_id)
-        if not order:
-            return None
-        
-        # Check if return already exists
-        existing_return = self.db.query(Return).filter(
-            Return.order_id == order_id
-        ).first()
-        
-        if existing_return:
-            return existing_return
-        
-        return_request = Return(
-            order_id=order_id,
+    
+    def create_review(self, user_id: str, product_id: int, rating: int, 
+                     title: str, comment: str) -> Review:
+        """Create a product review"""
+        review = Review(
             user_id=user_id,
-            return_number=f"RET-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:8].upper()}",
-            status=ReturnStatus.requested,
-            reason=reason,
-            description=description,
-            return_method=return_method
+            product_id=product_id,
+            rating=rating,
+            title=title,
+            comment=comment,
+            verified_purchase=True  # Mock verified purchase
         )
-        
-        self.db.add(return_request)
+        self.db.add(review)
         self.db.commit()
-        return return_request
-
-    def get_returns(self, user_id: str):
-        """Get user's returns"""
-        return self.db.query(Return).filter(Return.user_id == user_id).all()
-
-    def update_return_status(self, return_id: int, status: ReturnStatus, 
-                           refund_amount: float = None):
-        """Update return status"""
-        return_request = self.db.query(Return).filter(Return.id == return_id).first()
-        if return_request:
-            return_request.status = status
-            if refund_amount:
-                return_request.refund_amount = refund_amount
-            return_request.updated_at = datetime.utcnow()
-            self.db.commit()
-            return return_request
-        return None
-
-    # Loyalty Program
-    def get_loyalty_program(self, user_id: str):
-        """Get user's loyalty program status"""
-        loyalty = self.db.query(LoyaltyProgram).filter(
-            LoyaltyProgram.user_id == user_id
-        ).first()
+        self.db.refresh(review)
         
-        if not loyalty:
-            # Create new loyalty account
-            loyalty = LoyaltyProgram(user_id=user_id)
-            self.db.add(loyalty)
-            self.db.commit()
+        # Update product rating
+        self.update_product_rating(product_id)
         
-        return loyalty
-
-    def add_loyalty_points(self, user_id: str, amount: int, description: str):
-        """Add loyalty points to user account"""
-        loyalty = self.get_loyalty_program(user_id)
-        
-        # Calculate points (1 point per dollar spent)
-        points = amount
-        
-        loyalty.points_balance += points
-        loyalty.total_points_earned += points
-        
-        # Update tier
-        self.update_loyalty_tier(loyalty)
-        
-        # Log transaction
-        transaction = LoyaltyTransaction(
+        return review
+    
+    def update_product_rating(self, product_id: int):
+        """Update product average rating and review count"""
+        product = self.get_product_by_id(product_id)
+        if product:
+            reviews = self.db.query(Review).filter(Review.product_id == product_id).all()
+            if reviews:
+                avg_rating = sum(r.rating for r in reviews) / len(reviews)
+                product.rating = round(avg_rating, 1)
+                product.review_count = len(reviews)
+                self.db.commit()
+    
+    # Category Operations
+    def get_categories(self) -> List[Category]:
+        """Get all categories"""
+        return self.db.query(Category).filter(Category.parent_id == None).order_by(Category.sort_order).all()
+    
+    def get_category_by_slug(self, slug: str) -> Optional[Category]:
+        """Get category by slug"""
+        return self.db.query(Category).filter(Category.slug == slug).first()
+    
+    # Search History
+    def record_search_history(self, user_id: str, query: str, results_count: int):
+        """Record search history"""
+        search_history = SearchHistory(
             user_id=user_id,
-            transaction_type="earned",
-            points=points,
-            description=description
+            query=query,
+            results_count=results_count
         )
-        
-        self.db.add(transaction)
+        self.db.add(search_history)
         self.db.commit()
-        
-        return loyalty
-
-    def redeem_loyalty_points(self, user_id: str, points: int, description: str):
-        """Redeem loyalty points"""
-        loyalty = self.get_loyalty_program(user_id)
-        
-        if loyalty.points_balance < points:
-            return None
-        
-        loyalty.points_balance -= points
-        loyalty.total_points_redeemed += points
-        
-        # Log transaction
-        transaction = LoyaltyTransaction(
+    
+    # Product Views
+    def record_product_view(self, user_id: str, product_id: int, session_id: str = None):
+        """Record product view"""
+        product_view = ProductView(
             user_id=user_id,
-            transaction_type="redeemed",
-            points=-points,
-            description=description
+            product_id=product_id,
+            session_id=session_id
         )
-        
-        self.db.add(transaction)
+        self.db.add(product_view)
         self.db.commit()
-        
-        return loyalty
-
-    def update_loyalty_tier(self, loyalty: LoyaltyProgram):
-        """Update user's loyalty tier based on points"""
-        if loyalty.total_points_earned >= 10000:
-            tier = "platinum"
-            next_tier_points = 15000
-        elif loyalty.total_points_earned >= 5000:
-            tier = "gold"
-            next_tier_points = 10000
-        elif loyalty.total_points_earned >= 1000:
-            tier = "silver"
-            next_tier_points = 5000
-        else:
-            tier = "bronze"
-            next_tier_points = 1000
-        
-        loyalty.tier = tier
-        loyalty.tier_points = loyalty.total_points_earned
-        loyalty.next_tier_points = next_tier_points
-
-    def get_loyalty_transactions(self, user_id: str, limit: int = 50):
-        """Get user's loyalty transactions"""
-        return self.db.query(LoyaltyTransaction).filter(
-            LoyaltyTransaction.user_id == user_id
-        ).order_by(desc(LoyaltyTransaction.created_at)).limit(limit).all()
-
-    # Enhanced Features (AI Recommendations, Price Alerts, etc.)
-    def get_ai_recommendations(self, user_id: str, product_id: int = None, limit: int = 10):
+    
+    # Enhanced Features
+    
+    # AI Recommendations
+    def get_ai_recommendations(self, user_id: str, product_id: Optional[int] = None, limit: int = 8) -> List[Product]:
         """Get AI-powered product recommendations"""
-        query = self.db.query(AIRecommendation).filter(AIRecommendation.user_id == user_id)
-        
         if product_id:
-            query = query.filter(AIRecommendation.product_id == product_id)
-        
-        recommendations = query.order_by(desc(AIRecommendation.score)).limit(limit).all()
-        return recommendations
-
-    def create_price_alert(self, user_id: str, product_id: int, target_price: float):
-        """Create a price alert"""
-        product = self.get_product(product_id)
+            # Get recommendations based on specific product
+            recommendations = self.db.query(AIRecommendation).filter(
+                AIRecommendation.product_id == product_id
+            ).order_by(desc(AIRecommendation.score)).limit(limit).all()
+            
+            recommended_products = []
+            for rec in recommendations:
+                product = self.get_product_by_id(rec.recommended_product_id)
+                if product:
+                    recommended_products.append(product)
+            return recommended_products
+        else:
+            # Get general recommendations based on user behavior
+            # This is a simplified version - in production, you'd use ML models
+            return self.get_popular_products(limit)
+    
+    def create_ai_recommendation(self, user_id: str, product_id: int, 
+                               recommended_product_id: int, score: float, 
+                               reason: str, algorithm: str = "collaborative_filtering"):
+        """Create AI recommendation"""
+        recommendation = AIRecommendation(
+            user_id=user_id,
+            product_id=product_id,
+            recommended_product_id=recommended_product_id,
+            score=score,
+            reason=reason,
+            algorithm=algorithm
+        )
+        self.db.add(recommendation)
+        self.db.commit()
+        return recommendation
+    
+    # Price Alerts
+    def create_price_alert(self, user_id: str, product_id: int, target_price: float) -> PriceAlert:
+        """Create price alert"""
+        product = self.get_product_by_id(product_id)
         if not product:
-            return None
+            raise ValueError("Product not found")
         
         # Check if alert already exists
         existing_alert = self.db.query(PriceAlert).filter(
-            PriceAlert.user_id == user_id,
-            PriceAlert.product_id == product_id,
-            PriceAlert.is_active == True
+            and_(PriceAlert.user_id == user_id, PriceAlert.product_id == product_id)
         ).first()
         
         if existing_alert:
             existing_alert.target_price = target_price
+            existing_alert.current_price = product.price
+            existing_alert.is_active = True
+            existing_alert.notified = False
             self.db.commit()
             return existing_alert
         
@@ -592,153 +449,175 @@ class MarketplaceService:
             target_price=target_price,
             current_price=product.price
         )
-        
         self.db.add(alert)
         self.db.commit()
+        self.db.refresh(alert)
         return alert
-
-    def get_price_alerts(self, user_id: str):
+    
+    def get_user_price_alerts(self, user_id: str) -> List[PriceAlert]:
         """Get user's price alerts"""
         return self.db.query(PriceAlert).filter(
-            PriceAlert.user_id == user_id,
-            PriceAlert.is_active == True
+            and_(PriceAlert.user_id == user_id, PriceAlert.is_active == True)
         ).all()
-
-    def create_product_comparison(self, user_id: str, name: str, product_ids: list):
-        """Create a product comparison"""
+    
+    def delete_price_alert(self, user_id: str, alert_id: int) -> bool:
+        """Delete price alert"""
+        alert = self.db.query(PriceAlert).filter(
+            and_(PriceAlert.user_id == user_id, PriceAlert.id == alert_id)
+        ).first()
+        
+        if alert:
+            self.db.delete(alert)
+            self.db.commit()
+            return True
+        return False
+    
+    def check_price_alerts(self):
+        """Check and trigger price alerts"""
+        alerts = self.db.query(PriceAlert).filter(
+            and_(PriceAlert.is_active == True, PriceAlert.notified == False)
+        ).all()
+        
+        triggered_alerts = []
+        for alert in alerts:
+            product = self.get_product_by_id(alert.product_id)
+            if product and product.price <= alert.target_price:
+                alert.notified = True
+                alert.current_price = product.price
+                triggered_alerts.append(alert)
+        
+        self.db.commit()
+        return triggered_alerts
+    
+    # Product Comparisons
+    def create_product_comparison(self, user_id: str, name: str, product_ids: List[int]) -> ProductComparison:
+        """Create product comparison"""
         comparison = ProductComparison(
             user_id=user_id,
             name=name,
             product_ids=product_ids
         )
-        
         self.db.add(comparison)
         self.db.commit()
+        self.db.refresh(comparison)
         return comparison
-
-    def get_product_comparisons(self, user_id: str):
+    
+    def get_user_comparisons(self, user_id: str) -> List[ProductComparison]:
         """Get user's product comparisons"""
         return self.db.query(ProductComparison).filter(
             ProductComparison.user_id == user_id
-        ).all()
-
-    def add_recently_viewed(self, user_id: str, product_id: int):
-        """Add product to recently viewed"""
-        # Remove existing entry if exists
-        self.db.query(RecentlyViewed).filter(
-            RecentlyViewed.user_id == user_id,
-            RecentlyViewed.product_id == product_id
-        ).delete()
+        ).order_by(desc(ProductComparison.updated_at)).all()
+    
+    def get_comparison_products(self, comparison_id: int) -> List[Product]:
+        """Get products in a comparison"""
+        comparison = self.db.query(ProductComparison).filter(
+            ProductComparison.id == comparison_id
+        ).first()
         
-        # Add new entry
-        recently_viewed = RecentlyViewed(
-            user_id=user_id,
-            product_id=product_id
-        )
+        if comparison:
+            return [self.get_product_by_id(pid) for pid in comparison.product_ids if self.get_product_by_id(pid)]
+        return []
+    
+    def delete_comparison(self, user_id: str, comparison_id: int) -> bool:
+        """Delete product comparison"""
+        comparison = self.db.query(ProductComparison).filter(
+            and_(ProductComparison.user_id == user_id, ProductComparison.id == comparison_id)
+        ).first()
         
-        self.db.add(recently_viewed)
-        self.db.commit()
-        return recently_viewed
-
-    def get_recently_viewed(self, user_id: str, limit: int = 10):
+        if comparison:
+            self.db.delete(comparison)
+            self.db.commit()
+            return True
+        return False
+    
+    # Recently Viewed
+    def get_recently_viewed(self, user_id: str, limit: int = 10) -> List[Product]:
         """Get user's recently viewed products"""
-        return self.db.query(RecentlyViewed).filter(
+        recent_views = self.db.query(RecentlyViewed).filter(
             RecentlyViewed.user_id == user_id
         ).order_by(desc(RecentlyViewed.viewed_at)).limit(limit).all()
-
-    # Reviews and Q&A
-    def create_review(self, user_id: str, product_id: int, rating: int, 
-                     title: str, comment: str, user_name: str = None):
-        """Create a product review"""
-        review = Review(
+        
+        products = []
+        seen_ids = set()
+        for view in recent_views:
+            if view.product_id not in seen_ids:
+                product = self.get_product_by_id(view.product_id)
+                if product:
+                    products.append(product)
+                    seen_ids.add(view.product_id)
+        
+        return products
+    
+    def add_recently_viewed(self, user_id: str, product_id: int, session_id: str = None):
+        """Add product to recently viewed"""
+        recent_view = RecentlyViewed(
+            user_id=user_id,
             product_id=product_id,
-            user_id=user_id,
-            user_name=user_name or f"User {user_id}",
-            rating=rating,
-            title=title,
-            comment=comment
+            session_id=session_id
         )
-        
-        self.db.add(review)
-        
-        # Update product rating
-        product = self.get_product(product_id)
-        if product:
-            # Recalculate average rating
-            avg_rating = self.db.query(func.avg(Review.rating)).filter(
-                Review.product_id == product_id
-            ).scalar()
-            
-            product.rating = avg_rating or 0
-            product.review_count += 1
-        
+        self.db.add(recent_view)
         self.db.commit()
-        return review
-
-    def get_product_reviews(self, product_id: int, skip: int = 0, limit: int = 20):
-        """Get product reviews"""
-        query = self.db.query(Review).filter(Review.product_id == product_id)
-        total = query.count()
-        reviews = query.order_by(desc(Review.created_at)).offset(skip).limit(limit).all()
-        
-        return {
-            "reviews": reviews,
-            "total": total,
-            "skip": skip,
-            "limit": limit
-        }
-
-    def create_product_question(self, user_id: str, product_id: int, question: str, 
-                               user_name: str = None):
-        """Create a product question"""
-        product_question = ProductQuestion(
-            product_id=product_id,
-            user_id=user_id,
-            user_name=user_name or f"User {user_id}",
-            question=question
-        )
-        
-        self.db.add(product_question)
-        self.db.commit()
-        return product_question
-
-    def answer_product_question(self, question_id: int, user_id: str, answer: str,
-                               user_name: str = None, user_type: str = "customer"):
-        """Answer a product question"""
-        product_answer = ProductAnswer(
-            question_id=question_id,
-            user_id=user_id,
-            user_name=user_name or f"User {user_id}",
-            user_type=user_type,
-            answer=answer
-        )
-        
-        self.db.add(product_answer)
-        self.db.commit()
-        return product_answer
-
-    def get_product_questions(self, product_id: int, skip: int = 0, limit: int = 20):
-        """Get product questions and answers"""
+    
+    # Q&A System
+    def get_product_questions(self, product_id: int, page: int = 1, limit: int = 10) -> Dict[str, Any]:
+        """Get product questions with pagination"""
         query = self.db.query(ProductQuestion).filter(ProductQuestion.product_id == product_id)
         total = query.count()
-        questions = query.order_by(desc(ProductQuestion.created_at)).offset(skip).limit(limit).all()
+        questions = query.order_by(desc(ProductQuestion.created_at)).offset((page - 1) * limit).limit(limit).all()
         
         return {
             "questions": questions,
             "total": total,
-            "skip": skip,
-            "limit": limit
+            "page": page,
+            "limit": limit,
+            "pages": (total + limit - 1) // limit
         }
-
-    # Categories
-    def get_categories(self):
-        """Get all categories"""
-        return self.db.query(Category).filter(Category.parent_id == None).all()
-
-    def get_category(self, category_id: int):
-        """Get a specific category"""
-        return self.db.query(Category).filter(Category.id == category_id).first()
-
-    def get_category_by_slug(self, slug: str):
-        """Get category by slug"""
-        return self.db.query(Category).filter(Category.slug == slug).first()
+    
+    def create_product_question(self, user_id: str, product_id: int, question: str) -> ProductQuestion:
+        """Create product question"""
+        product_question = ProductQuestion(
+            user_id=user_id,
+            product_id=product_id,
+            question=question
+        )
+        self.db.add(product_question)
+        self.db.commit()
+        self.db.refresh(product_question)
+        return product_question
+    
+    def answer_product_question(self, question_id: int, answer: str, answered_by: str) -> ProductAnswer:
+        """Answer a product question"""
+        product_answer = ProductAnswer(
+            question_id=question_id,
+            answer=answer,
+            answered_by=answered_by
+        )
+        self.db.add(product_answer)
+        
+        # Update question status
+        question = self.db.query(ProductQuestion).filter(ProductQuestion.id == question_id).first()
+        if question:
+            question.is_answered = True
+            question.answered_at = datetime.now()
+        
+        self.db.commit()
+        self.db.refresh(product_answer)
+        return product_answer
+    
+    def vote_question_helpful(self, question_id: int) -> bool:
+        """Vote question as helpful"""
+        question = self.db.query(ProductQuestion).filter(ProductQuestion.id == question_id).first()
+        if question:
+            question.helpful_votes += 1
+            self.db.commit()
+            return True
+        return False
+    
+    def vote_answer_helpful(self, answer_id: int) -> bool:
+        """Vote answer as helpful"""
+        answer = self.db.query(ProductAnswer).filter(ProductAnswer.id == answer_id).first()
+        if answer:
+            answer.helpful_votes += 1
+            self.db.commit()
+            return True
+        return False

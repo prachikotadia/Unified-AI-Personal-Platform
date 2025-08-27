@@ -1,21 +1,49 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Plus, 
   Search, 
-  Sparkles
+  Sparkles,
+  Wifi,
+  WifiOff
 } from 'lucide-react'
 import { useChatStore } from '../../store/chat'
+import { useAuthStore } from '../../store/auth'
 import { formatDateTime } from '../../lib/utils'
 import NewChatModal from '../../components/chat/NewChatModal'
 import AIInsights from '../../components/ai/AIInsights'
 import AIAssistant from '../../components/ai/AIAssistant'
+import ChatTest from '../../components/chat/ChatTest'
 
 const ChatPage = () => {
-  const { rooms, setCurrentRoom } = useChatStore()
+  const { user } = useAuthStore()
+  const { 
+    rooms, 
+    setCurrentRoom, 
+    connect, 
+    disconnect, 
+    isConnected, 
+    isLoading, 
+    error,
+    getRooms,
+    getUsers
+  } = useChatStore()
   const [searchTerm, setSearchTerm] = useState('')
   const [showNewChatModal, setShowNewChatModal] = useState(false)
+
+  // Connect to chat server on component mount
+  useEffect(() => {
+    if (user?.id && !isConnected) {
+      connect(user.id);
+    }
+    
+    return () => {
+      if (isConnected) {
+        disconnect();
+      }
+    };
+  }, [user?.id, isConnected, connect, disconnect]);
 
   // Filter rooms based on search
   const filteredRooms = rooms.filter(room =>
@@ -35,10 +63,30 @@ const ChatPage = () => {
             <p className="text-gray-600 dark:text-gray-400">
               Connect with friends and collaborate
             </p>
+            <div className="flex items-center space-x-2 mt-2">
+              {isConnected ? (
+                <div className="flex items-center space-x-1 text-green-600">
+                  <Wifi className="w-4 h-4" />
+                  <span className="text-sm">Connected</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1 text-red-600">
+                  <WifiOff className="w-4 h-4" />
+                  <span className="text-sm">Disconnected</span>
+                </div>
+              )}
+              {isLoading && (
+                <div className="text-blue-600 text-sm">Connecting...</div>
+              )}
+              {error && (
+                <div className="text-red-600 text-sm">{error}</div>
+              )}
+            </div>
           </div>
           <button 
             onClick={() => setShowNewChatModal(true)}
             className="btn-primary flex items-center space-x-2"
+            disabled={!isConnected}
           >
             <Plus className="w-4 h-4" />
             <span>New Chat</span>
@@ -150,6 +198,15 @@ const ChatPage = () => {
 
       {/* AI Assistant */}
       <AIAssistant module="chat" />
+
+      {/* Chat Test Component */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+      >
+        <ChatTest />
+      </motion.div>
     </div>
   )
 }

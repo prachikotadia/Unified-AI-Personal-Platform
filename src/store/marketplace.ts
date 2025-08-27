@@ -127,7 +127,7 @@ export const useMarketplaceStore = create<MarketplaceState>()(
             'Weight': '250g',
             'Driver Size': '40mm',
             'Frequency Response': '20Hz-20kHz'
-          },
+          } as Record<string, string>,
           features: [
             'Active Noise Cancellation',
             '30-hour battery life',
@@ -168,7 +168,7 @@ export const useMarketplaceStore = create<MarketplaceState>()(
             'Water Resistance': '5ATM',
             'GPS': 'Built-in',
             'Heart Rate': '24/7 monitoring'
-          },
+          } as Record<string, string>,
           features: [
             'Heart rate monitoring',
             'GPS tracking',
