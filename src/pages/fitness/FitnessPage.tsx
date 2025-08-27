@@ -124,14 +124,19 @@ const FitnessPage = () => {
           <div className="text-center">
             <div className="text-red-500 text-lg font-semibold mb-2">Error Loading Fitness Data</div>
             <p className="text-gray-600 dark:text-gray-400">
-              {errors.dashboard || errors.dailySummary}
+              You are offline. Please check your connection.
             </p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="btn-primary mt-4"
-            >
-              Try Again
-            </button>
+            <div className="mt-4 space-y-2">
+              <button 
+                onClick={() => window.location.reload()}
+                className="btn-primary"
+              >
+                Try Again
+              </button>
+              <p className="text-sm text-gray-500">
+                Note: This is a demo application. In production, you would need to deploy the backend services.
+              </p>
+            </div>
           </div>
         </div>
       </div>

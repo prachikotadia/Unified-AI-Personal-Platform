@@ -53,8 +53,10 @@ class NotificationService {
     // this.initializeWebSocket();
   }
 
+import { getWebSocketURL } from '../config/api';
+
   private initializeWebSocket() {
-    const wsUrl = import.meta.env?.VITE_WS_URL || 'ws://localhost:8000/ws/finance';
+    const wsUrl = getWebSocketURL('finance');
     
     try {
       this.ws = new WebSocket(wsUrl);
