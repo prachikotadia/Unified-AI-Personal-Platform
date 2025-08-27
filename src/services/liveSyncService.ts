@@ -1,4 +1,5 @@
 import { fitnessAPIService } from './fitnessAPI';
+import { getWebSocketURL, isBackendAvailable } from '../config/api';
 
 // Live Sync Service for real-time mobile device connectivity
 export class LiveSyncService {
@@ -19,9 +20,17 @@ export class LiveSyncService {
   }
 
   // Initialize WebSocket connection for real-time updates
-  private initializeWebSocket() {
+  private async initializeWebSocket() {
     try {
-      const wsUrl = (import.meta as any).env?.VITE_WS_URL || 'ws://localhost:8000/ws/fitness';
+      // Check if backend is available before attempting WebSocket connection
+      const isAvailable = await isBackendAvailable();
+      if (!isAvailable) {
+        console.log('LiveSync: Backend not available, skipping WebSocket connection');
+        this.emit('connection', { status: 'disconnected', reason: 'backend_unavailable' });
+        return;
+      }
+
+      const wsUrl = getWebSocketURL('fitness');
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {

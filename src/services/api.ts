@@ -115,13 +115,14 @@ export interface SearchRequest {
   limit?: number;
 }
 
+import { API_BASE_URL, API_TIMEOUT } from '../config/api';
+
 // API Configuration
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },
