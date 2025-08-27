@@ -1,11 +1,38 @@
 # Backend directory (should be deployed separately)
 backend/
 
-# Python dependencies
+# Python dependencies - CRITICAL: These must be ignored
 requirements.txt
+backend/requirements.txt
 *.py
 *.pyc
 __pycache__/
+*.pyo
+*.pyd
+*.so
+
+# Python virtual environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python cache and build artifacts
+.pytest_cache/
+.coverage
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Python specific files
+setup.py
+pyproject.toml
+Pipfile
+Pipfile.lock
+poetry.lock
 
 # Virtual environments
 venv/

@@ -5,12 +5,16 @@
   # Directory to publish (relative to root of your repo)
   publish = "dist"
   
-  # Default build command
-  command = "npm run build"
+  # Default build command - only npm, no Python
+  command = "npm install && npm run build"
 
 [build.environment]
   # Node version
   NODE_VERSION = "18"
+  # Disable Python dependency installation
+  SKIP_PYTHON_INSTALL = "true"
+  # Force npm only
+  NPM_FLAGS = "--production"
 
 # Ignore files that should not be deployed
 [[headers]]
