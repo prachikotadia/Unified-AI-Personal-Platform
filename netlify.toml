@@ -6,7 +6,7 @@
   publish = "dist"
   
   # Default build command - only npm, no Python
-  command = "npm install && npm run build"
+  command = "npm install && npm run build -- --mode production"
 
 [build.environment]
   # Node version
