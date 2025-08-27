@@ -18,10 +18,10 @@ const devConfig: APIConfig = {
 
 // Production configuration - UPDATE THESE URLs WITH YOUR ACTUAL DEPLOYED BACKEND URLs
 const prodConfig: APIConfig = {
-  baseURL: 'https://your-backend-domain.com/api', // Replace with your actual backend URL
-  wsURL: 'wss://your-backend-domain.com/ws', // Replace with your actual WebSocket URL
-  chatURL: 'https://your-chat-service.com', // Replace with your actual chat service URL
-  travelURL: 'https://your-travel-service.com', // Replace with your actual travel service URL
+  baseURL: 'https://omnilife-backend.onrender.com', // Replace with your actual backend URL
+  wsURL: 'wss://omnilife-backend.onrender.com/ws', // Replace with your actual WebSocket URL
+  chatURL: 'https://omnilife-chat.onrender.com', // Replace with your actual chat service URL
+  travelURL: 'https://omnilife-travel.onrender.com', // Replace with your actual travel service URL
   timeout: 15000,
 };
 
@@ -38,6 +38,12 @@ export const getWebSocketURL = (service: 'fitness' | 'finance' | 'chat' = 'fitne
 
 // Helper function to check if backend is available
 export const isBackendAvailable = async (): Promise<boolean> => {
+  // In production, if we're using placeholder URLs, assume backend is not available
+  if (isProduction && (apiConfig.baseURL.includes('your-backend-domain.com') || apiConfig.baseURL.includes('omnilife-backend.onrender.com'))) {
+    console.log('Backend not configured - using demo mode');
+    return false;
+  }
+  
   try {
     const response = await fetch(`${apiConfig.baseURL}/health`, {
       method: 'GET',

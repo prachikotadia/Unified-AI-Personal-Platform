@@ -109,7 +109,7 @@ class SecurityManager {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: https: blob:",
-      "connect-src 'self' http://localhost:8000 http://localhost:8001 http://localhost:8003 https://api.localhost:8000 wss://localhost:8000 ws://localhost:8003",
+      "connect-src 'self' http://localhost:8000 http://localhost:8001 http://localhost:8003 https://api.localhost:8000 wss://localhost:8000 ws://localhost:8003 https://*.netlify.app https://*.railway.app https://*.render.com https://*.herokuapp.com",
       "frame-src 'none'",
       "object-src 'none'",
       "base-uri 'self'",
