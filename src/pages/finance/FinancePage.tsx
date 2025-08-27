@@ -42,123 +42,241 @@ import {
   Receipt,
   Calendar,
   MapPin,
-  Tag
+  Tag,
+  Bell,
+  Brain
 } from 'lucide-react';
 import Sparkles from './Sparkles';
 import AIInsights from '../../components/ai/AIInsights';
 import AIAssistant from '../../components/ai/AIAssistant';
-
-interface Transaction {
-  id: string;
-  type: 'income' | 'expense';
-  category: string;
-  amount: number;
-  description: string;
-  date: string;
-  merchant?: string;
-}
-
-interface BankAccount {
-  id: string;
-  account_name: string;
-  account_type: string;
-  bank_name: string;
-  balance: number;
-  currency: string;
-  is_primary: boolean;
-}
-
-interface CreditScore {
-  score: number;
-  range: string;
-  trend: string;
-  last_updated: string;
-}
-
-interface FinancialOffer {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  provider: string;
-  approval_chance: number;
-  is_pre_approved: boolean;
-}
-
-interface MonthlySpending {
-  total_income: number;
-  total_expenses: number;
-  net_savings: number;
-  category_breakdown: Record<string, number>;
-  spending_trend: string;
-}
+import { useFinance } from '../../hooks/useFinance';
+import { Transaction, BankAccount, Budget, FinancialGoal } from '../../services/financeAPI';
+import { bankIntegrationAPIService, BankConnection, LiveTransaction, CreditScoreData, FinancialOffer as BankFinancialOffer } from '../../services/bankIntegration';
+import { notificationService } from '../../services/notificationService';
+import { useToastHelpers } from '../../components/ui/Toast';
+import BankConnectionModal from '../../components/finance/BankConnectionModal';
+import NotificationCenter from '../../components/finance/NotificationCenter';
+import ExportShareModal from '../../components/finance/ExportShareModal';
+import AIForecastingModal from '../../components/finance/AIForecastingModal';
+import FinanceSettingsModal from '../../components/finance/FinanceSettingsModal';
+import TransactionModal from '../../components/finance/TransactionModal';
+import BankAccountModal from '../../components/finance/BankAccountModal';
+import BudgetModal from '../../components/finance/BudgetModal';
+import GoalModal from '../../components/finance/GoalModal';
 
 const FinancePage: React.FC = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [creditScore, setCreditScore] = useState<CreditScore | null>(null);
-  const [offers, setOffers] = useState<FinancialOffer[]>([]);
-  const [monthlySpending, setMonthlySpending] = useState<MonthlySpending | null>(null);
-  const [loading, setLoading] = useState(true);
+  
+  // New state for enhanced features
+  const [bankConnections, setBankConnections] = useState<BankConnection[]>([]);
+  const [liveTransactions, setLiveTransactions] = useState<LiveTransaction[]>([]);
+  const [enhancedCreditScore, setEnhancedCreditScore] = useState<CreditScoreData | null>(null);
+  const [personalizedOffers, setPersonalizedOffers] = useState<BankFinancialOffer[]>([]);
+  const [showBankModal, setShowBankModal] = useState(false);
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  
+  // Modal states for add functionality
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [showBankAccountModal, setShowBankAccountModal] = useState(false);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  
+  // Use toast helpers
+  const { success, error: showError, info } = useToastHelpers();
+  
+  // Use finance service
+  const {
+    transactions,
+    bankAccounts,
+    budgets,
+    financialGoals,
+    isLoading,
+    errors,
+    fetchTransactions,
+    fetchBankAccounts,
+    fetchBudgets,
+    fetchFinancialGoals,
+    createTransaction,
+    createBankAccount,
+    createBudget,
+    createFinancialGoal,
+    getTotalBalance,
+    getMonthlyIncome,
+    getMonthlyExpenses,
+    getMonthlySavings,
+    getSavingsRate
+  } = useFinance();
 
   useEffect(() => {
-    // Mock data loading
-    setTimeout(() => {
-      setTransactions([
-        { id: '1', type: 'expense', category: 'food_dining', amount: 45.50, description: 'Grocery Shopping', date: '2024-06-15', merchant: 'Walmart' },
-        { id: '2', type: 'income', category: 'salary', amount: 8500, description: 'Monthly Salary', date: '2024-06-01', merchant: 'Company Inc' },
-        { id: '3', type: 'expense', category: 'transportation', amount: 65.00, description: 'Gas Station', date: '2024-06-14', merchant: 'Shell' },
-        { id: '4', type: 'expense', category: 'entertainment', amount: 15.99, description: 'Netflix Subscription', date: '2024-06-10', merchant: 'Netflix' },
-        { id: '5', type: 'expense', category: 'utilities', amount: 150.00, description: 'Electric Bill', date: '2024-06-05', merchant: 'Power Company' }
-      ]);
+    // Load all finance data
+    const loadFinanceData = async () => {
+      try {
+        await Promise.all([
+          fetchTransactions(),
+          fetchBankAccounts(),
+          fetchBudgets(),
+          fetchFinancialGoals()
+        ]);
+      } catch (error) {
+        console.error('Error loading finance data:', error);
+      }
+    };
 
-      setBankAccounts([
-        { id: '1', account_name: 'Main Checking', account_type: 'checking', bank_name: 'Chase Bank', balance: 5240.50, currency: 'USD', is_primary: true },
-        { id: '2', account_name: 'Savings Account', account_type: 'savings', bank_name: 'Ally Bank', balance: 12500.00, currency: 'USD', is_primary: false },
-        { id: '3', account_name: 'Credit Card', account_type: 'credit_card', bank_name: 'American Express', balance: -1250.75, currency: 'USD', is_primary: false }
-      ]);
+    loadFinanceData();
+  }, [fetchTransactions, fetchBankAccounts, fetchBudgets, fetchFinancialGoals]);
 
-      setCreditScore({
-        score: 745,
-        range: 'Very Good',
-        trend: 'improving',
-        last_updated: '2024-06-01'
-      });
+  // Load enhanced features
+  useEffect(() => {
+    const loadEnhancedFeatures = async () => {
+      try {
+        // Load bank connections
+        const connections = await bankIntegrationAPIService.getBankConnections();
+        setBankConnections(connections);
 
-      setOffers([
-        { id: '1', type: 'credit_card', title: 'Chase Freedom Unlimited', description: 'Earn 1.5% cash back on all purchases', provider: 'Chase Bank', approval_chance: 0.85, is_pre_approved: true },
-        { id: '2', type: 'loan', title: 'Personal Loan - Low APR', description: 'Consolidate debt with our low-interest loan', provider: 'Wells Fargo', approval_chance: 0.70, is_pre_approved: false },
-        { id: '3', type: 'investment', title: 'High-Yield Savings Account', description: 'Earn 4.5% APY on your savings', provider: 'Ally Bank', approval_chance: 0.95, is_pre_approved: true }
-      ]);
+        // Load live transactions from connected accounts
+        if (connections.length > 0) {
+          const liveTransactions = await bankIntegrationAPIService.getLiveTransactions();
+          setLiveTransactions(liveTransactions);
+        }
 
-      setMonthlySpending({
-        total_income: 8500,
-        total_expenses: 6200,
-        net_savings: 2300,
-        category_breakdown: {
-          housing: 1800,
-          food_dining: 800,
-          transportation: 400,
-          utilities: 300,
-          entertainment: 500,
-          shopping: 600,
-          healthcare: 200,
-          insurance: 300,
-          taxes: 500,
-          debt_payment: 800
-        },
-        spending_trend: 'decreasing'
-      });
+        // Load enhanced credit score
+        const enhancedScore = await bankIntegrationAPIService.getCreditScore();
+        setEnhancedCreditScore(enhancedScore);
 
-      setLoading(false);
-    }, 1000);
+        // Load personalized offers
+        const offers = await bankIntegrationAPIService.getPersonalizedOffers();
+        setPersonalizedOffers(offers);
+
+        // Load notifications count
+        const notifications = await notificationService.getNotifications();
+        setUnreadNotifications(notifications.filter(n => !n.read).length);
+
+        // Subscribe to real-time updates
+        notificationService.subscribeToNotifications((notification) => {
+          setUnreadNotifications(prev => prev + 1);
+        });
+
+      } catch (error) {
+        console.error('Error loading enhanced features:', error);
+      }
+    };
+
+    loadEnhancedFeatures();
   }, []);
 
-  const totalBalance = bankAccounts.reduce((sum, account) => sum + account.balance, 0);
-  const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-  const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+  // Handle bank connection success
+  const handleBankConnectionSuccess = (connection: BankConnection) => {
+    setBankConnections(prev => [...prev, connection]);
+  };
+
+  // Handle add functionality
+  const handleAddTransaction = async (transaction: Transaction) => {
+    try {
+      await createTransaction(transaction);
+      success('Transaction added successfully!');
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+    }
+  };
+
+  const handleAddBankAccount = async (account: BankAccount) => {
+    try {
+      await createBankAccount(account);
+      success('Bank account added successfully!');
+    } catch (error) {
+      console.error('Error adding bank account:', error);
+    }
+  };
+
+  const handleAddBudget = async (budget: Budget) => {
+    try {
+      await createBudget(budget);
+      success('Budget created successfully!');
+    } catch (error) {
+      console.error('Error creating budget:', error);
+    }
+  };
+
+  const handleAddGoal = async (goal: FinancialGoal) => {
+    try {
+      await createFinancialGoal(goal);
+      success('Financial goal created successfully!');
+    } catch (error) {
+      console.error('Error creating financial goal:', error);
+    }
+  };
+
+  // Handle export/share actions
+  const handleExport = () => {
+    // Create a comprehensive financial report
+    const reportData = {
+      generatedAt: new Date().toISOString(),
+      totalBalance: totalBalance,
+      monthlyIncome: totalIncome,
+      monthlyExpenses: totalExpenses,
+      monthlySavings: monthlySavings,
+      savingsRate: savingsRate,
+      bankAccounts: bankAccounts,
+      recentTransactions: transactions.slice(0, 10),
+      summary: {
+        totalAccounts: bankAccounts.length,
+        totalTransactions: transactions.length,
+        averageTransactionAmount: transactions.length > 0 
+          ? transactions.reduce((sum, t) => sum + t.amount, 0) / transactions.length 
+          : 0,
+      }
+    };
+
+    // Create and download the report
+    const reportBlob = new Blob([JSON.stringify(reportData, null, 2)], {
+      type: 'application/json'
+    });
+    const url = URL.createObjectURL(reportBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `financial-report-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    // Show success toast
+    success('Financial report downloaded successfully!');
+    
+    // Also show the export modal for additional options
+    setShowExportModal(true);
+  };
+
+  const handleShare = () => {
+    // Check if Web Share API is available
+    if (navigator.share) {
+      navigator.share({
+        title: 'My Finance Dashboard',
+        text: `Check out my financial summary: Total Balance: $${totalBalance.toLocaleString()}, Monthly Income: $${totalIncome.toLocaleString()}, Savings Rate: ${savingsRate.toFixed(1)}%`,
+        url: window.location.href,
+      }).catch((error) => {
+        console.log('Error sharing:', error);
+        // Fallback to modal
+        setShowShareModal(true);
+      });
+    } else {
+      // Fallback to modal for browsers that don't support Web Share API
+      info('Sharing options available in the modal');
+      setShowShareModal(true);
+    }
+  };
+
+  const totalBalance = getTotalBalance();
+  const totalIncome = getMonthlyIncome();
+  const totalExpenses = getMonthlyExpenses();
+  const monthlySavings = getMonthlySavings();
+  const savingsRate = getSavingsRate();
 
   const getCategoryIcon = (category: string) => {
     const icons: Record<string, React.ReactNode> = {
@@ -204,7 +322,7 @@ const FinancePage: React.FC = () => {
     return colors[category] || '#BDC3C7';
   };
 
-  if (loading) {
+  if (isLoading.transactions || isLoading.bankAccounts) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
         <div className="max-w-7xl mx-auto">
@@ -239,13 +357,25 @@ const FinancePage: React.FC = () => {
             <p className="text-gray-600 mt-2">Manage your money, track expenses, and grow your wealth</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
+            <button 
+              onClick={handleExport}
+              className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
+              title="Download Financial Report"
+            >
               <Download size={20} />
             </button>
-            <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
+            <button 
+              onClick={handleShare}
+              className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
+              title="Share Dashboard"
+            >
               <Share2 size={20} />
             </button>
-            <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
+            <button 
+              onClick={() => setShowSettingsModal(true)}
+              className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
+              title="Finance Settings"
+            >
               <Settings size={20} />
             </button>
           </div>
@@ -311,7 +441,7 @@ const FinancePage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Credit Score</p>
-                <p className="text-2xl font-bold text-blue-600">{creditScore?.score}</p>
+                <p className="text-2xl font-bold text-blue-600">750</p>
               </div>
               <div className="p-3 bg-blue-100 rounded-lg">
                 <Shield className="text-blue-600" size={24} />
@@ -323,7 +453,7 @@ const FinancePage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Available Offers</p>
-                <p className="text-2xl font-bold text-purple-600">{offers.length}</p>
+                <p className="text-2xl font-bold text-purple-600">{transactions.length}</p>
               </div>
               <div className="p-3 bg-purple-100 rounded-lg">
                 <Gift className="text-purple-600" size={24} />
@@ -366,9 +496,37 @@ const FinancePage: React.FC = () => {
               <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
-                  <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                    View All
-                  </button>
+                                <div className="flex items-center gap-2">
+                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                  View All
+                </button>
+                <button
+                  onClick={() => setShowBankModal(true)}
+                  className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  title="Connect Bank Account"
+                >
+                  <Plus size={16} />
+                </button>
+                <button
+                  onClick={() => setShowAIModal(true)}
+                  className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  title="AI Forecasting"
+                >
+                  <Brain size={16} />
+                </button>
+                <button
+                  onClick={() => setShowNotificationCenter(true)}
+                  className="relative p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                  title="Notifications"
+                >
+                  <Bell size={16} />
+                  {unreadNotifications > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                    </span>
+                  )}
+                </button>
+              </div>
                 </div>
                 <div className="space-y-4">
                   {transactions.slice(0, 5).map((transaction) => (
@@ -384,7 +542,7 @@ const FinancePage: React.FC = () => {
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">{transaction.description}</p>
-                          <p className="text-sm text-gray-600">{transaction.merchant}</p>
+                          <p className="text-sm text-gray-600">{transaction.category.replace('_', ' ')}</p>
                         </div>
                       </div>
                       <div className="text-right">
@@ -402,7 +560,10 @@ const FinancePage: React.FC = () => {
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-semibold text-gray-900">Bank Accounts</h3>
-                  <button className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                  <button 
+                    onClick={() => setShowBankAccountModal(true)}
+                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
                     <Plus size={16} />
                   </button>
                 </div>
@@ -433,7 +594,10 @@ const FinancePage: React.FC = () => {
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">All Transactions</h3>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button 
+                  onClick={() => setShowTransactionModal(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
                   Add Transaction
                 </button>
               </div>
@@ -451,7 +615,7 @@ const FinancePage: React.FC = () => {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">{transaction.description}</p>
-                        <p className="text-sm text-gray-600">{transaction.merchant} • {new Date(transaction.date).toLocaleDateString()}</p>
+                        <p className="text-sm text-gray-600">{transaction.category.replace('_', ' ')} • {new Date(transaction.date).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -470,7 +634,10 @@ const FinancePage: React.FC = () => {
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">Bank Accounts</h3>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button 
+                  onClick={() => setShowBankAccountModal(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
                   Add Account
                 </button>
               </div>
@@ -509,40 +676,48 @@ const FinancePage: React.FC = () => {
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">Budgets</h3>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button 
+                  onClick={() => setShowBudgetModal(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
                   Create Budget
                 </button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Object.entries(monthlySpending?.category_breakdown || {}).map(([category, amount]) => (
-                  <div key={category} className="p-6 border border-gray-200 rounded-xl">
+                {[
+                  { id: '1', name: 'Food & Dining', category: 'food_dining', amount: 500, spent: 320, remaining: 180 },
+                  { id: '2', name: 'Transportation', category: 'transportation', amount: 300, spent: 180, remaining: 120 },
+                  { id: '3', name: 'Entertainment', category: 'entertainment', amount: 200, spent: 150, remaining: 50 }
+                ].map((budget) => (
+                  <div key={budget.id} className="p-6 border border-gray-200 rounded-xl">
                     <div className="flex items-center gap-3 mb-4">
                       <div 
                         className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: getCategoryColor(category) + '20' }}
+                        style={{ backgroundColor: getCategoryColor(budget.category) + '20' }}
                       >
-                        <div style={{ color: getCategoryColor(category) }}>
-                          {getCategoryIcon(category)}
+                        <div style={{ color: getCategoryColor(budget.category) }}>
+                          {getCategoryIcon(budget.category)}
                         </div>
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900 capitalize">{category.replace('_', ' ')}</p>
+                        <p className="font-semibold text-gray-900 capitalize">{budget.name}</p>
                         <p className="text-sm text-gray-600">Monthly Budget</p>
                       </div>
                     </div>
                     <div className="mb-4">
                       <div className="flex justify-between text-sm mb-1">
                         <span>Spent</span>
-                        <span>${amount.toLocaleString()}</span>
+                        <span>${budget.spent.toLocaleString()}</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
                           className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min((amount / 1000) * 100, 100)}%` }}
+                          style={{ width: `${Math.min((budget.spent / budget.amount) * 100, 100)}%` }}
                         ></div>
                       </div>
                     </div>
-                    <p className="text-lg font-bold text-gray-900">${amount.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-gray-900">${budget.remaining.toLocaleString()}</p>
+                    <p className="text-sm text-gray-600">remaining of ${budget.amount.toLocaleString()}</p>
                   </div>
                 ))}
               </div>
@@ -553,7 +728,10 @@ const FinancePage: React.FC = () => {
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">Financial Goals</h3>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button 
+                  onClick={() => setShowGoalModal(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
                   Set New Goal
                 </button>
               </div>
@@ -604,15 +782,15 @@ const FinancePage: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-900 mb-6">Spending Overview</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="text-center">
-                    <p className="text-3xl font-bold text-green-600">${monthlySpending?.total_income.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-green-600">${totalIncome.toLocaleString()}</p>
                     <p className="text-sm text-gray-600">Total Income</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-3xl font-bold text-red-600">${monthlySpending?.total_expenses.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-red-600">${totalExpenses.toLocaleString()}</p>
                     <p className="text-sm text-gray-600">Total Expenses</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-3xl font-bold text-blue-600">${monthlySpending?.net_savings.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-blue-600">${monthlySavings.toLocaleString()}</p>
                     <p className="text-sm text-gray-600">Net Savings</p>
                   </div>
                 </div>
@@ -622,20 +800,25 @@ const FinancePage: React.FC = () => {
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-6">Spending by Category</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {Object.entries(monthlySpending?.category_breakdown || {}).map(([category, amount]) => (
-                    <div key={category} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  {[
+                    { id: '1', name: 'Food & Dining', category: 'food_dining', spent: 320 },
+                    { id: '2', name: 'Transportation', category: 'transportation', spent: 180 },
+                    { id: '3', name: 'Entertainment', category: 'entertainment', spent: 150 },
+                    { id: '4', name: 'Shopping', category: 'shopping', spent: 120 }
+                  ].map((budget) => (
+                    <div key={budget.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div 
                           className="w-10 h-10 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: getCategoryColor(category) + '20' }}
+                          style={{ backgroundColor: getCategoryColor(budget.category) + '20' }}
                         >
-                          <div style={{ color: getCategoryColor(category) }}>
-                            {getCategoryIcon(category)}
+                          <div style={{ color: getCategoryColor(budget.category) }}>
+                            {getCategoryIcon(budget.category)}
                           </div>
                         </div>
-                        <span className="font-medium text-gray-900 capitalize">{category.replace('_', ' ')}</span>
+                        <span className="font-medium text-gray-900 capitalize">{budget.name}</span>
                       </div>
-                      <span className="font-semibold text-gray-900">${amount.toLocaleString()}</span>
+                      <span className="font-semibold text-gray-900">${budget.spent.toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
@@ -646,14 +829,14 @@ const FinancePage: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-900 mb-6">Credit Score</h3>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-4xl font-bold text-blue-600">{creditScore?.score}</p>
-                    <p className="text-sm text-gray-600">{creditScore?.range} • {creditScore?.trend}</p>
-                    <p className="text-sm text-gray-600">Last updated: {creditScore?.last_updated}</p>
+                                    <p className="text-4xl font-bold text-blue-600">750</p>
+                <p className="text-sm text-gray-600">Good • +15</p>
+                <p className="text-sm text-gray-600">Last updated: Today</p>
                   </div>
                   <div className="text-right">
                     <div className="w-32 h-32 rounded-full border-8 border-gray-200 flex items-center justify-center">
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-blue-600">{creditScore?.score}</p>
+                        <p className="text-2xl font-bold text-blue-600">750</p>
                         <p className="text-xs text-gray-600">FICO Score</p>
                       </div>
                     </div>
@@ -665,7 +848,7 @@ const FinancePage: React.FC = () => {
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-6">Personalized Offers</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {offers.map((offer) => (
+                  {personalizedOffers.slice(0, 3).map((offer) => (
                     <div key={offer.id} className="p-6 border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
                       <div className="flex items-center justify-between mb-4">
                         <span className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded-full capitalize">
@@ -708,6 +891,70 @@ const FinancePage: React.FC = () => {
         {/* AI Assistant */}
         <AIAssistant module="finance" />
       </div>
+
+      {/* Enhanced Feature Modals */}
+      <BankConnectionModal
+        isOpen={showBankModal}
+        onClose={() => setShowBankModal(false)}
+        onSuccess={handleBankConnectionSuccess}
+      />
+
+      <NotificationCenter
+        isOpen={showNotificationCenter}
+        onClose={() => setShowNotificationCenter(false)}
+      />
+
+      <ExportShareModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        type="export"
+      />
+
+      <ExportShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        type="share"
+      />
+
+      <AIForecastingModal
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+      />
+
+      <FinanceSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        onSave={() => success('Finance settings saved successfully!')}
+      />
+
+      {/* Add Modals */}
+      <TransactionModal
+        isOpen={showTransactionModal}
+        onClose={() => setShowTransactionModal(false)}
+        onSave={handleAddTransaction}
+        mode="add"
+      />
+
+      <BankAccountModal
+        isOpen={showBankAccountModal}
+        onClose={() => setShowBankAccountModal(false)}
+        onSave={handleAddBankAccount}
+        mode="add"
+      />
+
+      <BudgetModal
+        isOpen={showBudgetModal}
+        onClose={() => setShowBudgetModal(false)}
+        onSave={handleAddBudget}
+        mode="add"
+      />
+
+      <GoalModal
+        isOpen={showGoalModal}
+        onClose={() => setShowGoalModal(false)}
+        onSave={handleAddGoal}
+        mode="add"
+      />
     </div>
   );
 };

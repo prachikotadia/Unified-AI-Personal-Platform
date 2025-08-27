@@ -1,599 +1,441 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-import uuid
+import structlog
 
 from app.database import get_db
 from app.services.marketplace_service import MarketplaceService
+from app.models.marketplace import (
+    ProductCreate, ProductUpdate, ReviewCreate, CartItemCreate, 
+    CartItemUpdate, OrderCreate, SearchRequest, SearchFilters
+)
 from app.models.marketplace_db import (
-    OrderStatus, PaymentStatus, PaymentMethod, ShippingMethod,
-    ReturnStatus, InventoryStatus
+    Product, Review, CartItem, WishlistItem, Order, OrderItem, 
+    Category, ProductCategory, ProductSubcategory, OrderStatus, 
+    PaymentStatus, PaymentMethod, AIRecommendation, PriceAlert, 
+    ProductComparison, RecentlyViewed, ProductQuestion, ProductAnswer
 )
 
+logger = structlog.get_logger()
 router = APIRouter()
 
+def get_mock_user():
+    """Mock user for development - replace with actual auth"""
+    return {"id": "user_123", "username": "testuser"}
+
 # Product endpoints
-@router.get("/products")
+@router.get("/products", response_model=List[Dict[str, Any]])
 async def get_products(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
-    category_id: Optional[int] = None,
-    search: Optional[str] = None,
-    min_price: Optional[float] = None,
-    max_price: Optional[float] = None,
-    sort_by: str = Query("created_at", regex="^(created_at|price|rating|name)$"),
-    sort_order: str = Query("desc", regex="^(asc|desc)$"),
+    category: Optional[str] = Query(None, description="Filter by category"),
+    subcategory: Optional[str] = Query(None, description="Filter by subcategory"),
+    min_price: Optional[float] = Query(None, description="Minimum price"),
+    max_price: Optional[float] = Query(None, description="Maximum price"),
+    brand: Optional[str] = Query(None, description="Filter by brand"),
+    rating: Optional[float] = Query(None, description="Minimum rating"),
+    in_stock: Optional[bool] = Query(None, description="In stock only"),
+    sort_by: str = Query("relevance", description="Sort by: relevance, price, rating, newest, featured"),
+    sort_order: str = Query("desc", description="Sort order: asc, desc"),
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db)
 ):
-    """Get products with filtering and sorting"""
+    """Get products with advanced filtering and sorting"""
     service = MarketplaceService(db)
-    return service.get_products(
-        skip=skip, limit=limit, category_id=category_id,
-        search=search, min_price=min_price, max_price=max_price,
-        sort_by=sort_by, sort_order=sort_order
+    result = service.get_products(
+        category=category,
+        subcategory=subcategory,
+        min_price=min_price,
+        max_price=max_price,
+        brand=brand,
+        rating=rating,
+        in_stock=in_stock,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=page,
+        limit=limit
     )
+    # Convert SQLAlchemy objects to dictionaries
+    products = []
+    for product in result["products"]:
+        product_dict = {
+            "id": product.id,
+            "name": product.name,
+            "description": product.description,
+            "price": product.price,
+            "original_price": product.original_price,
+            "discount_percentage": product.discount_percentage,
+            "category": product.category.value if product.category else None,
+            "subcategory": product.subcategory.value if product.subcategory else None,
+            "brand": product.brand,
+            "sku": product.sku,
+            "stock_quantity": product.stock_quantity,
+            "images": product.images,
+            "specifications": product.specifications,
+            "features": product.features,
+            "tags": product.tags,
+            "rating": product.rating,
+            "review_count": product.review_count,
+            "featured": product.featured,
+            "trending": product.trending,
+            "prime_eligible": product.prime_eligible,
+            "free_shipping": product.free_shipping,
+            "status": product.status,
+            "created_at": product.created_at.isoformat() if product.created_at else None
+        }
+        products.append(product_dict)
+    return products
+
+@router.get("/products/search")
+async def search_products(
+    q: str = Query(..., description="Search query"),
+    category: Optional[str] = Query(None),
+    min_price: Optional[float] = Query(None),
+    max_price: Optional[float] = Query(None),
+    rating: Optional[float] = Query(None),
+    in_stock: Optional[bool] = Query(None),
+    sort_by: str = Query("relevance"),
+    sort_order: str = Query("desc"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """Search products"""
+    service = MarketplaceService(db)
+    filters = {
+        "category": category,
+        "min_price": min_price,
+        "max_price": max_price,
+        "rating": rating,
+        "in_stock": in_stock
+    }
+    return service.search_products(q, filters, sort_by, sort_order, page, limit)
 
 @router.get("/products/{product_id}")
 async def get_product(product_id: int, db: Session = Depends(get_db)):
-    """Get a specific product"""
+    """Get product by ID"""
     service = MarketplaceService(db)
-    product = service.get_product(product_id)
+    product = service.get_product_by_id(product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Record product view
+    service.record_product_view("user_123", product_id)
+    service.add_recently_viewed("user_123", product_id)
+    
     return product
 
 @router.get("/products/featured")
-async def get_featured_products(
-    limit: int = Query(10, ge=1, le=50),
-    db: Session = Depends(get_db)
-):
+async def get_featured_products(limit: int = Query(8, ge=1, le=20), db: Session = Depends(get_db)):
     """Get featured products"""
     service = MarketplaceService(db)
-    return service.get_featured_products(limit=limit)
-
-@router.get("/products/deals")
-async def get_deal_products(
-    limit: int = Query(10, ge=1, le=50),
-    db: Session = Depends(get_db)
-):
-    """Get products with deals"""
-    service = MarketplaceService(db)
-    return service.get_deal_products(limit=limit)
+    return service.get_featured_products(limit)
 
 @router.get("/products/trending")
-async def get_trending_products(
-    limit: int = Query(10, ge=1, le=50),
-    db: Session = Depends(get_db)
-):
+async def get_trending_products(limit: int = Query(8, ge=1, le=20), db: Session = Depends(get_db)):
     """Get trending products"""
     service = MarketplaceService(db)
-    return service.get_trending_products(limit=limit)
+    return service.get_trending_products(limit)
 
-# Inventory Management
-@router.get("/products/{product_id}/inventory")
-async def get_inventory_status(product_id: int, db: Session = Depends(get_db)):
-    """Get product inventory status"""
+@router.get("/products/deals")
+async def get_deals(limit: int = Query(8, ge=1, le=20), db: Session = Depends(get_db)):
+    """Get products with deals"""
     service = MarketplaceService(db)
-    status = service.get_inventory_status(product_id)
-    if not status:
-        raise HTTPException(status_code=404, detail="Product not found")
-    return status
+    return service.get_deals(limit)
 
-@router.get("/products/{product_id}/inventory/logs")
-async def get_inventory_logs(
-    product_id: int,
-    limit: int = Query(50, ge=1, le=100),
-    db: Session = Depends(get_db)
-):
-    """Get inventory change logs"""
+@router.get("/products/prime")
+async def get_prime_products(limit: int = Query(8, ge=1, le=20), db: Session = Depends(get_db)):
+    """Get prime eligible products"""
     service = MarketplaceService(db)
-    return service.get_inventory_logs(product_id, limit=limit)
+    return service.get_prime_products(limit)
 
-@router.post("/products/{product_id}/inventory/update")
-async def update_inventory(
-    product_id: int,
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
-    """Update product inventory"""
+@router.get("/products/popular")
+async def get_popular_products(limit: int = Query(8, ge=1, le=20), db: Session = Depends(get_db)):
+    """Get popular products"""
     service = MarketplaceService(db)
-    result = service.update_inventory(
-        product_id=product_id,
-        quantity=data.get("quantity", 0),
-        action=data.get("action", "adjustment"),
-        user_id=data.get("user_id"),
-        reason=data.get("reason")
-    )
-    if not result:
-        raise HTTPException(status_code=404, detail="Product not found")
-    return result
+    return service.get_popular_products(limit)
 
-# Cart Management
+# Cart endpoints
 @router.get("/cart")
-async def get_cart(user_id: str = Query(..., description="User ID"), db: Session = Depends(get_db)):
+async def get_cart(db: Session = Depends(get_db)):
     """Get user's cart"""
     service = MarketplaceService(db)
-    return service.get_cart(user_id)
+    return service.get_cart("user_123")
 
-@router.post("/cart/add")
-async def add_to_cart(
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
+@router.post("/cart")
+async def add_to_cart(item: CartItemCreate, db: Session = Depends(get_db)):
     """Add item to cart"""
     service = MarketplaceService(db)
-    result = service.add_to_cart(
-        user_id=data["user_id"],
-        product_id=data["product_id"],
-        quantity=data.get("quantity", 1)
-    )
-    if not result:
-        raise HTTPException(status_code=400, detail="Failed to add to cart")
-    return result
+    return service.add_to_cart("user_123", item.product_id, item.quantity)
 
-@router.put("/cart/update")
-async def update_cart_item(
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
+@router.put("/cart/{product_id}")
+async def update_cart_item(product_id: int, quantity: int = Query(..., ge=0), db: Session = Depends(get_db)):
     """Update cart item quantity"""
     service = MarketplaceService(db)
-    result = service.update_cart_item(
-        user_id=data["user_id"],
-        product_id=data["product_id"],
-        quantity=data["quantity"]
-    )
-    if not result:
-        raise HTTPException(status_code=404, detail="Cart item not found")
-    return result
+    return service.update_cart_item("user_123", product_id, quantity)
 
-@router.delete("/cart/remove")
-async def remove_from_cart(
-    user_id: str = Query(..., description="User ID"),
-    product_id: int = Query(..., description="Product ID"),
-    db: Session = Depends(get_db)
-):
+@router.delete("/cart/{product_id}")
+async def remove_from_cart(product_id: int, db: Session = Depends(get_db)):
     """Remove item from cart"""
     service = MarketplaceService(db)
-    success = service.remove_from_cart(user_id, product_id)
+    success = service.remove_from_cart("user_123", product_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Cart item not found")
+        raise HTTPException(status_code=404, detail="Item not found in cart")
     return {"message": "Item removed from cart"}
 
-@router.delete("/cart/clear")
-async def clear_cart(
-    user_id: str = Query(..., description="User ID"),
-    db: Session = Depends(get_db)
-):
-    """Clear user's cart"""
+@router.delete("/cart")
+async def clear_cart(db: Session = Depends(get_db)):
+    """Clear cart"""
     service = MarketplaceService(db)
-    service.clear_cart(user_id)
+    service.clear_cart("user_123")
     return {"message": "Cart cleared"}
 
-# Wishlist Management
+# Wishlist endpoints
 @router.get("/wishlist")
-async def get_wishlist(user_id: str = Query(..., description="User ID"), db: Session = Depends(get_db)):
+async def get_wishlist(db: Session = Depends(get_db)):
     """Get user's wishlist"""
     service = MarketplaceService(db)
-    return service.get_wishlist(user_id)
+    return service.get_wishlist("user_123")
 
-@router.post("/wishlist/add")
-async def add_to_wishlist(
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
+@router.post("/wishlist")
+async def add_to_wishlist(product_id: int, db: Session = Depends(get_db)):
     """Add item to wishlist"""
     service = MarketplaceService(db)
-    return service.add_to_wishlist(
-        user_id=data["user_id"],
-        product_id=data["product_id"]
-    )
+    return service.add_to_wishlist("user_123", product_id)
 
-@router.delete("/wishlist/remove")
-async def remove_from_wishlist(
-    user_id: str = Query(..., description="User ID"),
-    product_id: int = Query(..., description="Product ID"),
-    db: Session = Depends(get_db)
-):
+@router.delete("/wishlist/{product_id}")
+async def remove_from_wishlist(product_id: int, db: Session = Depends(get_db)):
     """Remove item from wishlist"""
     service = MarketplaceService(db)
-    success = service.remove_from_wishlist(user_id, product_id)
+    success = service.remove_from_wishlist("user_123", product_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Wishlist item not found")
+        raise HTTPException(status_code=404, detail="Item not found in wishlist")
     return {"message": "Item removed from wishlist"}
 
-# Order Management
-@router.post("/orders/create")
-async def create_order(
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
-    """Create a new order"""
+# Order endpoints
+@router.get("/orders")
+async def get_orders(db: Session = Depends(get_db)):
+    """Get user's orders"""
     service = MarketplaceService(db)
-    
-    # Get cart items
-    cart_items = service.get_cart(data["user_id"])
+    return service.get_user_orders("user_123")
+
+@router.get("/orders/{order_id}")
+async def get_order(order_id: int, db: Session = Depends(get_db)):
+    """Get order by ID"""
+    service = MarketplaceService(db)
+    order = service.get_order_by_id(order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return order
+
+@router.post("/orders")
+async def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
+    """Create new order"""
+    service = MarketplaceService(db)
+    cart_items = service.get_cart("user_123")
     if not cart_items:
         raise HTTPException(status_code=400, detail="Cart is empty")
     
-    # Create order
-    order = service.create_order(
-        user_id=data["user_id"],
-        cart_items=cart_items,
-        shipping_address=data["shipping_address"],
-        billing_address=data["billing_address"],
-        payment_method=PaymentMethod(data["payment_method"]),
-        shipping_method=ShippingMethod(data.get("shipping_method", "standard"))
-    )
-    
-    if not order:
-        raise HTTPException(status_code=400, detail="Failed to create order")
-    
-    return order
-
-@router.get("/orders")
-async def get_orders(
-    user_id: str = Query(..., description="User ID"),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db)
-):
-    """Get user's orders"""
-    service = MarketplaceService(db)
-    return service.get_orders(user_id, skip=skip, limit=limit)
-
-@router.get("/orders/{order_id}")
-async def get_order(
-    order_id: int,
-    user_id: Optional[str] = Query(None, description="User ID for verification"),
-    db: Session = Depends(get_db)
-):
-    """Get a specific order"""
-    service = MarketplaceService(db)
-    order = service.get_order(order_id, user_id)
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    return order
-
-@router.put("/orders/{order_id}/status")
-async def update_order_status(
-    order_id: int,
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
-    """Update order status"""
-    service = MarketplaceService(db)
-    order = service.update_order_status(order_id, OrderStatus(data["status"]))
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    return order
-
-# Shipping Calculator
-@router.post("/shipping/calculate")
-async def calculate_shipping(
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
-    """Calculate shipping cost"""
-    service = MarketplaceService(db)
-    shipping_cost = service.calculate_shipping(
-        shipping_address=data["shipping_address"],
-        shipping_method=ShippingMethod(data["shipping_method"]),
-        subtotal=data["subtotal"]
-    )
-    return {
-        "shipping_cost": shipping_cost,
-        "shipping_method": data["shipping_method"],
-        "estimated_days": {
-            "standard": 5,
-            "express": 2,
-            "overnight": 1,
-            "same_day": 1,
-            "international": 7
-        }.get(data["shipping_method"], 5)
-    }
-
-# Tax Calculator
-@router.post("/tax/calculate")
-async def calculate_tax(
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
-    """Calculate tax"""
-    service = MarketplaceService(db)
-    tax_amount = service.calculate_tax(
-        billing_address=data["billing_address"],
-        subtotal=data["subtotal"]
-    )
-    return {
-        "tax_amount": tax_amount,
-        "tax_rate": tax_amount / data["subtotal"] if data["subtotal"] > 0 else 0,
-        "billing_address": data["billing_address"]
-    }
-
-# Return/Refund System
-@router.post("/returns/create")
-async def create_return(
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
-    """Create a return request"""
-    service = MarketplaceService(db)
-    return_request = service.create_return(
-        user_id=data["user_id"],
-        order_id=data["order_id"],
-        reason=data["reason"],
-        description=data.get("description"),
-        return_method=data.get("return_method", "shipping")
-    )
-    if not return_request:
-        raise HTTPException(status_code=404, detail="Order not found")
-    return return_request
-
-@router.get("/returns")
-async def get_returns(
-    user_id: str = Query(..., description="User ID"),
-    db: Session = Depends(get_db)
-):
-    """Get user's returns"""
-    service = MarketplaceService(db)
-    return service.get_returns(user_id)
-
-@router.put("/returns/{return_id}/status")
-async def update_return_status(
-    return_id: int,
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
-    """Update return status"""
-    service = MarketplaceService(db)
-    return_request = service.update_return_status(
-        return_id=return_id,
-        status=ReturnStatus(data["status"]),
-        refund_amount=data.get("refund_amount")
-    )
-    if not return_request:
-        raise HTTPException(status_code=404, detail="Return not found")
-    return return_request
-
-# Loyalty Program
-@router.get("/loyalty")
-async def get_loyalty_program(
-    user_id: str = Query(..., description="User ID"),
-    db: Session = Depends(get_db)
-):
-    """Get user's loyalty program status"""
-    service = MarketplaceService(db)
-    return service.get_loyalty_program(user_id)
-
-@router.post("/loyalty/points/add")
-async def add_loyalty_points(
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
-    """Add loyalty points"""
-    service = MarketplaceService(db)
-    loyalty = service.add_loyalty_points(
-        user_id=data["user_id"],
-        amount=data["amount"],
-        description=data["description"]
-    )
-    return loyalty
-
-@router.post("/loyalty/points/redeem")
-async def redeem_loyalty_points(
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
-    """Redeem loyalty points"""
-    service = MarketplaceService(db)
-    loyalty = service.redeem_loyalty_points(
-        user_id=data["user_id"],
-        points=data["points"],
-        description=data["description"]
-    )
-    if not loyalty:
-        raise HTTPException(status_code=400, detail="Insufficient points")
-    return loyalty
-
-@router.get("/loyalty/transactions")
-async def get_loyalty_transactions(
-    user_id: str = Query(..., description="User ID"),
-    limit: int = Query(50, ge=1, le=100),
-    db: Session = Depends(get_db)
-):
-    """Get loyalty transactions"""
-    service = MarketplaceService(db)
-    return service.get_loyalty_transactions(user_id, limit=limit)
-
-# Enhanced Features
-@router.get("/recommendations")
-async def get_ai_recommendations(
-    user_id: str = Query(..., description="User ID"),
-    product_id: Optional[int] = Query(None, description="Product ID"),
-    limit: int = Query(10, ge=1, le=50),
-    db: Session = Depends(get_db)
-):
-    """Get AI-powered recommendations"""
-    service = MarketplaceService(db)
-    return service.get_ai_recommendations(user_id, product_id, limit)
-
-@router.post("/price-alerts")
-async def create_price_alert(
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
-    """Create a price alert"""
-    service = MarketplaceService(db)
-    alert = service.create_price_alert(
-        user_id=data["user_id"],
-        product_id=data["product_id"],
-        target_price=data["target_price"]
-    )
-    if not alert:
-        raise HTTPException(status_code=404, detail="Product not found")
-    return alert
-
-@router.get("/price-alerts")
-async def get_price_alerts(
-    user_id: str = Query(..., description="User ID"),
-    db: Session = Depends(get_db)
-):
-    """Get user's price alerts"""
-    service = MarketplaceService(db)
-    return service.get_price_alerts(user_id)
-
-@router.delete("/price-alerts/{alert_id}")
-async def delete_price_alert(
-    alert_id: int,
-    user_id: str = Query(..., description="User ID"),
-    db: Session = Depends(get_db)
-):
-    """Delete a price alert"""
-    service = MarketplaceService(db)
-    # Implementation would be added to service
-    return {"message": "Price alert deleted"}
-
-@router.post("/comparisons")
-async def create_product_comparison(
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
-    """Create a product comparison"""
-    service = MarketplaceService(db)
-    return service.create_product_comparison(
-        user_id=data["user_id"],
-        name=data["name"],
-        product_ids=data["product_ids"]
+    return service.create_order(
+        "user_123",
+        cart_items,
+        order_data.shipping_address,
+        order_data.billing_address,
+        order_data.payment_method
     )
 
-@router.get("/comparisons")
-async def get_product_comparisons(
-    user_id: str = Query(..., description="User ID"),
-    db: Session = Depends(get_db)
-):
-    """Get user's product comparisons"""
-    service = MarketplaceService(db)
-    return service.get_product_comparisons(user_id)
-
-@router.get("/recently-viewed")
-async def get_recently_viewed(
-    user_id: str = Query(..., description="User ID"),
-    limit: int = Query(10, ge=1, le=50),
-    db: Session = Depends(get_db)
-):
-    """Get recently viewed products"""
-    service = MarketplaceService(db)
-    return service.get_recently_viewed(user_id, limit)
-
-@router.post("/recently-viewed")
-async def add_recently_viewed(
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
-    """Add product to recently viewed"""
-    service = MarketplaceService(db)
-    return service.add_recently_viewed(
-        user_id=data["user_id"],
-        product_id=data["product_id"]
-    )
-
-# Reviews and Q&A
-@router.post("/products/{product_id}/reviews")
-async def create_review(
-    product_id: int,
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
-    """Create a product review"""
-    service = MarketplaceService(db)
-    review = service.create_review(
-        user_id=data["user_id"],
-        product_id=product_id,
-        rating=data["rating"],
-        title=data["title"],
-        comment=data["comment"],
-        user_name=data.get("user_name")
-    )
-    return review
-
+# Review endpoints
 @router.get("/products/{product_id}/reviews")
 async def get_product_reviews(
     product_id: int,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db)
 ):
     """Get product reviews"""
     service = MarketplaceService(db)
-    return service.get_product_reviews(product_id, skip=skip, limit=limit)
+    return service.get_product_reviews(product_id, page, limit)
 
-@router.post("/products/{product_id}/questions")
-async def create_product_question(
+@router.post("/products/{product_id}/reviews")
+async def create_review(
     product_id: int,
-    data: Dict[str, Any] = Body(...),
+    review: ReviewCreate,
     db: Session = Depends(get_db)
 ):
-    """Create a product question"""
+    """Create product review"""
     service = MarketplaceService(db)
-    question = service.create_product_question(
-        user_id=data["user_id"],
-        product_id=product_id,
-        question=data["question"],
-        user_name=data.get("user_name")
+    return service.create_review(
+        "user_123",
+        product_id,
+        review.rating,
+        review.title,
+        review.comment
     )
-    return question
 
-@router.post("/questions/{question_id}/answer")
-async def answer_product_question(
-    question_id: int,
-    data: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
-):
-    """Answer a product question"""
-    service = MarketplaceService(db)
-    answer = service.answer_product_question(
-        question_id=question_id,
-        user_id=data["user_id"],
-        answer=data["answer"],
-        user_name=data.get("user_name"),
-        user_type=data.get("user_type", "customer")
-    )
-    return answer
-
-@router.get("/products/{product_id}/questions")
-async def get_product_questions(
-    product_id: int,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db)
-):
-    """Get product questions"""
-    service = MarketplaceService(db)
-    return service.get_product_questions(product_id, skip=skip, limit=limit)
-
-# Categories
+# Category endpoints
 @router.get("/categories")
 async def get_categories(db: Session = Depends(get_db)):
     """Get all categories"""
     service = MarketplaceService(db)
     return service.get_categories()
 
-@router.get("/categories/{category_id}")
-async def get_category(category_id: int, db: Session = Depends(get_db)):
-    """Get a specific category"""
-    service = MarketplaceService(db)
-    category = service.get_category(category_id)
-    if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
-    return category
-
-@router.get("/categories/slug/{slug}")
-async def get_category_by_slug(slug: str, db: Session = Depends(get_db)):
+@router.get("/categories/{slug}")
+async def get_category(slug: str, db: Session = Depends(get_db)):
     """Get category by slug"""
     service = MarketplaceService(db)
     category = service.get_category_by_slug(slug)
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
     return category
+
+# Enhanced Features Endpoints
+
+# AI Recommendations
+@router.get("/recommendations")
+async def get_ai_recommendations(
+    product_id: Optional[int] = Query(None, description="Get recommendations for specific product"),
+    limit: int = Query(8, ge=1, le=20),
+    db: Session = Depends(get_db)
+):
+    """Get AI-powered product recommendations"""
+    service = MarketplaceService(db)
+    return service.get_ai_recommendations("user_123", product_id, limit)
+
+@router.get("/products/{product_id}/recommendations")
+async def get_product_recommendations(
+    product_id: int,
+    limit: int = Query(8, ge=1, le=20),
+    db: Session = Depends(get_db)
+):
+    """Get recommendations for a specific product"""
+    service = MarketplaceService(db)
+    return service.get_ai_recommendations("user_123", product_id, limit)
+
+# Price Alerts
+@router.get("/price-alerts")
+async def get_price_alerts(db: Session = Depends(get_db)):
+    """Get user's price alerts"""
+    service = MarketplaceService(db)
+    return service.get_user_price_alerts("user_123")
+
+@router.post("/price-alerts")
+async def create_price_alert(
+    product_id: int,
+    target_price: float = Query(..., gt=0, description="Target price for alert"),
+    db: Session = Depends(get_db)
+):
+    """Create price alert"""
+    service = MarketplaceService(db)
+    try:
+        return service.create_price_alert("user_123", product_id, target_price)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@router.delete("/price-alerts/{alert_id}")
+async def delete_price_alert(alert_id: int, db: Session = Depends(get_db)):
+    """Delete price alert"""
+    service = MarketplaceService(db)
+    success = service.delete_price_alert("user_123", alert_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Price alert not found")
+    return {"message": "Price alert deleted"}
+
+# Product Comparisons
+@router.get("/comparisons")
+async def get_comparisons(db: Session = Depends(get_db)):
+    """Get user's product comparisons"""
+    service = MarketplaceService(db)
+    return service.get_user_comparisons("user_123")
+
+@router.post("/comparisons")
+async def create_comparison(
+    name: str = Query(..., description="Comparison name"),
+    product_ids: List[int] = Query(..., description="Product IDs to compare"),
+    db: Session = Depends(get_db)
+):
+    """Create product comparison"""
+    service = MarketplaceService(db)
+    if len(product_ids) < 2:
+        raise HTTPException(status_code=400, detail="Need at least 2 products to compare")
+    if len(product_ids) > 4:
+        raise HTTPException(status_code=400, detail="Can compare maximum 4 products")
+    
+    return service.create_product_comparison("user_123", name, product_ids)
+
+@router.get("/comparisons/{comparison_id}")
+async def get_comparison(comparison_id: int, db: Session = Depends(get_db)):
+    """Get comparison products"""
+    service = MarketplaceService(db)
+    products = service.get_comparison_products(comparison_id)
+    if not products:
+        raise HTTPException(status_code=404, detail="Comparison not found")
+    return products
+
+@router.delete("/comparisons/{comparison_id}")
+async def delete_comparison(comparison_id: int, db: Session = Depends(get_db)):
+    """Delete product comparison"""
+    service = MarketplaceService(db)
+    success = service.delete_comparison("user_123", comparison_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Comparison not found")
+    return {"message": "Comparison deleted"}
+
+# Recently Viewed
+@router.get("/recently-viewed")
+async def get_recently_viewed(
+    limit: int = Query(10, ge=1, le=20),
+    db: Session = Depends(get_db)
+):
+    """Get recently viewed products"""
+    service = MarketplaceService(db)
+    return service.get_recently_viewed("user_123", limit)
+
+# Q&A System
+@router.get("/products/{product_id}/questions")
+async def get_product_questions(
+    product_id: int,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db)
+):
+    """Get product questions"""
+    service = MarketplaceService(db)
+    return service.get_product_questions(product_id, page, limit)
+
+@router.post("/products/{product_id}/questions")
+async def create_product_question(
+    product_id: int,
+    question: str = Query(..., description="Question text"),
+    db: Session = Depends(get_db)
+):
+    """Create product question"""
+    service = MarketplaceService(db)
+    return service.create_product_question("user_123", product_id, question)
+
+@router.post("/questions/{question_id}/answer")
+async def answer_question(
+    question_id: int,
+    answer: str = Query(..., description="Answer text"),
+    db: Session = Depends(get_db)
+):
+    """Answer a product question"""
+    service = MarketplaceService(db)
+    return service.answer_product_question(question_id, answer, "admin")
+
+@router.post("/questions/{question_id}/vote")
+async def vote_question_helpful(question_id: int, db: Session = Depends(get_db)):
+    """Vote question as helpful"""
+    service = MarketplaceService(db)
+    success = service.vote_question_helpful(question_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Question not found")
+    return {"message": "Vote recorded"}
+
+@router.post("/answers/{answer_id}/vote")
+async def vote_answer_helpful(answer_id: int, db: Session = Depends(get_db)):
+    """Vote answer as helpful"""
+    service = MarketplaceService(db)
+    success = service.vote_answer_helpful(answer_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Answer not found")
+    return {"message": "Vote recorded"}

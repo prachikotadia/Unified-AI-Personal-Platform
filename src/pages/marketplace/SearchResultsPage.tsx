@@ -61,10 +61,12 @@ const SearchResultsPage: React.FC = () => {
       setLoading(true);
       
       const searchRequest: SearchRequest = {
-        query,
-        filters,
-        sort_by: sortBy,
-        sort_order: sortOrder,
+        search: query,
+        category: filters.category,
+        minPrice: filters.min_price ? Number(filters.min_price) : undefined,
+        maxPrice: filters.max_price ? Number(filters.max_price) : undefined,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
         page: currentPage,
         limit: 20
       };

@@ -38,8 +38,17 @@ import {
   Banknote,
   BarChart3 as DividendIcon,
   Package,
-  Gift
+  Gift,
+  RefreshCw,
+  Settings,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Upload
 } from 'lucide-react';
+import { transactionSyncService, SyncStatus } from '../../services/transactionSync';
+import TransactionModal from '../../components/finance/TransactionModal';
+import BulkOperationsModal from '../../components/finance/BulkOperationsModal';
 
 interface Transaction {
   id: string;
@@ -75,6 +84,14 @@ const TransactionsPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'description'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [loading, setLoading] = useState(true);
+  
+  // New state for enhanced features
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(transactionSyncService.getStatus());
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [modalMode, setModalMode] = useState<'add' | 'edit' | 'delete'>('add');
+  const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<'update' | 'delete' | 'tag'>('update');
 
   const expenseCategories: Category[] = [
     { value: 'food_dining', label: 'Food & Dining', icon: <Utensils size={20} />, color: '#FF6B6B' },
@@ -181,6 +198,21 @@ const TransactionsPage: React.FC = () => {
     setFilteredTransactions(filtered);
   }, [transactions, searchTerm, selectedType, selectedCategory, sortBy, sortOrder]);
 
+  // Subscribe to sync status updates
+  useEffect(() => {
+    const unsubscribe = transactionSyncService.subscribeToStatus(setSyncStatus);
+    return unsubscribe;
+  }, []);
+
+  // Subscribe to new transactions from sync
+  useEffect(() => {
+    const unsubscribe = transactionSyncService.subscribeToTransactions((newTransactions) => {
+      setTransactions(prev => [...newTransactions, ...prev]);
+      setFilteredTransactions(prev => [...newTransactions, ...prev]);
+    });
+    return unsubscribe;
+  }, []);
+
   const getCategoryIcon = (category: string) => {
     const allCategories = [...expenseCategories, ...incomeCategories];
     const found = allCategories.find(c => c.value === category);
@@ -212,6 +244,75 @@ const TransactionsPage: React.FC = () => {
     setShowEditModal(true);
   };
 
+  // Enhanced transaction handlers
+  const handleAddTransaction = () => {
+    setModalMode('add');
+    setSelectedTransaction(null);
+    setShowTransactionModal(true);
+  };
+
+  const handleEditTransactionModal = (transaction: Transaction) => {
+    setModalMode('edit');
+    setSelectedTransaction(transaction);
+    setShowTransactionModal(true);
+  };
+
+  const handleDeleteTransactionModal = (transaction: Transaction) => {
+    setModalMode('delete');
+    setSelectedTransaction(transaction);
+    setShowTransactionModal(true);
+  };
+
+  const handleTransactionSuccess = (transaction: Transaction) => {
+    if (modalMode === 'add') {
+      setTransactions(prev => [transaction, ...prev]);
+      setFilteredTransactions(prev => [transaction, ...prev]);
+    } else if (modalMode === 'edit' && selectedTransaction) {
+      setTransactions(prev => prev.map(t => t.id === selectedTransaction.id ? transaction : t));
+      setFilteredTransactions(prev => prev.map(t => t.id === selectedTransaction.id ? transaction : t));
+    }
+  };
+
+  const handleTransactionDelete = (id: string) => {
+    setTransactions(prev => prev.filter(t => t.id !== id));
+    setFilteredTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
+  // Bulk operations handlers
+  const handleBulkUpdate = async (transactionIds: string[], updates: Partial<Transaction>) => {
+    setTransactions(prev => prev.map(t => 
+      transactionIds.includes(t.id) ? { ...t, ...updates } : t
+    ));
+    setFilteredTransactions(prev => prev.map(t => 
+      transactionIds.includes(t.id) ? { ...t, ...updates } : t
+    ));
+  };
+
+  const handleBulkDelete = async (transactionIds: string[]) => {
+    setTransactions(prev => prev.filter(t => !transactionIds.includes(t.id)));
+    setFilteredTransactions(prev => prev.filter(t => !transactionIds.includes(t.id)));
+  };
+
+  const handleImport = async (newTransactions: Transaction[]) => {
+    setTransactions(prev => [...newTransactions, ...prev]);
+    setFilteredTransactions(prev => [...newTransactions, ...prev]);
+  };
+
+  const handleExport = async (format: 'csv' | 'pdf' | 'excel') => {
+    // Simulate export functionality
+    console.log(`Exporting transactions in ${format} format`);
+    // In a real implementation, this would call the export service
+  };
+
+  // Sync handlers
+  const handleManualSync = async () => {
+    try {
+      await transactionSyncService.performSync();
+    } catch (error) {
+      console.error('Sync failed:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
@@ -241,14 +342,64 @@ const TransactionsPage: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
             <p className="text-gray-600 mt-2">Manage your income and expenses</p>
+            
+            {/* Sync Status */}
+            <div className="flex items-center gap-4 mt-3">
+              <div className="flex items-center gap-2">
+                {syncStatus.isConnected ? (
+                  <CheckCircle className="text-green-600" size={16} />
+                ) : (
+                  <AlertCircle className="text-red-600" size={16} />
+                )}
+                <span className="text-sm text-gray-600">
+                  {syncStatus.isConnected ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+              
+              {syncStatus.lastSync && (
+                <div className="flex items-center gap-2">
+                  <Clock className="text-gray-400" size={16} />
+                  <span className="text-sm text-gray-600">
+                    Last sync: {new Date(syncStatus.lastSync).toLocaleString()}
+                  </span>
+                </div>
+              )}
+              
+              {syncStatus.syncInProgress && (
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="text-blue-600 animate-spin" size={16} />
+                  <span className="text-sm text-blue-600">Syncing...</span>
+                </div>
+              )}
+            </div>
           </div>
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            <Plus size={20} />
-            Add Transaction
-          </button>
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleManualSync}
+              disabled={syncStatus.syncInProgress}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <RefreshCw className={syncStatus.syncInProgress ? 'animate-spin' : ''} size={16} />
+              Sync
+            </button>
+            
+            <button
+              onClick={() => setShowBulkModal(true)}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+            >
+              <Filter size={16} />
+              Bulk Operations
+            </button>
+            
+            <button 
+              onClick={handleAddTransaction}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <Plus size={20} />
+              Add Transaction
+            </button>
+          </div>
         </motion.div>
 
         {/* Summary Cards */}
@@ -644,6 +795,27 @@ const TransactionsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Enhanced Transaction Modal */}
+      <TransactionModal
+        isOpen={showTransactionModal}
+        onClose={() => setShowTransactionModal(false)}
+        mode={modalMode}
+        transaction={selectedTransaction || undefined}
+        onSuccess={handleTransactionSuccess}
+        onDelete={handleTransactionDelete}
+      />
+
+      {/* Bulk Operations Modal */}
+      <BulkOperationsModal
+        isOpen={showBulkModal}
+        onClose={() => setShowBulkModal(false)}
+        transactions={transactions}
+        onBulkUpdate={handleBulkUpdate}
+        onBulkDelete={handleBulkDelete}
+        onImport={handleImport}
+        onExport={handleExport}
+      />
     </div>
   );
 };

@@ -1,278 +1,280 @@
-# 🚀 OmniLife - Unified AI Personal Platform
+# OmniLife - Unified AI Personal Platform
 
-A comprehensive, AI-powered personal platform that integrates finance management, marketplace shopping, fitness tracking, travel planning, social networking, and intelligent chat capabilities.
+A modern, cloud-native full-stack application that combines AI-powered personal finance, e-commerce marketplace, health & fitness tracking, travel planning, social features, and real-time chat into one unified platform.
 
-## ✨ Features
+## 🚀 Features
 
-### 🛒 **Advanced Marketplace**
-- **Amazon-like shopping experience** with advanced search and filtering
-- **Real-time inventory management** with stock tracking
-- **Multiple payment methods** (PayPal, Apple Pay, credit cards)
-- **AI-powered recommendations** and price alerts
-- **Loyalty program** with points and rewards
-- **Comprehensive return/refund system**
-- **Product reviews and Q&A system**
+### Core Modules
+- **💰 AI-Powered Finance**: Budgeting, expense tracking, forecasting, and smart insights
+- **🛍️ E-commerce Marketplace**: Product catalog with AI recommendations and shopping cart
+- **💪 Health & Fitness**: Activity tracking, workout logging, nutrition, and progress analytics
+- **✈️ Travel Planning**: Trip suggestions, itinerary generation, and price alerts
+- **👥 Social Features**: Share budgets, trips, workouts, and connect with friends
+- **💬 Real-time Chat**: WebSocket-based messaging with presence indicators
 
-### 💰 **Finance Management**
-- **Expense tracking** with categorization
-- **Budget planning** and goal setting
-- **Credit score monitoring**
-- **Financial offers** and recommendations
-- **AI-powered financial insights**
-- **Monthly spending analytics**
+### Technical Features
+- **🎨 Modern UI/UX**: Glassmorphism design with Framer Motion animations
+- **📱 Responsive Design**: Mobile-first approach with adaptive layouts
+- **🌙 Dark/Light Theme**: Seamless theme switching with system preference detection
+- **🔐 Authentication**: OAuth2 (Google/GitHub) + JWT with secure session management
+- **⚡ Real-time Updates**: WebSocket connections for live data synchronization
+- **🤖 AI Integration**: Personalized recommendations and intelligent insights
+- **📊 Data Visualization**: Interactive charts and progress tracking
 
-### 🏃‍♂️ **Fitness & Health**
-- **Workout tracking** and planning
-- **Goal setting** and achievement tracking
-- **Progress analytics** and insights
-- **AI-powered workout recommendations**
-- **Nutrition planning** and tracking
+## 🛠️ Tech Stack
 
-### ✈️ **Travel Planning**
-- **Trip planning** and itinerary management
-- **Flight search** and booking
-- **Hotel recommendations**
-- **Travel analytics** and insights
-- **AI-powered travel suggestions**
-
-### 👥 **Social Networking**
-- **Social feed** and content sharing
-- **Friend connections** and messaging
-- **Shared items** and recommendations
-- **Community features**
-
-### 💬 **Intelligent Chat**
-- **Real-time messaging** with AI assistance
-- **Voice and video calls**
-- **File sharing** and media support
-- **AI-powered smart replies**
-- **Conversation summaries**
-
-## 🏗️ Architecture
-
-### **Frontend (React + TypeScript)**
+### Frontend
 - **React 18** with TypeScript
-- **Vite** for fast development
-- **Tailwind CSS** for styling
-- **Zustand** for state management
-- **React Router** for navigation
-- **Framer Motion** for animations
+- **Vite** for fast development and building
+- **TailwindCSS** for styling with custom design system
+- **Framer Motion** for smooth animations and transitions
+- **React Query** for server state management
+- **Zustand** for client state management
+- **React Router v6** for navigation
+- **Recharts** for data visualization
 - **Lucide React** for icons
 
-### **Backend (Python + FastAPI)**
-- **FastAPI** for high-performance API
-- **SQLAlchemy** for database ORM
-- **PostgreSQL/SQLite** for data storage
+### Backend (Planned)
+- **FastAPI** (Python) for microservices
+- **Node.js/Express** for some services
+- **PostgreSQL** for transactional data
 - **Redis** for caching and sessions
-- **Elasticsearch** for advanced search
-- **Pydantic** for data validation
-- **Structlog** for structured logging
+- **MongoDB** for event logs and analytics
+- **Neo4j** for social graph and recommendations
+- **Elasticsearch** for product search
+- **Kafka** for event streaming
+- **Kubernetes** for orchestration
 
-### **AI Integration**
-- **OpenAI GPT-4** for intelligent responses
-- **LangChain** for AI workflows
-- **Natural Language Processing** for user interactions
-- **AI-powered insights** across all modules
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 18+ and npm
-- Python 3.11+
-- PostgreSQL (optional, SQLite for development)
-- Redis (optional for development)
-- Elasticsearch (optional for development)
-
-### Frontend Setup
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-```
-
-### Backend Setup
-```bash
-# Navigate to backend directory
-cd backend
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Set up environment variables
-cp env.example .env
-# Edit .env with your configuration
-
-# Initialize database
-python init_db.py
-
-# Start development server
-uvicorn main:app --reload --host 0.0.0.0 --port 8001
-```
-
-### Environment Variables
-Create a `.env` file in the backend directory:
-
-```env
-# Database
-DATABASE_URL=sqlite:///./omnilife_marketplace.db
-FORCE_SQLITE=true
-
-# Search
-ELASTICSEARCH_HOST=localhost
-ELASTICSEARCH_PORT=9200
-ELASTICSEARCH_INDEX=marketplace
-
-# Caching
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# Email
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-
-# SMS (Twilio)
-TWILIO_ACCOUNT_SID=your-account-sid
-TWILIO_AUTH_TOKEN=your-auth-token
-TWILIO_PHONE_NUMBER=+1234567890
-
-# Push Notifications (Firebase)
-FIREBASE_SERVER_KEY=your-firebase-server-key
-
-# Security
-MAX_LOGIN_ATTEMPTS=5
-LOGIN_LOCKOUT_DURATION=900
-SUSPICIOUS_ACTIVITY_THRESHOLD=0.7
-FRAUD_DETECTION_ENABLED=true
-
-# Payment
-PAYMENT_GATEWAY_KEY=your-payment-gateway-key
-PAYMENT_WEBHOOK_SECRET=your-webhook-secret
-```
+### AI/ML
+- **TensorFlow/PyTorch** for machine learning models
+- **Personalization models** for recommendations
+- **Time-series forecasting** for finance predictions
+- **Anomaly detection** for expense monitoring
+- **Natural language processing** for chat and summaries
 
 ## 📁 Project Structure
 
 ```
-omnilife-platform/
-├── src/                          # Frontend React application
-│   ├── components/               # Reusable components
-│   ├── pages/                    # Page components
-│   ├── store/                    # Zustand state management
-│   ├── services/                 # API services
-│   ├── utils/                    # Utility functions
-│   └── types/                    # TypeScript type definitions
-├── backend/                      # Python FastAPI backend
-│   ├── app/                      # Application code
-│   │   ├── routers/              # API route handlers
-│   │   ├── services/             # Business logic services
-│   │   ├── models/               # Database models
-│   │   └── middleware/           # Custom middleware
-│   ├── tests/                    # Test suite
-│   ├── requirements.txt          # Python dependencies
-│   └── main.py                   # Application entry point
-├── docs/                         # Documentation
-├── README.md                     # Project documentation
-└── .gitignore                    # Git ignore rules
+src/
+├── components/          # Reusable UI components
+│   ├── layout/         # Layout components (Navbar, Sidebar, etc.)
+│   ├── ui/             # Basic UI components
+│   └── charts/         # Data visualization components
+├── pages/              # Page components
+│   ├── auth/           # Authentication pages
+│   ├── finance/        # Finance module pages
+│   ├── marketplace/    # Marketplace module pages
+│   ├── fitness/        # Fitness module pages
+│   ├── travel/         # Travel module pages
+│   ├── social/         # Social module pages
+│   └── chat/           # Chat module pages
+├── store/              # State management (Zustand stores)
+├── lib/                # Utility functions and helpers
+├── hooks/              # Custom React hooks
+├── types/              # TypeScript type definitions
+└── styles/             # Global styles and CSS
 ```
 
-## 🔧 API Endpoints
+## 🚀 Getting Started
 
-### Marketplace
-- `GET /api/marketplace/products` - Get products with filters
-- `POST /api/marketplace/cart/add` - Add to cart
-- `POST /api/marketplace/orders/create` - Create order
-- `GET /api/marketplace/loyalty` - Loyalty program info
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Git
 
-### Search
-- `GET /api/search/products` - Advanced product search
-- `GET /api/search/suggestions` - Search suggestions
-- `GET /api/search/analytics` - Search analytics
+### Installation
 
-### Analytics
-- `POST /api/analytics/session/start` - Start session
-- `POST /api/analytics/page-view` - Track page view
-- `GET /api/analytics/user/{user_id}` - User analytics
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/omnilife-frontend.git
+   cd omnilife-frontend
+   ```
 
-### Notifications
-- `POST /api/notifications/create` - Create notification
-- `GET /api/notifications/user/{user_id}` - User notifications
-- `POST /api/notifications/send/email` - Send email
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
 
-### Security
-- `POST /api/security/login-attempt` - Record login
-- `POST /api/security/payment-security` - Analyze payment
-- `GET /api/security/events` - Security events
+3. **Start the development server**
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+
+4. **Open your browser**
+   Navigate to `http://localhost:3000`
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+- `npm run test` - Run tests
+- `npm run test:watch` - Run tests in watch mode
+
+## 🎨 Design System
+
+### Color Palette
+- **Primary**: Blue gradient (`#4A90E2` to `#007AFF`)
+- **Success**: Green gradient (`#43E97B` to `#38F9D7`)
+- **Warning**: Orange gradient (`#FF6A00` to `#FF8E53`)
+- **Info**: Purple gradient (`#8E2DE2` to `#4A00E0`)
+
+### Glassmorphism Effect
+- Background blur: `backdrop-filter: blur(12px)`
+- Transparency: `rgba(255, 255, 255, 0.15)` (light) / `rgba(0, 0, 0, 0.25)` (dark)
+- Border radius: `20px`
+- Soft shadows for depth
+
+### Typography
+- **Headings**: Inter font family
+- **Body**: System font stack
+- **Monospace**: JetBrains Mono for code
+
+## 🔧 Configuration
+
+### Environment Variables
+Create a `.env.local` file in the root directory:
+
+```env
+VITE_API_BASE_URL=http://localhost:8000
+VITE_WS_URL=ws://localhost:8000/ws
+VITE_GOOGLE_CLIENT_ID=your-google-client-id
+VITE_GITHUB_CLIENT_ID=your-github-client-id
+```
+
+### TailwindCSS Configuration
+The project uses a custom TailwindCSS configuration with:
+- Custom color palette
+- Glassmorphism utilities
+- Animation keyframes
+- Responsive breakpoints
+
+## 📱 Responsive Design
+
+The application is built with a mobile-first approach:
+- **Mobile**: < 768px
+- **Tablet**: 768px - 1024px
+- **Desktop**: > 1024px
+
+### Breakpoints
+- `sm`: 640px
+- `md`: 768px
+- `lg`: 1024px
+- `xl`: 1280px
+- `2xl`: 1536px
+
+## 🔐 Authentication
+
+The app supports multiple authentication methods:
+- **Email/Password**: Traditional login with validation
+- **Google OAuth**: One-click Google sign-in
+- **GitHub OAuth**: Developer-friendly GitHub integration
+
+### Security Features
+- JWT token management
+- Secure session storage
+- Password hashing (bcrypt)
+- CSRF protection
+- Rate limiting
+
+## 🎯 Key Features Implementation
+
+### 1. Dashboard
+- Unified overview of all modules
+- Real-time data updates
+- Quick action buttons
+- AI-powered insights
+
+### 2. Finance Module
+- Transaction tracking
+- Budget management
+- Expense categorization
+- AI forecasting
+- Spending analytics
+
+### 3. Marketplace
+- Product catalog
+- AI recommendations
+- Shopping cart
+- Order management
+- Search and filtering
+
+### 4. Fitness Tracking
+- Workout logging
+- Nutrition tracking
+- Progress analytics
+- Goal setting
+- Achievement badges
+
+### 5. Travel Planning
+- Destination search
+- AI itinerary generation
+- Price tracking
+- Trip sharing
+- Travel recommendations
+
+### 6. Social Features
+- User profiles
+- Content sharing
+- Activity feed
+- Friend connections
+- Privacy controls
+
+### 7. Real-time Chat
+- WebSocket messaging
+- User presence
+- File sharing
+- Group chats
+- Message history
 
 ## 🧪 Testing
 
-### Frontend Tests
-```bash
-# Run tests
-npm test
+### Test Structure
+- **Unit Tests**: Component and utility function testing
+- **Integration Tests**: API integration and state management
+- **E2E Tests**: User flow testing with Playwright
 
-# Run tests with coverage
+### Running Tests
+```bash
+# Unit tests
+npm run test
+
+# E2E tests
+npm run test:e2e
+
+# Coverage report
 npm run test:coverage
-```
-
-### Backend Tests
-```bash
-cd backend
-
-# Run all tests
-pytest
-
-# Run specific test category
-pytest -m unit
-pytest -m integration
-pytest -m security
-
-# Run with coverage
-pytest --cov=app --cov-report=html
 ```
 
 ## 🚀 Deployment
 
-### Docker Deployment
+### Production Build
 ```bash
-# Build and run with Docker Compose
-docker-compose up --build
-```
-
-### Manual Deployment
-```bash
-# Frontend
 npm run build
-# Deploy dist/ folder to your web server
-
-# Backend
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-## 📊 Features Overview
+### Docker Deployment
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "run", "preview"]
+```
 
-| Module | Features | Status |
-|--------|----------|--------|
-| 🛒 Marketplace | Advanced search, cart, orders, payments, loyalty | ✅ Complete |
-| 💰 Finance | Expense tracking, budgeting, analytics | ✅ Complete |
-| 🏃‍♂️ Fitness | Workout tracking, goals, analytics | ✅ Complete |
-| ✈️ Travel | Trip planning, flight search, hotels | ✅ Complete |
-| 👥 Social | Feed, friends, sharing | ✅ Complete |
-| 💬 Chat | Messaging, calls, AI assistance | ✅ Complete |
-| 🔍 Search | Elasticsearch, filters, suggestions | ✅ Complete |
-| 📊 Analytics | User behavior, insights, tracking | ✅ Complete |
-| 🔔 Notifications | Email, SMS, push notifications | ✅ Complete |
-| 🔐 Security | Fraud detection, threat prevention | ✅ Complete |
+### Environment Setup
+1. Set up environment variables
+2. Configure API endpoints
+3. Set up OAuth providers
+4. Configure WebSocket connections
 
 ## 🤝 Contributing
 
@@ -282,44 +284,31 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
+### Development Guidelines
+- Follow TypeScript best practices
+- Use ESLint and Prettier for code formatting
+- Write unit tests for new features
+- Update documentation for API changes
+- Follow the established design system
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
-- **Documentation**: [Backend Enhancements](backend/BACKEND_ENHANCEMENTS.md)
-- **API Docs**: `http://localhost:8001/api-docs`
-- **Issues**: Create an issue on GitHub
+- **Documentation**: [Wiki](https://github.com/your-username/omnilife-frontend/wiki)
+- **Issues**: [GitHub Issues](https://github.com/your-username/omnilife-frontend/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/your-username/omnilife-frontend/discussions)
 
-## 🎯 Roadmap
+## 🙏 Acknowledgments
 
-- [ ] **Machine Learning Integration**
-  - Product recommendation engine
-  - Fraud detection AI
-  - Customer segmentation
-  - Predictive analytics
-
-- [ ] **Microservices Architecture**
-  - Service decomposition
-  - API gateway implementation
-  - Service mesh integration
-  - Event-driven architecture
-
-- [ ] **Advanced Analytics**
-  - Real-time dashboards
-  - Business intelligence
-  - A/B testing framework
-  - Customer journey mapping
-
-- [ ] **Enhanced Security**
-  - Multi-factor authentication
-  - Biometric authentication
-  - Advanced threat detection
-  - Compliance automation
+- [Framer Motion](https://www.framer.com/motion/) for animations
+- [TailwindCSS](https://tailwindcss.com/) for styling
+- [Lucide](https://lucide.dev/) for icons
+- [Recharts](https://recharts.org/) for charts
+- [React Query](https://tanstack.com/query) for data fetching
 
 ---
 
-**Built with ❤️ using React, FastAPI, and AI technologies**
-
-*OmniLife - Your Unified AI Personal Platform*
+**OmniLife** - Empowering your lifestyle with AI 🚀

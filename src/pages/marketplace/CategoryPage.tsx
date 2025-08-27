@@ -57,9 +57,9 @@ const CategoryPage: React.FC = () => {
       const [categoryData, productsData] = await Promise.all([
         marketplaceAPI.getCategoryBySlug(slug!),
         marketplaceAPI.getProducts({
-          filters: { category: slug },
-          sort_by: sortBy,
-          sort_order: sortOrder,
+          category: slug,
+          sortBy: sortBy,
+          sortOrder: sortOrder,
           page: 1,
           limit: 50
         })

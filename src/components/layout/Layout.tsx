@@ -16,7 +16,7 @@ const Layout = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Navbar */}
-        <Navbar onMenuClick={() => setSidebarOpen(true)} />
+        <Navbar />
         
         {/* Page Content */}
         <main className="flex-1 p-4 md:p-6 lg:p-8">

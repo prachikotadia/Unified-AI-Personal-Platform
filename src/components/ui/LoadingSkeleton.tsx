@@ -1,61 +1,167 @@
-import { motion } from 'framer-motion'
+import React from 'react';
 
 interface SkeletonProps {
-  className?: string
-  count?: number
+  className?: string;
+  width?: string | number;
+  height?: string | number;
+  rounded?: 'none' | 'sm' | 'md' | 'lg' | 'full';
 }
 
-const Skeleton = ({ className = "h-4", count = 1 }: SkeletonProps) => {
+const Skeleton: React.FC<SkeletonProps> = ({ 
+  className = '', 
+  width, 
+  height, 
+  rounded = 'md' 
+}) => {
+  const roundedClasses = {
+    none: '',
+    sm: 'rounded-sm',
+    md: 'rounded-md',
+    lg: 'rounded-lg',
+    full: 'rounded-full'
+  };
+
   return (
-    <>
-      {Array.from({ length: count }).map((_, index) => (
-        <motion.div
-          key={index}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: index * 0.1 }}
-          className={`bg-gray-200 dark:bg-gray-700 rounded animate-pulse ${className}`}
-        />
-      ))}
-    </>
-  )
-}
+    <div
+      className={`animate-pulse bg-gray-200 dark:bg-gray-700 ${roundedClasses[rounded]} ${className}`}
+      style={{
+        width: width,
+        height: height
+      }}
+    />
+  );
+};
 
-export const CardSkeleton = () => (
-  <div className="glass-card p-6 space-y-4">
-    <div className="flex items-center space-x-3">
-      <Skeleton className="w-12 h-12 rounded-full" />
-      <div className="flex-1 space-y-2">
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-3 w-1/2" />
-      </div>
+// Product Card Skeleton
+export const ProductCardSkeleton: React.FC = () => (
+  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+    <Skeleton className="w-full h-48 mb-4" rounded="lg" />
+    <Skeleton className="w-3/4 h-4 mb-2" />
+    <Skeleton className="w-1/2 h-3 mb-2" />
+    <div className="flex items-center space-x-2 mb-2">
+      <Skeleton className="w-16 h-3" />
+      <Skeleton className="w-12 h-3" />
     </div>
-    <Skeleton className="h-4" count={3} />
+    <Skeleton className="w-20 h-6 mb-3" />
+    <div className="flex space-x-2">
+      <Skeleton className="w-8 h-8" rounded="full" />
+      <Skeleton className="w-8 h-8" rounded="full" />
+      <Skeleton className="w-8 h-8" rounded="full" />
+    </div>
   </div>
-)
+);
 
-export const TableSkeleton = () => (
-  <div className="glass-card p-6 space-y-4">
-    <Skeleton className="h-6 w-1/4" />
-    {Array.from({ length: 5 }).map((_, index) => (
-      <div key={index} className="flex items-center space-x-4 py-3">
-        <Skeleton className="w-8 h-8 rounded-full" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-4 w-1/3" />
-          <Skeleton className="h-3 w-1/4" />
-        </div>
-        <Skeleton className="h-4 w-20" />
+// Product List Skeleton
+export const ProductListSkeleton: React.FC = () => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    {[...Array(8)].map((_, i) => (
+      <ProductCardSkeleton key={i} />
+    ))}
+  </div>
+);
+
+// Table Row Skeleton
+export const TableRowSkeleton: React.FC = () => (
+  <div className="flex items-center space-x-4 p-4 border-b border-gray-200 dark:border-gray-700">
+    <Skeleton className="w-12 h-12" rounded="lg" />
+    <div className="flex-1 space-y-2">
+      <Skeleton className="w-3/4 h-4" />
+      <Skeleton className="w-1/2 h-3" />
+    </div>
+    <Skeleton className="w-20 h-6" />
+    <Skeleton className="w-16 h-6" />
+    <div className="flex space-x-2">
+      <Skeleton className="w-8 h-8" rounded="full" />
+      <Skeleton className="w-8 h-8" rounded="full" />
+    </div>
+  </div>
+);
+
+// Form Skeleton
+export const FormSkeleton: React.FC = () => (
+  <div className="space-y-6">
+    <div className="space-y-4">
+      <Skeleton className="w-1/4 h-4" />
+      <Skeleton className="w-full h-10" />
+    </div>
+    <div className="space-y-4">
+      <Skeleton className="w-1/3 h-4" />
+      <Skeleton className="w-full h-32" />
+    </div>
+    <div className="flex space-x-3">
+      <Skeleton className="w-24 h-10" />
+      <Skeleton className="w-24 h-10" />
+    </div>
+  </div>
+);
+
+// Page Header Skeleton
+export const PageHeaderSkeleton: React.FC = () => (
+  <div className="mb-6">
+    <Skeleton className="w-1/3 h-8 mb-2" />
+    <Skeleton className="w-1/2 h-4" />
+  </div>
+);
+
+// Stats Card Skeleton
+export const StatsCardSkeleton: React.FC = () => (
+  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+    <div className="flex items-center justify-between">
+      <div className="space-y-2">
+        <Skeleton className="w-20 h-4" />
+        <Skeleton className="w-16 h-6" />
+      </div>
+      <Skeleton className="w-12 h-12" rounded="full" />
+    </div>
+  </div>
+);
+
+// Chart Skeleton
+export const ChartSkeleton: React.FC = () => (
+  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+    <Skeleton className="w-1/3 h-6 mb-4" />
+    <Skeleton className="w-full h-64" />
+  </div>
+);
+
+// Navigation Skeleton
+export const NavigationSkeleton: React.FC = () => (
+  <div className="flex items-center space-x-4">
+    {[...Array(5)].map((_, i) => (
+      <Skeleton key={i} className="w-20 h-8" />
+    ))}
+  </div>
+);
+
+// Sidebar Skeleton
+export const SidebarSkeleton: React.FC = () => (
+  <div className="space-y-4">
+    {[...Array(6)].map((_, i) => (
+      <div key={i} className="flex items-center space-x-3">
+        <Skeleton className="w-6 h-6" rounded="full" />
+        <Skeleton className="w-24 h-4" />
       </div>
     ))}
   </div>
-)
+);
 
-export const GridSkeleton = ({ cols = 3 }: { cols?: number }) => (
-  <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${cols} gap-6`}>
-    {Array.from({ length: 6 }).map((_, index) => (
-      <CardSkeleton key={index} />
-    ))}
+// Modal Skeleton
+export const ModalSkeleton: React.FC = () => (
+  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full">
+    <div className="flex items-center justify-between mb-4">
+      <Skeleton className="w-1/2 h-6" />
+      <Skeleton className="w-6 h-6" rounded="full" />
+    </div>
+    <div className="space-y-4">
+      <Skeleton className="w-full h-4" />
+      <Skeleton className="w-3/4 h-4" />
+      <Skeleton className="w-full h-10" />
+    </div>
+    <div className="flex space-x-3 mt-6">
+      <Skeleton className="w-20 h-10" />
+      <Skeleton className="w-20 h-10" />
+    </div>
   </div>
-)
+);
 
-export default Skeleton
+export default Skeleton;
