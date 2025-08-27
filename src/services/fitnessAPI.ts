@@ -1143,4 +1143,4 @@ const mockFitnessAPI = {
 
 // Export the appropriate API based on environment
 const useMockAPI = (import.meta as any).env?.VITE_USE_MOCK_API === 'true';
-export const fitnessAPIService = new FitnessAPIService();
+export const fitnessAPIService = useMockAPI ? mockFitnessAPI : new FitnessAPIService();
