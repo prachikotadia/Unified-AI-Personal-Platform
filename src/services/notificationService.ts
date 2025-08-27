@@ -1,4 +1,5 @@
 import { bankIntegrationAPIService } from './bankIntegration';
+import { getWebSocketURL } from '../config/api';
 
 // Notification Types
 export interface Notification {
@@ -52,8 +53,6 @@ class NotificationService {
     // Disable WebSocket for now to prevent connection errors
     // this.initializeWebSocket();
   }
-
-import { getWebSocketURL } from '../config/api';
 
   private initializeWebSocket() {
     const wsUrl = getWebSocketURL('finance');
