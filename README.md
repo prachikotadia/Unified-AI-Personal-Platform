@@ -1,282 +1,281 @@
 # OmniLife - Unified AI Personal Platform
 
-A modern, cloud-native full-stack application that combines AI-powered personal finance, e-commerce marketplace, health & fitness tracking, travel planning, social features, and real-time chat into one unified platform.
+A comprehensive full-stack application that integrates AI-powered insights with personal finance management, e-commerce marketplace, health & fitness tracking, travel planning, and real-time communication features.
 
-## 🚀 Features
+🌐 **Live Demo**: [https://lifeomni.netlify.app/](https://lifeomni.netlify.app/)
+
+## Overview
+
+OmniLife is a modern, cloud-native platform that combines multiple personal management modules into a unified experience. The platform leverages GPT-4 for intelligent analysis, recommendations, and automated insights across all modules.
+
+## Screenshots
+
+### Dashboard
+![Dashboard](./screenshots/dashboard.png)
+
+The main dashboard provides a unified view of all modules with key metrics and quick access to each feature.
+
+### Finance Dashboard
+![Finance Dashboard](./screenshots/finance-dashboard.png)
+
+Comprehensive financial overview with total balance, monthly income/expenses, credit score, recent transactions, and linked bank accounts.
+
+### Fitness Dashboard
+![Fitness Dashboard](./screenshots/fitness-dashboard.png)
+
+Track your health and fitness progress with step counting, calorie tracking, workout logging, and weekly progress visualization.
+
+### Marketplace
+![Marketplace](./screenshots/marketplace.png)
+
+AI-powered product recommendations with personalized shopping preferences and recently viewed items.
+
+### Social
+![Social](./screenshots/social.png)
+
+Connect with friends, share achievements, and view shared items from your connections.
+
+## Architecture
+
+The application follows a microservices architecture with the following components:
+
+- **Frontend**: React 18 with TypeScript, Vite, and TailwindCSS
+- **Backend API** (Port 8000): Core FastAPI service with PostgreSQL and Redis
+- **Chat Service** (Port 8001): Real-time WebSocket messaging service
+- **AI Service** (Port 8002): Dedicated GPT-4 integration service
+- **Nginx**: Reverse proxy and load balancer (Port 80/443)
+
+## Features
 
 ### Core Modules
-- **💰 AI-Powered Finance**: Budgeting, expense tracking, forecasting, and smart insights
-- **🛍️ E-commerce Marketplace**: Product catalog with AI recommendations and shopping cart
-- **💪 Health & Fitness**: Activity tracking, workout logging, nutrition, and progress analytics
-- **✈️ Travel Planning**: Trip suggestions, itinerary generation, and price alerts
-- **👥 Social Features**: Share budgets, trips, workouts, and connect with friends
-- **💬 Real-time Chat**: WebSocket-based messaging with presence indicators
+
+- **Finance Management**: Budget tracking, expense analysis, account management, and AI-powered financial insights
+- **E-commerce Marketplace**: Product catalog, shopping cart, order management, and personalized recommendations
+- **Health & Fitness**: Activity tracking, workout logging, goal setting, and progress analytics
+- **Travel Planning**: Trip planning, itinerary generation, expense tracking, and destination recommendations
+- **Real-time Chat**: WebSocket-based messaging with sentiment analysis
+- **Social Features**: Share achievements, connect with friends, and collaborative planning
 
 ### Technical Features
-- **🎨 Modern UI/UX**: Glassmorphism design with Framer Motion animations
-- **📱 Responsive Design**: Mobile-first approach with adaptive layouts
-- **🌙 Dark/Light Theme**: Seamless theme switching with system preference detection
-- **🔐 Authentication**: OAuth2 (Google/GitHub) + JWT with secure session management
-- **⚡ Real-time Updates**: WebSocket connections for live data synchronization
-- **🤖 AI Integration**: Personalized recommendations and intelligent insights
-- **📊 Data Visualization**: Interactive charts and progress tracking
 
-## 🛠️ Tech Stack
+- Modern UI with glassmorphism design and smooth animations
+- Responsive design optimized for all devices
+- Dark/light theme with system preference detection
+- OAuth2 authentication (Google/GitHub) with JWT
+- Real-time data synchronization via WebSocket
+- GPT-4 integration for intelligent analysis and recommendations
+- Interactive data visualization with charts and graphs
+
+## Tech Stack
 
 ### Frontend
-- **React 18** with TypeScript
-- **Vite** for fast development and building
-- **TailwindCSS** for styling with custom design system
-- **Framer Motion** for smooth animations and transitions
-- **React Query** for server state management
-- **Zustand** for client state management
-- **React Router v6** for navigation
-- **Recharts** for data visualization
-- **Lucide React** for icons
+- React 18 + TypeScript
+- Vite for build tooling
+- TailwindCSS for styling
+- Framer Motion for animations
+- Zustand for state management
+- React Query for server state
+- Recharts for data visualization
 
-### Backend (Planned)
-- **FastAPI** (Python) for microservices
-- **Node.js/Express** for some services
-- **PostgreSQL** for transactional data
-- **Redis** for caching and sessions
-- **MongoDB** for event logs and analytics
-- **Neo4j** for social graph and recommendations
-- **Elasticsearch** for product search
-- **Kafka** for event streaming
-- **Kubernetes** for orchestration
+### Backend
+- FastAPI (Python)
+- PostgreSQL with SQLAlchemy ORM
+- Redis for caching and sessions
+- WebSocket for real-time communication
+- OpenAI GPT-4 API
+- LangChain for AI workflows
+- Alembic for database migrations
 
-### AI/ML
-- **TensorFlow/PyTorch** for machine learning models
-- **Personalization models** for recommendations
-- **Time-series forecasting** for finance predictions
-- **Anomaly detection** for expense monitoring
-- **Natural language processing** for chat and summaries
+### Infrastructure
+- Docker and Docker Compose
+- Nginx reverse proxy
+- Prometheus and Grafana for monitoring
 
-## 📁 Project Structure
-
-```
-src/
-├── components/          # Reusable UI components
-│   ├── layout/         # Layout components (Navbar, Sidebar, etc.)
-│   ├── ui/             # Basic UI components
-│   └── charts/         # Data visualization components
-├── pages/              # Page components
-│   ├── auth/           # Authentication pages
-│   ├── finance/        # Finance module pages
-│   ├── marketplace/    # Marketplace module pages
-│   ├── fitness/        # Fitness module pages
-│   ├── travel/         # Travel module pages
-│   ├── social/         # Social module pages
-│   └── chat/           # Chat module pages
-├── store/              # State management (Zustand stores)
-├── lib/                # Utility functions and helpers
-├── hooks/              # Custom React hooks
-├── types/              # TypeScript type definitions
-└── styles/             # Global styles and CSS
-```
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
-- npm or yarn
-- Git
+
+- Node.js 18+
+- Python 3.8+
+- Docker and Docker Compose (optional)
+- PostgreSQL (for production)
+- Redis (for production)
+- OpenAI API key
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/omnilife-frontend.git
-   cd omnilife-frontend
-   ```
+#### Option 1: Docker Compose (Recommended)
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd omnilife
+```
 
-3. **Start the development server**
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   ```
+2. Copy environment file:
+```bash
+cp backend/env.example .env
+```
 
-4. **Open your browser**
-   Navigate to `http://localhost:3000`
+3. Edit `.env` with your configuration:
+```env
+OPENAI_API_KEY=your_openai_api_key
+SECRET_KEY=your-secret-key
+DATABASE_URL=postgresql://user:password@localhost:5432/omnilife
+REDIS_URL=redis://localhost:6379/0
+```
 
-### Available Scripts
+4. Start all services:
+```bash
+docker-compose up -d
+```
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-- `npm run test` - Run tests
-- `npm run test:watch` - Run tests in watch mode
+5. Access the application:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- API Documentation: http://localhost:8000/docs
 
-## 🎨 Design System
+#### Option 2: Local Development
 
-### Color Palette
-- **Primary**: Blue gradient (`#4A90E2` to `#007AFF`)
-- **Success**: Green gradient (`#43E97B` to `#38F9D7`)
-- **Warning**: Orange gradient (`#FF6A00` to `#FF8E53`)
-- **Info**: Purple gradient (`#8E2DE2` to `#4A00E0`)
+**Frontend Setup:**
+```bash
+npm install
+npm run dev
+```
 
-### Glassmorphism Effect
-- Background blur: `backdrop-filter: blur(12px)`
-- Transparency: `rgba(255, 255, 255, 0.15)` (light) / `rgba(0, 0, 0, 0.25)` (dark)
-- Border radius: `20px`
-- Soft shadows for depth
+**Backend Setup:**
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp env.example .env
+# Edit .env with your settings
+python start.py
+```
 
-### Typography
-- **Headings**: Inter font family
-- **Body**: System font stack
-- **Monospace**: JetBrains Mono for code
+**Database Setup:**
+```bash
+cd backend
+python setup_database.py
+```
 
-## 🔧 Configuration
+## Project Structure
+
+```
+.
+├── src/                    # Frontend source code
+│   ├── components/         # React components
+│   ├── pages/             # Page components
+│   ├── store/             # State management
+│   ├── services/          # API services
+│   └── hooks/             # Custom React hooks
+├── backend/               # Backend source code
+│   ├── app/               # Application code
+│   │   ├── models/        # Database models
+│   │   ├── routers/       # API routes
+│   │   ├── services/      # Business logic
+│   │   └── schemas/       # Pydantic schemas
+│   ├── main.py            # Main FastAPI application
+│   ├── chat_server.py     # Chat microservice
+│   ├── ai_service.py      # AI microservice
+│   └── requirements.txt   # Python dependencies
+├── docker-compose.yml      # Development environment
+├── docker-compose.prod.yml # Production environment
+└── nginx/                 # Nginx configuration
+```
+
+## Configuration
 
 ### Environment Variables
-Create a `.env.local` file in the root directory:
+
+Key environment variables for the backend:
 
 ```env
-VITE_API_BASE_URL=http://localhost:8000
-VITE_WS_URL=ws://localhost:8000/ws
-VITE_GOOGLE_CLIENT_ID=your-google-client-id
-VITE_GITHUB_CLIENT_ID=your-github-client-id
+# Database
+DATABASE_URL=postgresql://user:password@host:port/database
+
+# Redis
+REDIS_URL=redis://host:port/database
+
+# Security
+SECRET_KEY=your-secret-key
+OPENAI_API_KEY=your-openai-api-key
+
+# Environment
+ENVIRONMENT=development
+DEBUG=true
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 ```
 
-### TailwindCSS Configuration
-The project uses a custom TailwindCSS configuration with:
-- Custom color palette
-- Glassmorphism utilities
-- Animation keyframes
-- Responsive breakpoints
+## API Documentation
 
-## 📱 Responsive Design
+Once the backend is running, interactive API documentation is available at:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
 
-The application is built with a mobile-first approach:
-- **Mobile**: < 768px
-- **Tablet**: 768px - 1024px
-- **Desktop**: > 1024px
-
-### Breakpoints
-- `sm`: 640px
-- `md`: 768px
-- `lg`: 1024px
-- `xl`: 1280px
-- `2xl`: 1536px
-
-## 🔐 Authentication
-
-The app supports multiple authentication methods:
-- **Email/Password**: Traditional login with validation
-- **Google OAuth**: One-click Google sign-in
-- **GitHub OAuth**: Developer-friendly GitHub integration
-
-### Security Features
-- JWT token management
-- Secure session storage
-- Password hashing (bcrypt)
-- CSRF protection
-- Rate limiting
-
-## 🎯 Key Features Implementation
-
-### 1. Dashboard
-- Unified overview of all modules
-- Real-time data updates
-- Quick action buttons
-- AI-powered insights
-
-### 2. Finance Module
-- Transaction tracking
-- Budget management
-- Expense categorization
-- AI forecasting
-- Spending analytics
-
-### 3. Marketplace
-- Product catalog
-- AI recommendations
-- Shopping cart
-- Order management
-- Search and filtering
-
-### 4. Fitness Tracking
-- Workout logging
-- Nutrition tracking
-- Progress analytics
-- Goal setting
-- Achievement badges
-
-### 5. Travel Planning
-- Destination search
-- AI itinerary generation
-- Price tracking
-- Trip sharing
-- Travel recommendations
-
-### 6. Social Features
-- User profiles
-- Content sharing
-- Activity feed
-- Friend connections
-- Privacy controls
-
-### 7. Real-time Chat
-- WebSocket messaging
-- User presence
-- File sharing
-- Group chats
-- Message history
-
-## 🧪 Testing
-
-### Test Structure
-- **Unit Tests**: Component and utility function testing
-- **Integration Tests**: API integration and state management
-- **E2E Tests**: User flow testing with Playwright
+## Development
 
 ### Running Tests
+
 ```bash
-# Unit tests
-npm run test
+# Frontend tests
+npm test
 
-# E2E tests
-npm run test:e2e
-
-# Coverage report
-npm run test:coverage
+# Backend tests
+cd backend
+pytest
 ```
 
-## 🚀 Deployment
+### Code Quality
 
-### Production Build
 ```bash
-npm run build
+# Frontend linting
+npm run lint
+
+# Backend formatting
+black backend/
+isort backend/
 ```
 
-### Docker Deployment
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-RUN npm run build
-EXPOSE 3000
-CMD ["npm", "run", "preview"]
+## Deployment
+
+### Production Deployment
+
+1. Update environment variables for production
+2. Build Docker images:
+```bash
+docker-compose -f docker-compose.prod.yml build
 ```
 
-### Environment Setup
-1. Set up environment variables
-2. Configure API endpoints
-3. Set up OAuth providers
-4. Configure WebSocket connections
+3. Deploy:
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
 
-## 🤝 Contributing
+### Cloud Platforms
+
+The project includes configuration files for:
+- Railway (`deploy/railway.json`)
+- Render (`deploy/render.yaml`)
+
+## Security
+
+- JWT-based authentication with refresh tokens
+- Password hashing with bcrypt
+- CORS protection
+- Rate limiting via Nginx
+- Input validation with Pydantic
+- SQL injection protection via SQLAlchemy ORM
+
+## Monitoring
+
+Health check endpoints:
+- Main API: `GET /health`
+- Chat Service: `GET /health`
+- AI Service: `GET /health`
+
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -284,31 +283,7 @@ CMD ["npm", "run", "preview"]
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-### Development Guidelines
-- Follow TypeScript best practices
-- Use ESLint and Prettier for code formatting
-- Write unit tests for new features
-- Update documentation for API changes
-- Follow the established design system
 
-## 📄 License
+## Support
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **Documentation**: [Wiki](https://github.com/your-username/omnilife-frontend/wiki)
-- **Issues**: [GitHub Issues](https://github.com/your-username/omnilife-frontend/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/omnilife-frontend/discussions)
-
-## 🙏 Acknowledgments
-
-- [Framer Motion](https://www.framer.com/motion/) for animations
-- [TailwindCSS](https://tailwindcss.com/) for styling
-- [Lucide](https://lucide.dev/) for icons
-- [Recharts](https://recharts.org/) for charts
-- [React Query](https://tanstack.com/query) for data fetching
-
----
-
-**OmniLife** - Empowering your lifestyle with AI 🚀
+For issues and questions, please open an issue on the repository.
