@@ -11,27 +11,27 @@ OmniLife is a modern, cloud-native platform that combines multiple personal mana
 ## Screenshots
 
 ### Dashboard
-![Dashboard](./assets/screenshots/dashboard.png)
+<img src="assets/screenshots/dashboard.png" alt="Dashboard" width="800"/>
 
 The main dashboard provides a unified view of all modules with key metrics and quick access to each feature.
 
 ### Finance Dashboard
-![Finance Dashboard](./assets/screenshots/finance-dashboard.png)
+<img src="assets/screenshots/finance-dashboard.png" alt="Finance Dashboard" width="800"/>
 
 Comprehensive financial overview with total balance, monthly income/expenses, credit score, recent transactions, and linked bank accounts.
 
 ### Fitness Dashboard
-![Fitness Dashboard](./assets/screenshots/fitness-dashboard.png)
+<img src="assets/screenshots/fitness-dashboard.png" alt="Fitness Dashboard" width="800"/>
 
 Track your health and fitness progress with step counting, calorie tracking, workout logging, and weekly progress visualization.
 
 ### Marketplace
-![Marketplace](./assets/screenshots/marketplace.png)
+<img src="assets/screenshots/marketplace.png" alt="Marketplace" width="800"/>
 
 AI-powered product recommendations with personalized shopping preferences and recently viewed items.
 
 ### Social
-![Social](./assets/screenshots/social.png)
+<img src="assets/screenshots/social.png" alt="Social" width="800"/>
 
 Connect with friends, share achievements, and view shared items from your connections.
 
