@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base API configuration
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
 
 // Types
 export interface BankAccount {
@@ -909,7 +909,6 @@ export const mockFinanceAPI = {
         id: '1',
         user_id: 'user_123',
         name: 'Emergency Fund',
-        name: 'Emergency Fund',
         description: 'Save 6 months of expenses',
         target_amount: 15000,
         current_amount: 12500,
@@ -1125,7 +1124,7 @@ export const financeAPI = new FinanceAPIService();
 
 // Export the appropriate API based on environment
 // To use real API: ensure backend is running and VITE_USE_MOCK_API is not set to 'true'
-const useMockAPI = (import.meta as any).env?.VITE_USE_MOCK_API === 'true';
+const useMockAPI = (import.meta as any).env?.VITE_USE_MOCK_API === 'true' || (import.meta as any).env?.DEV;
 export const financeAPIService = useMockAPI ? mockFinanceAPI : new FinanceAPIService();
 
 

@@ -22,19 +22,15 @@ class AICommandResponse(BaseModel):
     command: str
     executed: bool
     data: Optional[Dict[str, Any]] = None
+    ai_model: str = "GPT-4"
 
 class InsightRequest(BaseModel):
     module: str
-    data: Dict[str, Any]
+    user_data: Dict[str, Any]
 
 class InsightResponse(BaseModel):
     insights: List[Dict[str, Any]]
-    module: str
-    generated_at: datetime
-
-class FinancialAnalysisRequest(BaseModel):
-    transactions: List[Dict[str, Any]]
-    budgets: List[Dict[str, Any]]
+    ai_model: str = "GPT-4"
 
 class BudgetPlanRequest(BaseModel):
     income: float
@@ -62,13 +58,29 @@ class SocialPostRequest(BaseModel):
     tone: str
     platform: str
 
-class ReminderRequest(BaseModel):
-    task: str
-    priority: str
-    due_date: datetime
-
 class ChatAnalysisRequest(BaseModel):
     messages: List[Dict[str, Any]]
+
+class ModelInfoResponse(BaseModel):
+    model: str
+    version: str
+    capabilities: List[str]
+    max_tokens: int
+    temperature: float
+    provider: str
+
+@router.get("/model-info", response_model=ModelInfoResponse)
+async def get_ai_model_info(ai_service: AIService = Depends()):
+    """Get information about the AI model being used"""
+    try:
+        model_info = await ai_service.get_model_info()
+        return ModelInfoResponse(**model_info)
+    except Exception as e:
+        logger.error(f"Error getting model info: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get model information"
+        )
 
 @router.post("/command", response_model=AICommandResponse)
 async def process_ai_command(
@@ -77,7 +89,7 @@ async def process_ai_command(
     ai_service: AIService = Depends()
 ):
     """
-    Process natural language commands and execute AI-powered actions
+    Process natural language commands and execute AI-powered actions using GPT-4
     
     Examples:
     - "Send message to John about the meeting"
@@ -89,7 +101,7 @@ async def process_ai_command(
     - "Remind me to call the doctor tomorrow"
     """
     try:
-        logger.info(f"Processing AI command for user {current_user.id}: {request.command}")
+        logger.info(f"Processing GPT-4 AI command for user {current_user.id}: {request.command}")
         
         # Add user context to the request
         user_context = {
@@ -109,7 +121,8 @@ async def process_ai_command(
             response=result.get("response", ""),
             command=request.command,
             executed=result.get("executed", False),
-            data=result.get("data")
+            data=result.get("data"),
+            ai_model=result.get("ai_model", "GPT-4")
         )
         
     except Exception as e:
@@ -126,17 +139,19 @@ async def generate_insights(
     ai_service: AIService = Depends()
 ):
     """
-    Generate AI insights for different modules (finance, fitness, travel, social)
+    Generate AI insights for different modules using GPT-4
     """
     try:
-        logger.info(f"Generating insights for user {current_user.id} in module {request.module}")
+        logger.info(f"Generating GPT-4 insights for user {current_user.id} in module {request.module}")
         
-        insights = await ai_service.generate_insights(request.module, request.data)
+        insights = await ai_service.generate_insights(
+            request.module,
+            request.user_data
+        )
         
         return InsightResponse(
             insights=insights,
-            module=request.module,
-            generated_at=datetime.utcnow()
+            ai_model="GPT-4"
         )
         
     except Exception as e:
@@ -148,22 +163,24 @@ async def generate_insights(
 
 @router.post("/finance/analyze")
 async def analyze_financial_data(
-    request: FinancialAnalysisRequest,
+    transactions: List[Dict[str, Any]],
+    budgets: List[Dict[str, Any]],
     current_user: UserResponse = Depends(get_current_user),
     ai_service: AIService = Depends()
 ):
     """
-    Analyze financial data and provide AI-powered insights
+    Analyze financial data using GPT-4's advanced reasoning capabilities
     """
     try:
-        logger.info(f"Analyzing financial data for user {current_user.id}")
+        logger.info(f"Analyzing financial data with GPT-4 for user {current_user.id}")
         
-        analysis = await ai_service.analyze_financial_data(
-            request.transactions,
-            request.budgets
-        )
+        analysis = await ai_service.analyze_financial_data(transactions, budgets)
         
-        return analysis
+        return {
+            "analysis": analysis,
+            "ai_model": "GPT-4",
+            "user_id": current_user.id
+        }
         
     except Exception as e:
         logger.error(f"Error analyzing financial data: {e}")
@@ -179,10 +196,10 @@ async def create_budget_plan(
     ai_service: AIService = Depends()
 ):
     """
-    Create a personalized budget plan using AI
+    Create a personalized budget plan using GPT-4's advanced planning capabilities
     """
     try:
-        logger.info(f"Creating budget plan for user {current_user.id}")
+        logger.info(f"Creating budget plan with GPT-4 for user {current_user.id}")
         
         budget_plan = await ai_service.create_budget_plan(
             request.income,
@@ -190,7 +207,11 @@ async def create_budget_plan(
             request.expenses
         )
         
-        return budget_plan
+        return {
+            "budget_plan": budget_plan,
+            "ai_model": "GPT-4",
+            "user_id": current_user.id
+        }
         
     except Exception as e:
         logger.error(f"Error creating budget plan: {e}")
@@ -206,10 +227,10 @@ async def create_workout_plan(
     ai_service: AIService = Depends()
 ):
     """
-    Create a personalized workout plan using AI
+    Create a personalized workout plan using GPT-4's fitness expertise
     """
     try:
-        logger.info(f"Creating workout plan for user {current_user.id}")
+        logger.info(f"Creating workout plan with GPT-4 for user {current_user.id}")
         
         workout_plan = await ai_service.recommend_workout_plan(
             request.fitness_level,
@@ -217,7 +238,11 @@ async def create_workout_plan(
             request.available_time
         )
         
-        return workout_plan
+        return {
+            "workout_plan": workout_plan,
+            "ai_model": "GPT-4",
+            "user_id": current_user.id
+        }
         
     except Exception as e:
         logger.error(f"Error creating workout plan: {e}")
@@ -233,10 +258,10 @@ async def plan_trip(
     ai_service: AIService = Depends()
 ):
     """
-    Plan a personalized trip using AI
+    Plan a personalized trip using GPT-4's travel expertise
     """
     try:
-        logger.info(f"Planning trip for user {current_user.id} to {request.destination}")
+        logger.info(f"Planning trip with GPT-4 for user {current_user.id}")
         
         trip_plan = await ai_service.plan_trip(
             request.destination,
@@ -245,7 +270,11 @@ async def plan_trip(
             request.preferences
         )
         
-        return trip_plan
+        return {
+            "trip_plan": trip_plan,
+            "ai_model": "GPT-4",
+            "user_id": current_user.id
+        }
         
     except Exception as e:
         logger.error(f"Error planning trip: {e}")
@@ -261,10 +290,10 @@ async def recommend_products(
     ai_service: AIService = Depends()
 ):
     """
-    Get AI-powered product recommendations
+    Get AI-powered product recommendations using GPT-4
     """
     try:
-        logger.info(f"Getting product recommendations for user {current_user.id}")
+        logger.info(f"Getting product recommendations with GPT-4 for user {current_user.id}")
         
         recommendations = await ai_service.recommend_products(
             request.preferences,
@@ -272,7 +301,11 @@ async def recommend_products(
             request.category
         )
         
-        return {"recommendations": recommendations}
+        return {
+            "recommendations": recommendations,
+            "ai_model": "GPT-4",
+            "user_id": current_user.id
+        }
         
     except Exception as e:
         logger.error(f"Error recommending products: {e}")
@@ -288,18 +321,22 @@ async def generate_social_post(
     ai_service: AIService = Depends()
 ):
     """
-    Generate social media post content using AI
+    Generate social media post content using GPT-4's content creation capabilities
     """
     try:
-        logger.info(f"Generating social post for user {current_user.id}")
+        logger.info(f"Generating social post with GPT-4 for user {current_user.id}")
         
-        post = await ai_service.generate_social_post(
+        post_content = await ai_service.generate_social_post(
             request.topic,
             request.tone,
             request.platform
         )
         
-        return post
+        return {
+            "post_content": post_content,
+            "ai_model": "GPT-4",
+            "user_id": current_user.id
+        }
         
     except Exception as e:
         logger.error(f"Error generating social post: {e}")
@@ -308,25 +345,54 @@ async def generate_social_post(
             detail="Failed to generate social post"
         )
 
-@router.post("/reminders/create")
-async def create_reminder(
-    request: ReminderRequest,
+@router.post("/chat/analyze-sentiment")
+async def analyze_chat_sentiment(
+    request: ChatAnalysisRequest,
     current_user: UserResponse = Depends(get_current_user),
     ai_service: AIService = Depends()
 ):
     """
-    Create a smart reminder with AI suggestions
+    Analyze chat conversation sentiment using GPT-4's advanced NLP capabilities
     """
     try:
-        logger.info(f"Creating reminder for user {current_user.id}")
+        logger.info(f"Analyzing chat sentiment with GPT-4 for user {current_user.id}")
         
-        reminder = await ai_service.create_reminder(
-            request.task,
-            request.priority,
-            request.due_date
+        analysis = await ai_service.analyze_chat_sentiment(request.messages)
+        
+        return {
+            "analysis": analysis,
+            "ai_model": "GPT-4",
+            "user_id": current_user.id
+        }
+        
+    except Exception as e:
+        logger.error(f"Error analyzing chat sentiment: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to analyze chat sentiment"
         )
+
+@router.post("/productivity/create-reminder")
+async def create_reminder(
+    task: str,
+    priority: str,
+    due_date: datetime,
+    current_user: UserResponse = Depends(get_current_user),
+    ai_service: AIService = Depends()
+):
+    """
+    Create a smart reminder with GPT-4's planning capabilities
+    """
+    try:
+        logger.info(f"Creating reminder with GPT-4 for user {current_user.id}")
         
-        return reminder
+        reminder = await ai_service.create_reminder(task, priority, due_date)
+        
+        return {
+            "reminder": reminder,
+            "ai_model": "GPT-4",
+            "user_id": current_user.id
+        }
         
     except Exception as e:
         logger.error(f"Error creating reminder: {e}")
@@ -335,27 +401,32 @@ async def create_reminder(
             detail="Failed to create reminder"
         )
 
-@router.post("/chat/analyze")
-async def analyze_chat_sentiment(
-    request: ChatAnalysisRequest,
+@router.post("/advanced/function-calling")
+async def advanced_function_calling(
+    prompt: str,
+    functions: Optional[List[Dict[str, Any]]] = None,
     current_user: UserResponse = Depends(get_current_user),
     ai_service: AIService = Depends()
 ):
     """
-    Analyze chat conversation sentiment and provide insights
+    Use GPT-4's advanced function calling capabilities
     """
     try:
-        logger.info(f"Analyzing chat sentiment for user {current_user.id}")
+        logger.info(f"Using GPT-4 function calling for user {current_user.id}")
         
-        analysis = await ai_service.analyze_chat_sentiment(request.messages)
+        response = await ai_service.generate_advanced_response_with_functions(prompt, functions)
         
-        return analysis
+        return {
+            "response": response,
+            "ai_model": "GPT-4",
+            "user_id": current_user.id
+        }
         
     except Exception as e:
-        logger.error(f"Error analyzing chat sentiment: {e}")
+        logger.error(f"Error with function calling: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to analyze chat sentiment"
+            detail="Failed to process function calling request"
         )
 
 @router.get("/health")

@@ -1,1 +1,1 @@
-# OmniLife Backend Application Package
+# OmniLife Backend API

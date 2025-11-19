@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Eye, EyeOff, Mail, Lock, User, Github } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, Github, Phone } from 'lucide-react'
 import { useAuthStore } from '../../store/auth'
 import { cn } from '../../lib/utils'
 
@@ -13,9 +13,19 @@ const signupSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters').max(20, 'Username must be less than 20 characters'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
+  phone: z.string().optional(),
+  verificationMethod: z.enum(['email', 'sms']).default('email'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
+}).refine((data) => {
+  if (data.verificationMethod === 'sms' && !data.phone) {
+    return false
+  }
+  return true
+}, {
+  message: "Phone number is required for SMS verification",
+  path: ["phone"],
 })
 
 type SignupForm = z.infer<typeof signupSchema>
@@ -30,6 +40,7 @@ const SignupPage = () => {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
@@ -38,7 +49,7 @@ const SignupPage = () => {
   const onSubmit = async (data: SignupForm) => {
     clearError()
     try {
-      await signup(data.email, data.username, data.password)
+      await signup(data.email, data.username, data.password, data.verificationMethod)
       navigate('/')
     } catch (error) {
       // Error is handled by the store
@@ -185,6 +196,64 @@ const SignupPage = () => {
               <p className="mt-1 text-sm text-red-500">{errors.username.message}</p>
             )}
           </div>
+
+          {/* Verification Method Selection */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Verification Method
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800">
+                <input
+                  {...register('verificationMethod')}
+                  type="radio"
+                  value="email"
+                  className="mr-2"
+                />
+                <div>
+                  <div className="font-medium">Email</div>
+                  <div className="text-sm text-gray-500">Send code to email</div>
+                </div>
+              </label>
+              <label className="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800">
+                <input
+                  {...register('verificationMethod')}
+                  type="radio"
+                  value="sms"
+                  className="mr-2"
+                />
+                <div>
+                  <div className="font-medium">SMS</div>
+                  <div className="text-sm text-gray-500">Send code to phone</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Phone Number (conditional) */}
+          {watch('verificationMethod') === 'sms' && (
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium mb-2">
+                Phone Number
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  {...register('phone')}
+                  type="tel"
+                  id="phone"
+                  className={cn(
+                    "input-field pl-10",
+                    errors.phone && "border-red-500 focus:ring-red-500"
+                  )}
+                  placeholder="+1 (555) 123-4567"
+                />
+              </div>
+              {errors.phone && (
+                <p className="mt-1 text-sm text-red-500">{errors.phone.message}</p>
+              )}
+            </div>
+          )}
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium mb-2">

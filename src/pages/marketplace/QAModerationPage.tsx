@@ -106,7 +106,6 @@ const QAModerationPage: React.FC = () => {
           askedAt: '2024-01-16T09:00:00Z',
           helpful: 0,
           notHelpful: 5,
-          status: 'flagged',
           isVerified: false,
           reportCount: 3,
           reportReasons: ['Spam', 'Inappropriate content', 'Offensive language']

@@ -1,402 +1,280 @@
-# OmniLife Backend
+# OmniLife Backend API
 
-A comprehensive Python FastAPI backend for the OmniLife Unified AI Personal Platform, featuring microservices architecture, AI integration, real-time communication, and full-stack functionality.
+A FastAPI backend with full authentication, database connection, JWT session handling, and guest mode support.
 
-## 🚀 Features
+## Features
 
-### Core Features
-- **FastAPI Framework** - Modern, fast web framework for building APIs
-- **MongoDB Integration** - NoSQL database with Motor for async operations
-- **Redis Caching** - High-performance caching and session management
-- **JWT Authentication** - Secure token-based authentication
-- **OAuth2 Integration** - Google and GitHub authentication
-- **Real-time Communication** - WebSocket support for live features
-- **Rate Limiting** - API protection and abuse prevention
-- **CORS Support** - Cross-origin resource sharing
-- **Comprehensive Logging** - Structured logging with structlog
+- ✅ **User Authentication**: Signup, login, JWT tokens
+- ✅ **Password Security**: bcrypt hashing
+- ✅ **Session Handling**: JWT-based sessions with `/me` endpoint
+- ✅ **Protected Routes**: User-specific data with authentication
+- ✅ **Guest Mode**: Demo data for unauthenticated users
+- ✅ **Database**: SQLite (dev) / PostgreSQL (prod) with SQLAlchemy ORM
+- ✅ **CORS**: Configured for frontend integration
 
-### AI-Powered Features
-- **OpenAI Integration** - GPT-4 powered natural language processing
-- **LangChain Framework** - Advanced AI workflows and chains
-- **Natural Language Commands** - Process user commands in plain English
-- **Financial Analysis** - AI-powered spending insights and budget recommendations
-- **Workout Planning** - Personalized fitness plans and recommendations
-- **Trip Planning** - Intelligent travel itinerary creation
-- **Product Recommendations** - AI-driven shopping suggestions
-- **Social Post Generation** - Automated content creation
-- **Smart Reminders** - Intelligent task management
-- **Chat Analysis** - Conversation sentiment and insights
+## Quick Start
 
-### Microservices Architecture
-- **User Management** - Complete user lifecycle management
-- **Finance Module** - Transactions, budgets, goals, accounts
-- **Marketplace** - Products, orders, cart, wishlist
-- **Fitness Tracking** - Workouts, nutrition, goals, achievements
-- **Travel Planning** - Trips, itineraries, price alerts
-- **Social Features** - Posts, follows, likes, comments
-- **Chat System** - Real-time messaging and conversations
-- **Notification Service** - Multi-channel notifications
-- **AI Service** - Centralized AI functionality
-
-### Security & Performance
-- **Helmet Security** - Security headers and protection
-- **Input Validation** - Pydantic models for data validation
-- **Error Handling** - Comprehensive error management
-- **Database Indexing** - Optimized query performance
-- **Background Tasks** - Celery for async processing
-- **File Upload** - Secure file handling and storage
-- **Monitoring** - Prometheus metrics and health checks
-
-## 🛠️ Tech Stack
-
-- **Framework**: FastAPI 0.104.1
-- **Database**: MongoDB with Motor (async driver)
-- **Cache**: Redis
-- **AI**: OpenAI GPT-4, LangChain
-- **Authentication**: JWT, OAuth2 (Google, GitHub)
-- **Real-time**: WebSockets
-- **Background Tasks**: Celery
-- **Monitoring**: Prometheus, Sentry
-- **Documentation**: Swagger/OpenAPI
-- **Testing**: Pytest
-- **Code Quality**: Black, isort, flake8, mypy
-
-## 📋 Prerequisites
-
-- Python 3.8+
-- MongoDB 4.4+
-- Redis 6.0+
-- Node.js (for frontend integration)
-
-## 🚀 Quick Start
-
-### 1. Clone and Setup
+### 1. Install Dependencies
 
 ```bash
-# Clone the repository
-git clone <repository-url>
 cd backend
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Environment Configuration
+### 2. Set Up Environment
 
 ```bash
-# Copy environment template
 cp env.example .env
-
-# Edit .env file with your configuration
-# Required: MongoDB_URL, REDIS_URL, JWT_SECRET_KEY, OPENAI_API_KEY
+# Edit .env with your settings
 ```
 
-### 3. Database Setup
-
-```bash
-# Start MongoDB (if not running)
-mongod
-
-# Start Redis (if not running)
-redis-server
-```
-
-### 4. Run the Application
+### 3. Run the Server
 
 ```bash
 # Development mode
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+python start.py
 
-# Production mode
-uvicorn main:app --host 0.0.0.0 --port 8000
+# Or directly with uvicorn
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 5. Access the API
+### 4. Access API
 
-- **API Documentation**: http://localhost:8000/api-docs
-- **ReDoc Documentation**: http://localhost:8000/redoc
+- **API Documentation**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/health
 
-## 📚 API Documentation
+## API Endpoints
 
-### Authentication Endpoints
+### Authentication
 
-```http
-POST /api/auth/register
-POST /api/auth/login
-POST /api/auth/refresh
-POST /api/auth/logout
-GET  /api/auth/me
-POST /api/auth/google
-POST /api/auth/github
+- `POST /auth/signup` - Create new user account
+- `POST /auth/login` - Login and get JWT token
+- `GET /auth/me` - Get current user profile
+- `POST /auth/guest-login` - Create temporary guest user
+
+### Data (Protected + Guest Mode)
+
+- `GET /data/fitness/dashboard` - Fitness dashboard data
+- `GET /data/finance/dashboard` - Finance dashboard data
+- `GET /data/fitness/goals` - Fitness goals
+- `GET /data/finance/accounts` - Finance accounts
+- `POST /data/fitness/goals` - Create fitness goal (auth only)
+- `POST /data/finance/accounts` - Create finance account (auth only)
+
+## Authentication Flow
+
+### 1. User Registration
+```bash
+curl -X POST "http://localhost:8000/auth/signup" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "john_doe",
+    "email": "john@example.com",
+    "password": "securepassword123",
+    "display_name": "John Doe"
+  }'
 ```
 
-### AI Endpoints
-
-```http
-POST /api/ai/command                    # Process natural language commands
-POST /api/ai/insights                   # Generate AI insights
-POST /api/ai/finance/analyze            # Analyze financial data
-POST /api/ai/finance/budget-plan        # Create budget plans
-POST /api/ai/fitness/workout-plan       # Generate workout plans
-POST /api/ai/travel/plan                # Plan trips
-POST /api/ai/marketplace/recommendations # Product recommendations
-POST /api/ai/social/generate-post       # Generate social posts
-POST /api/ai/reminders/create           # Create smart reminders
-POST /api/ai/chat/analyze               # Analyze chat sentiment
-GET  /api/ai/capabilities               # List AI capabilities
+### 2. User Login
+```bash
+curl -X POST "http://localhost:8000/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com",
+    "password": "securepassword123"
+  }'
 ```
 
-### Finance Endpoints
-
-```http
-GET    /api/finance/transactions
-POST   /api/finance/transactions
-GET    /api/finance/budgets
-POST   /api/finance/budgets
-GET    /api/finance/goals
-POST   /api/finance/goals
-GET    /api/finance/accounts
-POST   /api/finance/accounts
-GET    /api/finance/analytics
-```
-
-### Marketplace Endpoints
-
-```http
-GET    /api/marketplace/products
-POST   /api/marketplace/products
-GET    /api/marketplace/orders
-POST   /api/marketplace/orders
-GET    /api/marketplace/cart
-POST   /api/marketplace/cart
-GET    /api/marketplace/wishlist
-POST   /api/marketplace/wishlist
-```
-
-### Fitness Endpoints
-
-```http
-GET    /api/fitness/workouts
-POST   /api/fitness/workouts
-GET    /api/fitness/nutrition
-POST   /api/fitness/nutrition
-GET    /api/fitness/goals
-POST   /api/fitness/goals
-GET    /api/fitness/metrics
-POST   /api/fitness/metrics
-GET    /api/fitness/achievements
-```
-
-### Social Endpoints
-
-```http
-GET    /api/social/posts
-POST   /api/social/posts
-GET    /api/social/follows
-POST   /api/social/follows
-GET    /api/social/likes
-POST   /api/social/likes
-GET    /api/social/comments
-POST   /api/social/comments
-```
-
-### Chat Endpoints
-
-```http
-GET    /api/chat/rooms
-POST   /api/chat/rooms
-GET    /api/chat/messages
-POST   /api/chat/messages
-GET    /api/chat/unread
-```
-
-## 🤖 AI Features Usage
-
-### Natural Language Commands
-
-The AI can process commands like:
-
-```python
-# Send a message
-"Send message to John about the meeting tomorrow"
-
-# Find products
-"Find electronics products under $100"
-
-# Create budget
-"Create a budget for next month with $5000 income"
-
-# Plan workout
-"Plan a 30-minute workout for today"
-
-# Plan trip
-"Plan a 5-day trip to Paris with $2000 budget"
-
-# Generate social post
-"Create a social post about fitness motivation"
-
-# Set reminder
-"Remind me to call the doctor tomorrow at 2 PM"
-```
-
-### AI Insights
-
-Get intelligent insights for different modules:
-
-```python
-# Financial insights
-POST /api/ai/insights
+Response:
+```json
 {
-    "module": "finance",
-    "data": {
-        "transactions": [...],
-        "budgets": [...],
-        "income": 5000
-    }
-}
-
-# Fitness insights
-POST /api/ai/insights
-{
-    "module": "fitness",
-    "data": {
-        "workouts": [...],
-        "goals": [...],
-        "metrics": {...}
-    }
+  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "token_type": "bearer",
+  "user": {
+    "id": 1,
+    "username": "john_doe",
+    "email": "john@example.com",
+    "display_name": "John Doe",
+    "is_active": true,
+    "is_verified": true,
+    "is_guest": false
+  }
 }
 ```
 
-## 🔧 Configuration
-
-### Environment Variables
-
-Key configuration options in `.env`:
-
+### 3. Access Protected Data
 ```bash
-# Database
-MONGODB_URL=mongodb://localhost:27017
-MONGODB_DATABASE=omnilife
-
-# Redis
-REDIS_URL=redis://localhost:6379
-
-# JWT
-JWT_SECRET_KEY=your-secret-key
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
-
-# OpenAI
-OPENAI_API_KEY=your-openai-key
-
-# Frontend
-FRONTEND_URL=http://localhost:3004
+curl -X GET "http://localhost:8000/data/fitness/dashboard" \
+  -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
 ```
 
-### Database Collections
-
-The application uses these MongoDB collections:
-
-- `users` - User accounts and profiles
-- `transactions` - Financial transactions
-- `budgets` - Budget plans
-- `goals` - Financial and fitness goals
-- `products` - Marketplace products
-- `orders` - Purchase orders
-- `workouts` - Fitness workouts
-- `posts` - Social media posts
-- `chat_rooms` - Chat conversations
-- `ai_conversations` - AI chat history
-- `notifications` - User notifications
-
-## 🧪 Testing
-
+### 4. Guest Mode (No Token)
 ```bash
-# Run all tests
+curl -X GET "http://localhost:8000/data/fitness/dashboard"
+# Returns demo data without authentication
+```
+
+## Database Models
+
+### User Model
+- `id`: Primary key
+- `username`: Unique username
+- `email`: Unique email
+- `hashed_password`: bcrypt hashed password
+- `is_active`: Account status
+- `is_verified`: Email verification status
+- `is_guest`: Guest user flag
+- `display_name`: User's display name
+- `avatar`: Profile picture URL
+- `bio`: User bio
+- `location`: User location
+- `preferences`: JSON preferences
+- `created_at`: Account creation time
+- `last_login`: Last login time
+
+### Fitness Models
+- `FitnessGoal`: User fitness goals
+- `FitnessWorkout`: Workout records
+- `FitnessMeasurement`: Body measurements
+
+### Finance Models
+- `FinanceAccount`: Bank accounts
+- `FinanceTransaction`: Financial transactions
+- `FinanceBudget`: Budget tracking
+- `FinanceGoal`: Financial goals
+
+## Frontend Integration
+
+### 1. Update Frontend API Configuration
+
+Update your frontend's API configuration to point to the backend:
+
+```typescript
+// src/config/api.ts
+export const API_BASE_URL = 'http://localhost:8000';
+```
+
+### 2. Authentication Flow
+
+```typescript
+// Login
+const response = await fetch(`${API_BASE_URL}/auth/login`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email, password })
+});
+
+const { access_token, user } = await response.json();
+
+// Store token
+localStorage.setItem('token', access_token);
+
+// Use token for API calls
+const data = await fetch(`${API_BASE_URL}/data/fitness/dashboard`, {
+  headers: { 'Authorization': `Bearer ${access_token}` }
+});
+```
+
+### 3. Guest Mode
+
+For guest mode, simply don't include the Authorization header:
+
+```typescript
+// Guest mode - no token needed
+const demoData = await fetch(`${API_BASE_URL}/data/fitness/dashboard`);
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | Database connection string | `sqlite:///./omnilife.db` |
+| `SECRET_KEY` | JWT secret key | `your-secret-key-change-in-production` |
+| `ALGORITHM` | JWT algorithm | `HS256` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Token expiration time | `30` |
+| `ENVIRONMENT` | Environment mode | `development` |
+| `DEBUG` | Debug mode | `true` |
+| `ALLOWED_ORIGINS` | CORS allowed origins | `http://localhost:3001,http://localhost:3000` |
+
+## Production Deployment
+
+### 1. PostgreSQL Database
+```bash
+# Update DATABASE_URL in .env
+DATABASE_URL=postgresql://user:password@localhost/omnilife
+```
+
+### 2. Environment Variables
+```bash
+# Production settings
+ENVIRONMENT=production
+DEBUG=false
+SECRET_KEY=your-super-secure-production-secret-key
+```
+
+### 3. Run with Gunicorn
+```bash
+pip install gunicorn
+gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+```
+
+## Security Features
+
+- ✅ **Password Hashing**: bcrypt with salt
+- ✅ **JWT Tokens**: Secure session management
+- ✅ **CORS Protection**: Configured origins
+- ✅ **Input Validation**: Pydantic schemas
+- ✅ **SQL Injection Protection**: SQLAlchemy ORM
+- ✅ **Rate Limiting**: Built-in FastAPI protection
+
+## Development
+
+### Database Migrations
+```bash
+# Initialize Alembic (if needed)
+alembic init alembic
+
+# Create migration
+alembic revision --autogenerate -m "Initial migration"
+
+# Apply migration
+alembic upgrade head
+```
+
+### Testing
+```bash
+# Install test dependencies
+pip install pytest pytest-asyncio httpx
+
+# Run tests
 pytest
-
-# Run with coverage
-pytest --cov=app
-
-# Run specific test file
-pytest tests/test_ai.py
-
-# Run with verbose output
-pytest -v
 ```
 
-## 📊 Monitoring
+## Troubleshooting
 
-### Health Checks
+### Common Issues
 
-```http
-GET /health
-```
+1. **Database Connection Error**
+   - Check `DATABASE_URL` in `.env`
+   - Ensure database file exists (SQLite) or server is running (PostgreSQL)
 
-### Metrics
+2. **CORS Errors**
+   - Update `ALLOWED_ORIGINS` in `.env`
+   - Check frontend URL matches allowed origins
 
-Prometheus metrics available at `/metrics` (when enabled)
+3. **JWT Token Issues**
+   - Verify `SECRET_KEY` is set
+   - Check token expiration time
+   - Ensure token format: `Bearer <token>`
 
-### Logging
+4. **Import Errors**
+   - Ensure all dependencies are installed: `pip install -r requirements.txt`
+   - Check Python path and virtual environment
 
-Structured JSON logging with configurable levels:
+## API Documentation
 
-```python
-import structlog
-logger = structlog.get_logger()
-logger.info("User action", user_id=123, action="login")
-```
+Once the server is running, visit:
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
 
-## 🚀 Deployment
-
-### Docker Deployment
-
-```bash
-# Build image
-docker build -t omnilife-backend .
-
-# Run container
-docker run -p 8000:8000 omnilife-backend
-```
-
-### Production Considerations
-
-1. **Environment Variables**: Set all production environment variables
-2. **Database**: Use production MongoDB cluster
-3. **Redis**: Use production Redis instance
-4. **Security**: Enable HTTPS, secure cookies, proper CORS
-5. **Monitoring**: Configure Sentry, Prometheus
-6. **Rate Limiting**: Adjust limits for production traffic
-7. **Backup**: Set up database backups
-8. **SSL**: Configure SSL certificates
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Run linting: `black . && isort . && flake8`
-6. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 🆘 Support
-
-For support and questions:
-
-- Create an issue in the repository
-- Check the API documentation at `/api-docs`
-- Review the logs for debugging information
-
-## 🔗 Related Projects
-
-- **Frontend**: React TypeScript application
-- **Mobile App**: React Native application (planned)
-- **Admin Dashboard**: Vue.js admin interface (planned)
+These provide interactive API documentation with examples and testing capabilities.

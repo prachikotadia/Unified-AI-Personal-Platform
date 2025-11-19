@@ -55,6 +55,23 @@ class UserProfileUpdate(BaseModel):
     gender: Optional[str] = None
     address: Optional[dict] = None
 
+class OAuthRequest(BaseModel):
+    provider: str  # "google" or "github"
+    code: str
+    redirect_uri: str
+
+class VerificationRequest(BaseModel):
+    user_id: int
+    code_type: str  # "email" or "phone"
+    code: str
+
+class ResendVerificationRequest(BaseModel):
+    user_id: int
+    contact_type: str  # "email" or "phone"
+
+class GuestLoginRequest(BaseModel):
+    session_id: Optional[str] = None
+
 # Authentication endpoints
 @router.post("/register", response_model=dict)
 async def register(
@@ -306,3 +323,157 @@ async def resend_verification(
         )
     
     return {"message": "Verification email sent"}
+
+# OAuth endpoints
+@router.post("/oauth/{provider}")
+async def oauth_login(
+    provider: str,
+    oauth_data: OAuthRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Login with OAuth provider"""
+    try:
+        user_service = UserService(db)
+        request_info = {
+            "ip_address": request.client.host,
+            "user_agent": request.headers.get("user-agent")
+        }
+        
+        result = await user_service.authenticate_with_oauth(
+            provider=provider,
+            code=oauth_data.code,
+            request_info=request_info
+        )
+        
+        return {
+            "message": "OAuth login successful",
+            "user": result["user"],
+            "tokens": result["tokens"],
+            "is_new_user": result["is_new_user"]
+        }
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"OAuth login error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="OAuth login failed"
+        )
+
+@router.get("/oauth/{provider}/url")
+async def get_oauth_url(provider: str):
+    """Get OAuth authorization URL"""
+    try:
+        from app.auth.oauth import OAuthHandler
+        oauth_url = OAuthHandler.get_oauth_url(provider)
+        return {"oauth_url": oauth_url}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+# Verification endpoints
+@router.post("/verify-code")
+async def verify_code(
+    verification_data: VerificationRequest,
+    db: Session = Depends(get_db)
+):
+    """Verify email or phone verification code"""
+    try:
+        user_service = UserService(db)
+        
+        if verification_data.code_type == "email":
+            success = user_service.verify_email_code(verification_data.user_id, verification_data.code)
+        elif verification_data.code_type == "phone":
+            success = user_service.verify_phone_code(verification_data.user_id, verification_data.code)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid verification type"
+            )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired verification code"
+            )
+        
+        return {"message": f"{verification_data.code_type.title()} verified successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Verification error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Verification failed"
+        )
+
+@router.post("/resend-verification-code")
+async def resend_verification_code(
+    resend_data: ResendVerificationRequest,
+    db: Session = Depends(get_db)
+):
+    """Resend verification code"""
+    try:
+        user_service = UserService(db)
+        success = await user_service.resend_verification(
+            resend_data.user_id,
+            resend_data.contact_type
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to send verification code"
+            )
+        
+        return {"message": f"Verification code sent to {resend_data.contact_type}"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Resend verification error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to resend verification code"
+        )
+
+# Guest login endpoint
+@router.post("/guest-login")
+async def guest_login(
+    guest_data: GuestLoginRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Create guest user for demo purposes"""
+    try:
+        user_service = UserService(db)
+        user = user_service.create_guest_user()
+        
+        # Create session
+        tokens = user_service.create_user_session(
+            user,
+            ip_address=request.client.host,
+            user_agent=request.headers.get("user-agent")
+        )
+        
+        return {
+            "message": "Guest login successful",
+            "user": user.to_dict(),
+            "tokens": tokens,
+            "is_guest": True
+        }
+        
+    except Exception as e:
+        logger.error(f"Guest login error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Guest login failed"
+        )

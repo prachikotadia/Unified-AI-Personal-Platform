@@ -11,6 +11,7 @@ import { cn } from '../../lib/utils'
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+  rememberMe: z.boolean().default(false),
 })
 
 type LoginForm = z.infer<typeof loginSchema>
@@ -19,7 +20,7 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [isOAuthLoading, setIsOAuthLoading] = useState<string | null>(null)
   const navigate = useNavigate()
-  const { login, loginWithOAuth, isLoading, error, clearError } = useAuthStore()
+  const { login, loginWithOAuth, guestLogin, isLoading, error, clearError } = useAuthStore()
 
   const {
     register,
@@ -32,7 +33,17 @@ const LoginPage = () => {
   const onSubmit = async (data: LoginForm) => {
     clearError()
     try {
-      await login(data.email, data.password)
+      await login(data.email, data.password, data.rememberMe)
+      navigate('/')
+    } catch (error) {
+      // Error is handled by the store
+    }
+  }
+
+  const handleGuestLogin = async () => {
+    clearError()
+    try {
+      await guestLogin()
       navigate('/')
     } catch (error) {
       // Error is handled by the store
@@ -187,6 +198,23 @@ const LoginPage = () => {
             )}
           </div>
 
+          <div className="flex items-center justify-between">
+            <label className="flex items-center space-x-2">
+              <input
+                {...register('rememberMe')}
+                type="checkbox"
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+              />
+              <span className="text-sm text-gray-600 dark:text-gray-400">Remember me</span>
+            </label>
+            <Link
+              to="/forgot-password"
+              className="text-sm text-blue-gradient-from hover:text-blue-gradient-to transition-colors"
+            >
+              Forgot password?
+            </Link>
+          </div>
+
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -212,6 +240,17 @@ const LoginPage = () => {
             )}
           </button>
         </form>
+
+        {/* Guest Login */}
+        <div className="mt-4">
+          <button
+            onClick={handleGuestLogin}
+            disabled={isLoading}
+            className="w-full px-4 py-3 text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+          >
+            Continue as Guest (Demo Mode)
+          </button>
+        </div>
 
         {/* Footer */}
         <div className="mt-6 text-center">

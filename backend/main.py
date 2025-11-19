@@ -1,298 +1,301 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from datetime import datetime
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
+import jwt
+from typing import Optional, Dict, Any
+import os
+from dotenv import load_dotenv
 import structlog
 
-# Import routers
-from app.routers.health import router as health_router
-from app.routers.travel import router as travel_router
-from app.routers.chat import router as chat_router
-from app.routers.finance import router as finance_router
-from app.routers.marketplace_db import router as marketplace_router
-from app.routers.auth import router as auth_router
-from app.routers.payment import router as payment_router
-from app.routers.inventory import router as inventory_router
-from app.routers.shipping import router as shipping_router
+from app.database import get_db, engine, init_db
+from app.cache import redis_cache
+from app.models import user
+from app.models import data_models
+from app.schemas import auth_schemas
+from app.schemas import data_schemas
+from app.services import auth_service
+from app.services import data_service
+from app.services.ai_insights_service import ai_insights_service
+from app.config import settings
 
-# Configure logging
-structlog.configure(
-    processors=[
-        structlog.stdlib.filter_by_level,
-        structlog.stdlib.add_logger_name,
-        structlog.stdlib.add_log_level,
-        structlog.stdlib.PositionalArgumentsFormatter(),
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-        structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer()
-    ],
-    context_class=dict,
-    logger_factory=structlog.stdlib.LoggerFactory(),
-    wrapper_class=structlog.stdlib.BoundLogger,
-    cache_logger_on_first_use=True,
-)
+load_dotenv()
 
 logger = structlog.get_logger()
 
-# Create FastAPI app
+# Create database tables
+user.Base.metadata.create_all(bind=engine)
+data_models.Base.metadata.create_all(bind=engine)
+
 app = FastAPI(
-    title="OmniLife API",
-    description="Unified AI Personal Platform API",
-    version="1.0.0",
-    docs_url="/api-docs",
-    redoc_url="/redoc"
+    title="OmniLife Backend API",
+    description="Backend API for OmniLife - AI-Powered Personal Platform",
+    version="1.0.0"
 )
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://localhost:3004"],
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# Include routers
-app.include_router(
-    health_router,
-    prefix="/api/health",
-    tags=["Health & Fitness"]
-)
-
-app.include_router(
-    travel_router,
-    prefix="/api/travel",
-    tags=["Travel & Tourism"]
-)
-
-app.include_router(
-    chat_router,
-    prefix="/api/chat",
-    tags=["Chat & Communication"]
-)
-
-app.include_router(
-    finance_router,
-    prefix="/api/finance",
-    tags=["Finance & Banking"]
-)
-
-app.include_router(
-    marketplace_router,
-    prefix="/api/marketplace",
-    tags=["Marketplace & E-commerce"]
-)
-
-# New routers
-app.include_router(
-    auth_router,
-    prefix="/api/auth",
-    tags=["Authentication"]
-)
-
-app.include_router(
-    payment_router,
-    prefix="/api/payment",
-    tags=["Payment Processing"]
-)
-
-app.include_router(
-    inventory_router,
-    prefix="/api/inventory",
-    tags=["Inventory Management"]
-)
-
-app.include_router(
-    shipping_router,
-    prefix="/api/shipping",
-    tags=["Shipping & Delivery"]
-)
-
-# AI endpoints
-@app.get("/api/ai/health", tags=["AI"])
-async def ai_health_check():
-    """AI service health check"""
-    return {
-        "status": "healthy",
-        "service": "ai",
-        "timestamp": datetime.utcnow().isoformat(),
-        "capabilities": [
-            "natural_language_processing",
-            "health_insights",
-            "workout_planning",
-            "nutrition_recommendations",
-            "goal_tracking",
-            "product_recommendations",
-            "financial_analysis",
-            "travel_planning"
-        ]
-    }
-
-@app.get("/api/ai/capabilities", tags=["AI"])
-async def get_ai_capabilities():
-    """Get list of AI capabilities"""
-    return {
-        "capabilities": [
-            {
-                "name": "Natural Language Processing",
-                "description": "Process natural language commands and execute actions",
-                "endpoint": "/api/ai/command"
-            },
-            {
-                "name": "Health & Fitness Analysis",
-                "description": "Analyze health data and provide insights",
-                "endpoint": "/api/ai/health/analyze"
-            },
-            {
-                "name": "Workout Planning",
-                "description": "Create personalized workout plans",
-                "endpoint": "/api/ai/health/workout-plan"
-            },
-            {
-                "name": "Nutrition Recommendations",
-                "description": "Provide personalized nutrition advice",
-                "endpoint": "/api/ai/health/nutrition"
-            },
-            {
-                "name": "Financial Analysis",
-                "description": "Analyze financial data and provide insights",
-                "endpoint": "/api/ai/finance/analyze"
-            },
-            {
-                "name": "Budget Planning",
-                "description": "Create personalized budget plans",
-                "endpoint": "/api/ai/finance/budget-plan"
-            },
-            {
-                "name": "Travel Planning",
-                "description": "Plan personalized trips",
-                "endpoint": "/api/ai/travel/plan"
-            },
-            {
-                "name": "Product Recommendations",
-                "description": "Get AI-powered product recommendations",
-                "endpoint": "/api/ai/marketplace/recommendations"
-            },
-            {
-                "name": "Social Post Generation",
-                "description": "Generate social media content",
-                "endpoint": "/api/ai/social/generate-post"
-            },
-            {
-                "name": "Smart Reminders",
-                "description": "Create intelligent reminders with suggestions",
-                "endpoint": "/api/ai/reminders/create"
-            },
-            {
-                "name": "Chat Analysis",
-                "description": "Analyze chat conversations and sentiment",
-                "endpoint": "/api/ai/chat/analyze"
-            }
-        ]
-    }
-
-# Health check endpoints
-@app.get("/health", tags=["Health"])
-async def health_check():
-    """Basic health check"""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
-    }
-
-@app.get("/api/health/detailed", tags=["Health"])
-async def detailed_health_check():
-    """Detailed health check with all services"""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "services": {
-            "api": "healthy",
-            "database": "healthy",
-            "ai": "healthy",
-            "payment": "healthy",
-            "email": "healthy",
-            "shipping": "healthy"
-        },
-        "version": "1.0.0"
-    }
-
-# Test database endpoint
-@app.get("/test-db", tags=["Test"])
-async def test_db():
-    """Test database connection"""
-    try:
-        from app.database import get_db
-        from app.models.marketplace_db import Product
-        from sqlalchemy.orm import Session
-        
-        db = next(get_db())
-        count = db.query(Product).count()
-        return {"message": "Database connection successful", "product_count": count}
-    except Exception as e:
-        return {"message": "Database connection failed", "error": str(e)}
-
-# Root endpoint
-@app.get("/", tags=["Root"])
-async def root():
-    """Root endpoint with API information"""
-    return {
-        "message": "Welcome to OmniLife API",
-        "version": "1.0.0",
-        "description": "Unified AI Personal Platform",
-        "features": {
-            "health_fitness": "/api/health",
-            "travel_tourism": "/api/travel",
-            "chat_communication": "/api/chat",
-            "finance_banking": "/api/finance",
-            "marketplace_ecommerce": "/api/marketplace",
-            "authentication": "/api/auth",
-            "payment_processing": "/api/payment",
-            "inventory_management": "/api/inventory",
-            "shipping_delivery": "/api/shipping",
-            "ai_services": "/api/ai"
-        },
-        "documentation": {
-            "swagger": "/api-docs",
-            "redoc": "/redoc"
-        },
-        "health_check": "/health"
-    }
+# Security
+security = HTTPBearer()
 
 # Startup event
 @app.on_event("startup")
 async def startup_event():
-    """Application startup event"""
-    logger.info("OmniLife API starting up...")
-    logger.info("Loading all modules and services...")
+    """Initialize services on startup"""
+    try:
+        # Initialize Redis connection (optional)
+        await redis_cache.connect()
+        logger.info("Redis connection attempted")
+        
+        # Initialize database
+        init_db()
+        logger.info("Database initialized successfully")
+        
+    except Exception as e:
+        logger.error(f"Startup error: {e}")
+        raise
 
 # Shutdown event
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Application shutdown event"""
-    logger.info("OmniLife API shutting down...")
+    """Cleanup on shutdown"""
+    try:
+        await redis_cache.disconnect()
+        logger.info("Redis disconnected successfully")
+    except Exception as e:
+        logger.error(f"Shutdown error: {e}")
 
-# Error handlers
-@app.exception_handler(404)
-async def not_found_handler(request, exc):
-    """Handle 404 errors"""
-    return {
-        "error": "Not Found",
-        "message": "The requested resource was not found",
-        "path": str(request.url.path)
-    }
+# Dependency to get current user from JWT
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+) -> Optional[user.User]:
+    """Get current user from JWT token"""
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+        
+        return auth_service.get_user_by_id(db, int(user_id))
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.JWTError:
+        return None
 
-@app.exception_handler(500)
-async def internal_error_handler(request, exc):
-    """Handle 500 errors"""
-    logger.error(f"Internal server error: {str(exc)}")
-    return {
-        "error": "Internal Server Error",
-        "message": "An internal server error occurred"
-    }
+# Dependency to get current user or None (for guest mode)
+async def get_current_user_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db)
+) -> Optional[user.User]:
+    """Get current user from JWT token or None for guest mode"""
+    if not credentials:
+        return None
+    
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+        
+        return auth_service.get_user_by_id(db, int(user_id))
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.JWTError:
+        return None
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    try:
+        # Check database connection
+        db = next(get_db())
+        db.execute("SELECT 1")
+        
+        # Check Redis connection (optional)
+        redis_status = "disconnected"
+        if redis_cache.aioredis_client:
+            try:
+                await redis_cache.aioredis_client.ping()
+                redis_status = "connected"
+            except:
+                redis_status = "disconnected"
+        
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow(),
+            "service": "main-api",
+            "version": "1.0.0",
+            "database": "connected",
+            "redis": redis_status
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Service unhealthy"
+        )
+
+# Authentication endpoints
+@app.post("/auth/signup", response_model=auth_schemas.UserResponse)
+async def signup(user_data: auth_schemas.UserCreate, db: Session = Depends(get_db)):
+    """Create a new user account"""
+    try:
+        return auth_service.create_user(db, user_data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/auth/login", response_model=auth_schemas.LoginResponse)
+async def login(login_data: auth_schemas.UserLogin, db: Session = Depends(get_db)):
+    """Login user and return JWT token"""
+    try:
+        return auth_service.authenticate_user(db, login_data)
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+@app.get("/auth/me", response_model=auth_schemas.UserResponse)
+async def get_current_user_profile(current_user: user.User = Depends(get_current_user)):
+    """Get current user profile"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return current_user
+
+@app.post("/auth/guest-login", response_model=auth_schemas.LoginResponse)
+async def guest_login(db: Session = Depends(get_db)):
+    """Create a temporary guest user account"""
+    try:
+        return auth_service.create_guest_user(db)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Data endpoints (with caching)
+@app.get("/data/fitness/dashboard")
+async def get_fitness_dashboard(
+    current_user: Optional[user.User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    """Get fitness dashboard data with caching"""
+    try:
+        # Try to get from cache first
+        cache_key = f"fitness_dashboard_{current_user.id if current_user else 'guest'}"
+        cached_data = await redis_cache.get_cache(cache_key)
+        
+        if cached_data:
+            return cached_data
+        
+        # Get fresh data
+        data = data_service.get_user_fitness_data(db, current_user.id if current_user else None)
+        
+        # Cache the data for 5 minutes
+        await redis_cache.set_cache(cache_key, data, expire=300)
+        
+        return data
+    except Exception as e:
+        logger.error(f"Error getting fitness dashboard: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get fitness data")
+
+@app.get("/data/finance/dashboard")
+async def get_finance_dashboard(
+    current_user: Optional[user.User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    """Get finance dashboard data with caching"""
+    try:
+        # Try to get from cache first
+        cache_key = f"finance_dashboard_{current_user.id if current_user else 'guest'}"
+        cached_data = await redis_cache.get_cache(cache_key)
+        
+        if cached_data:
+            return cached_data
+        
+        # Get fresh data
+        data = data_service.get_user_finance_data(db, current_user.id if current_user else None)
+        
+        # Cache the data for 5 minutes
+        await redis_cache.set_cache(cache_key, data, expire=300)
+        
+        return data
+    except Exception as e:
+        logger.error(f"Error getting finance dashboard: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get finance data")
+
+@app.get("/data/fitness/goals")
+async def get_fitness_goals(
+    current_user: Optional[user.User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    """Get fitness goals"""
+    try:
+        data = data_service.get_user_fitness_goals(db, current_user.id if current_user else None)
+        return data
+    except Exception as e:
+        logger.error(f"Error getting fitness goals: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get fitness goals")
+
+@app.get("/data/finance/accounts")
+async def get_finance_accounts(
+    current_user: Optional[user.User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    """Get finance accounts"""
+    try:
+        data = data_service.get_user_finance_accounts(db, current_user.id if current_user else None)
+        return data
+    except Exception as e:
+        logger.error(f"Error getting finance accounts: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get finance accounts")
+
+# Protected endpoints (require authentication)
+@app.post("/data/fitness/goals", response_model=data_schemas.FitnessGoal)
+async def create_fitness_goal(
+    goal_data: data_schemas.FitnessGoalCreate,
+    current_user: user.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new fitness goal"""
+    try:
+        goal = data_service.create_fitness_goal(db, goal_data, current_user.id)
+        
+        # Invalidate cache
+        await redis_cache.invalidate_cache("fitness_dashboard_*")
+        
+        return goal
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/data/finance/accounts", response_model=data_schemas.FinanceAccount)
+async def create_finance_account(
+    account_data: data_schemas.FinanceAccountCreate,
+    current_user: user.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new finance account"""
+    try:
+        account = data_service.create_finance_account(db, account_data, current_user.id)
+        
+        # Invalidate cache
+        await redis_cache.invalidate_cache("finance_dashboard_*")
+        
+        return account
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Include AI insights router
+from app.routers.ai_insights import router as ai_insights_router
+app.include_router(ai_insights_router)
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

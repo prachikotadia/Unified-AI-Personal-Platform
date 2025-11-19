@@ -97,7 +97,7 @@ export interface FinancialOffer {
 }
 
 // API Configuration
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 // Create axios instance
 const api: AxiosInstance = axios.create({

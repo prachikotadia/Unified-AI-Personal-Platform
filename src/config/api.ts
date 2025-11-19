@@ -9,10 +9,10 @@ interface APIConfig {
 
 // Development configuration
 const devConfig: APIConfig = {
-  baseURL: 'http://localhost:8000/api',
-  wsURL: 'ws://localhost:8000/ws',
+  baseURL: 'http://localhost:5000',
+  wsURL: 'ws://localhost:5000/ws',
   chatURL: 'http://localhost:8003',
-  travelURL: 'http://localhost:8001',
+  travelURL: 'http://localhost:8004',
   timeout: 10000,
 };
 

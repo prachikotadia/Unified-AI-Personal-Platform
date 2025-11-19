@@ -249,22 +249,18 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
-    first_name = Column(String(50))
-    last_name = Column(String(50))
-    phone = Column(String(20))
+    hashed_password = Column(String(255), nullable=True)  # Null for OAuth users
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
-    email_verified_at = Column(DateTime)
-    phone_verified_at = Column(DateTime)
-    profile_picture = Column(String(255))
-    date_of_birth = Column(DateTime)
-    gender = Column(String(10))
-    address = Column(JSON)  # Store address as JSON
-    preferences = Column(JSON)  # Store user preferences
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    last_login = Column(DateTime)
+    is_guest = Column(Boolean, default=False)
+    display_name = Column(String(100))
+    avatar = Column(String(255))
+    bio = Column(Text)
+    location = Column(String(100))
+    preferences = Column(Text)  # JSON string for user preferences
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    last_login = Column(DateTime(timezone=True))
     
     # Relationships
     orders = relationship("Order", back_populates="user")
@@ -325,3 +321,24 @@ class UserSession(Base):
     def is_expired(self) -> bool:
         """Check if session is expired"""
         return datetime.utcnow() > self.expires_at
+
+class VerificationCode(Base):
+    __tablename__ = "verification_codes"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False)
+    code_type = Column(String(20), nullable=False)  # 'email' or 'phone'
+    contact = Column(String(255), nullable=False)  # email or phone number
+    code = Column(String(10), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    is_used = Column(Boolean, default=False)
+    used_at = Column(DateTime)
+    created_at = Column(DateTime, default=func.now())
+    
+    def is_expired(self) -> bool:
+        """Check if verification code is expired"""
+        return datetime.utcnow() > self.expires_at
+    
+    def is_valid(self) -> bool:
+        """Check if verification code is valid and not used"""
+        return not self.is_used and not self.is_expired()

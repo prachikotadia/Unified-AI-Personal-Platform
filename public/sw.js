@@ -141,7 +141,13 @@ self.addEventListener('fetch', (event) => {
 // Handle API requests with cache-first strategy
 async function handleApiRequest(request) {
   try {
-    // Try cache first
+    // For AI insights, always try network first
+    if (request.url.includes('/ai-insights/')) {
+      const networkResponse = await fetch(request);
+      return networkResponse;
+    }
+    
+    // Try cache first for other API requests
     const cachedResponse = await caches.match(request);
     if (cachedResponse) {
       return cachedResponse;
@@ -150,8 +156,8 @@ async function handleApiRequest(request) {
     // If not in cache, fetch from network
     const networkResponse = await fetch(request);
     
-    // Cache successful API responses
-    if (networkResponse.status === 200) {
+    // Cache successful API responses (except AI insights)
+    if (networkResponse.status === 200 && !request.url.includes('/ai-insights/')) {
       const responseClone = networkResponse.clone();
       const cache = await caches.open(DYNAMIC_CACHE);
       cache.put(request, responseClone);
@@ -184,6 +190,11 @@ async function handleApiRequest(request) {
 
 // Handle static assets with cache-first strategy
 async function handleStaticAsset(request) {
+  // Skip chrome-extension URLs
+  if (request.url.startsWith('chrome-extension://')) {
+    return fetch(request);
+  }
+  
   const cachedResponse = await caches.match(request);
   if (cachedResponse) {
     return cachedResponse;

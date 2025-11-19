@@ -1046,101 +1046,142 @@ const mockFitnessAPI = {
 
   // Dashboard
   getDashboard: async (): Promise<FitnessDashboard> => {
-    return {
-      today_summary: {
-        id: '1',
-        user_id: 'user_123',
-        date: new Date().toISOString().split('T')[0],
-        steps: 8420,
-        calories_burned: 420,
-        calories_consumed: 1850,
-        water_intake: 2000,
-        sleep_hours: 7.5,
-        workouts: 1,
-        mood: MoodLevel.GOOD,
-        energy: EnergyLevel.MEDIUM,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      weekly_stats: {
-        steps: 58000,
-        calories_burned: 2800,
-        workouts: 5,
-        active_days: 6,
-      },
-      current_goals: [
-        {
+    // Import user data service
+    const { userDataService } = await import('./userDataService')
+    const { useAuthStore } = await import('../store/auth')
+    
+    const user = useAuthStore.getState().user
+    const userId = user?.id || 'guest'
+    
+    // Check if user is guest
+    if (userDataService.isGuestUser(userId)) {
+      // Return demo data for guest users
+      return {
+        today_summary: {
           id: '1',
           user_id: 'user_123',
-          name: 'Lose 5kg',
-          description: 'Weight loss goal',
-          type: 'weight_loss',
-          target_value: 65,
-          current_value: 70.5,
-          unit: 'kg',
-          deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'active',
-          progress_percentage: 70,
+          date: new Date().toISOString().split('T')[0],
+          steps: 8420,
+          calories_burned: 420,
+          calories_consumed: 1850,
+          water_intake: 2000,
+          sleep_hours: 7.5,
+          workouts: 1,
+          mood: MoodLevel.GOOD,
+          energy: EnergyLevel.MEDIUM,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
-      ],
-      recent_achievements: [
-        {
-          id: '1',
-          user_id: 'user_123',
-          name: 'First Workout',
-          description: 'Complete your first workout',
-          type: 'workout',
-          icon: '🏃‍♂️',
-          unlocked: true,
-          unlocked_at: new Date().toISOString(),
-          progress: 100,
-          target: 1,
-          created_at: new Date().toISOString(),
+              weekly_stats: {
+          steps: 58000,
+          calories_burned: 2800,
+          workouts: 5,
+          active_days: 6,
         },
-      ],
-      streaks: [
-        {
-          id: '1',
-          user_id: 'user_123',
-          type: 'workout',
-          current_streak: 7,
-          longest_streak: 15,
-          start_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          last_activity: new Date().toISOString(),
+        current_goals: [
+          {
+            id: '1',
+            user_id: 'user_123',
+            name: 'Lose 5kg',
+            description: 'Weight loss goal',
+            type: 'weight_loss',
+            target_value: 65,
+            current_value: 70.5,
+            unit: 'kg',
+            deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            status: 'active',
+            progress_percentage: 70,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ],
+        recent_achievements: [
+          {
+            id: '1',
+            user_id: 'user_123',
+            name: 'First Workout',
+            description: 'Complete your first workout',
+            type: 'workout',
+            icon: '🏃‍♂️',
+            unlocked: true,
+            unlocked_at: new Date().toISOString(),
+            progress: 100,
+            target: 1,
+            created_at: new Date().toISOString(),
+          },
+        ],
+        streaks: [
+          {
+            id: '1',
+            user_id: 'user_123',
+            type: 'workout',
+            current_streak: 7,
+            longest_streak: 15,
+            start_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            last_activity: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ],
+        insights: [
+          {
+            id: '1',
+            user_id: 'user_123',
+            type: 'performance',
+            title: 'Improving Cardio Performance',
+            description: 'Your cardio sessions are getting stronger. Consider increasing intensity.',
+            data: { improvement: 15 },
+            priority: 'medium',
+            created_at: new Date().toISOString(),
+          },
+        ],
+        recommendations: [
+          {
+            id: '1',
+            user_id: 'user_123',
+            type: 'workout',
+            title: 'Try HIIT Training',
+            description: 'High-intensity interval training can boost your metabolism',
+            action_items: ['Start with 20-minute sessions', 'Include 30-second sprints', 'Rest for 1 minute between intervals'],
+            priority: 'high',
+            created_at: new Date().toISOString(),
+          },
+        ],
+      };
+    } else {
+      // Return real user data for authenticated users
+      return userDataService.getUserData(userId, 'fitness_dashboard', {
+        today_summary: {
+          id: `summary_${userId}`,
+          user_id: userId,
+          date: new Date().toISOString().split('T')[0],
+          steps: Math.floor(Math.random() * 5000) + 3000,
+          calories_burned: Math.floor(Math.random() * 300) + 200,
+          calories_consumed: Math.floor(Math.random() * 500) + 1500,
+          water_intake: Math.floor(Math.random() * 1000) + 1500,
+          sleep_hours: Math.floor(Math.random() * 3) + 6,
+          workouts: Math.floor(Math.random() * 3) + 1,
+          mood: MoodLevel.GOOD,
+          energy: EnergyLevel.MEDIUM,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
-      ],
-      insights: [
-        {
-          id: '1',
-          user_id: 'user_123',
-          type: 'performance',
-          title: 'Improving Cardio Performance',
-          description: 'Your cardio sessions are getting stronger. Consider increasing intensity.',
-          data: { improvement: 15 },
-          priority: 'medium',
-          created_at: new Date().toISOString(),
+        weekly_stats: {
+          steps: Math.floor(Math.random() * 20000) + 40000,
+          calories_burned: Math.floor(Math.random() * 1500) + 2000,
+          workouts: Math.floor(Math.random() * 4) + 3,
+          active_days: Math.floor(Math.random() * 3) + 4,
         },
-      ],
-      recommendations: [
-        {
-          id: '1',
-          user_id: 'user_123',
-          type: 'workout',
-          title: 'Try HIIT Training',
-          description: 'High-intensity interval training can boost your metabolism',
-          action_items: ['Start with 20-minute sessions', 'Include 30-second sprints', 'Rest for 1 minute between intervals'],
-          priority: 'high',
-          created_at: new Date().toISOString(),
-        },
-      ],
-    };
+        current_goals: [],
+        recent_achievements: [],
+        streaks: [],
+        insights: [],
+        recommendations: [],
+      });
+    }
   },
 };
 
 // Export the appropriate API based on environment
-const useMockAPI = (import.meta as any).env?.VITE_USE_MOCK_API === 'true';
+const useMockAPI = (import.meta as any).env?.VITE_USE_MOCK_API === 'true' || (import.meta as any).env?.DEV;
 export const fitnessAPIService = useMockAPI ? mockFitnessAPI : new FitnessAPIService();

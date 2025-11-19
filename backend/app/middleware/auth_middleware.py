@@ -8,7 +8,8 @@ import os
 from dotenv import load_dotenv
 
 from app.models.user import UserResponse, UserInDB
-from app.database import get_collection
+from app.database import get_db
+from app.services import auth_service
 
 load_dotenv()
 logger = structlog.get_logger()
@@ -54,7 +55,10 @@ def verify_token(token: str) -> dict:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> UserResponse:
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db = Depends(get_db)
+) -> UserResponse:
     """Get current authenticated user"""
     try:
         token = credentials.credentials
@@ -68,11 +72,10 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        # Get user from database
-        users_collection = get_collection("users")
-        user_data = await users_collection.find_one({"_id": user_id})
+        # Get user from database using SQLAlchemy
+        user = auth_service.get_user_by_id(db, int(user_id))
         
-        if user_data is None:
+        if user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found",
@@ -80,7 +83,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             )
         
         # Check if user is active
-        if user_data.get("status") != "active":
+        if user.status != "active":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User account is not active",
@@ -88,15 +91,17 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             )
         
         # Convert to UserResponse model
-        user = UserResponse(**user_data)
-        
-        # Update last seen
-        await users_collection.update_one(
-            {"_id": user_id},
-            {"$set": {"last_seen": datetime.utcnow()}}
+        user_response = UserResponse(
+            id=user.id,
+            email=user.email,
+            username=user.username,
+            full_name=user.full_name,
+            status=user.status,
+            created_at=user.created_at,
+            updated_at=user.updated_at
         )
         
-        return user
+        return user_response
         
     except HTTPException:
         raise
@@ -125,6 +130,45 @@ async def get_optional_user(credentials: Optional[HTTPAuthorizationCredentials] 
     try:
         return await get_current_user(credentials)
     except HTTPException:
+        return None
+
+async def get_current_user_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db = Depends(get_db)
+) -> Optional[UserResponse]:
+    """Get current user if authenticated, otherwise return None"""
+    if not credentials:
+        return None
+    
+    try:
+        token = credentials.credentials
+        payload = verify_token(token)
+        
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+        
+        # Get user from database using SQLAlchemy
+        user = auth_service.get_user_by_id(db, int(user_id))
+        
+        if user is None:
+            return None
+        
+        # Convert to UserResponse model
+        user_response = UserResponse(
+            id=user.id,
+            email=user.email,
+            username=user.username,
+            full_name=user.full_name,
+            status=user.status,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
+        
+        return user_response
+        
+    except Exception as e:
+        logger.error(f"Error getting optional user: {e}")
         return None
 
 def require_permissions(*permissions: str):

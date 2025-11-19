@@ -74,10 +74,21 @@ import DebugCheckoutPage from './pages/marketplace/DebugCheckoutPage'
 import TestCheckoutFlow from './pages/marketplace/TestCheckoutFlow'
 import SimplePaymentTest from './pages/marketplace/SimplePaymentTest'
 import MinimalPaymentPage from './pages/marketplace/MinimalPaymentPage'
+import AIInsightsDemo from './pages/AIInsightsDemo'
+import DatabaseAdmin from './pages/DatabaseAdmin'
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, isLoading } = useAuthStore()
+  
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      </div>
+    )
+  }
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
@@ -196,7 +207,13 @@ function App() {
           {/* Profile Routes */}
           <Route path="profile" element={<ProfilePage />} />
           <Route path="settings" element={<SettingsPage />} />
+          
+          {/* AI Insights Demo Route */}
+          <Route path="ai-insights-demo" element={<AIInsightsDemo />} />
         </Route>
+
+        {/* Public Admin Routes */}
+        <Route path="database-admin" element={<DatabaseAdmin />} />
 
         {/* Catch all route */}
         <Route path="*" element={<Navigate to="/" replace />} />

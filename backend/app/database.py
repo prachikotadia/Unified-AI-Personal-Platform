@@ -7,40 +7,31 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Database URL - use PostgreSQL in production, SQLite for development
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "postgresql://postgres:password@localhost:5432/omnilife_marketplace"
-)
+# Database URL configuration
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./omnilife.db")
 
-# For development, use SQLite if FORCE_SQLITE is set or PostgreSQL is not available
-if os.getenv("FORCE_SQLITE") or not DATABASE_URL.startswith("postgresql://"):
-    # Use SQLite for development
-    DATABASE_URL = "sqlite:///./omnilife_marketplace.db"
+# Create engine based on database type
+if DATABASE_URL.startswith("sqlite"):
+    # SQLite configuration for development
     engine = create_engine(
         DATABASE_URL,
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
+        echo=True  # Set to False in production
     )
 else:
-    # Try PostgreSQL
-    try:
-        engine = create_engine(
-            DATABASE_URL,
-            pool_pre_ping=True,
-            pool_recycle=300,
-        )
-    except Exception:
-        # Fallback to SQLite
-        DATABASE_URL = "sqlite:///./omnilife_marketplace.db"
-        engine = create_engine(
-            DATABASE_URL,
-            connect_args={"check_same_thread": False},
-            poolclass=StaticPool,
-        )
+    # PostgreSQL configuration for production
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        echo=False  # Set to True for debugging
+    )
 
+# Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# Create Base class
 Base = declarative_base()
 
 # Dependency to get database session
@@ -50,3 +41,8 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# Database initialization
+def init_db():
+    """Initialize database tables"""
+    Base.metadata.create_all(bind=engine)

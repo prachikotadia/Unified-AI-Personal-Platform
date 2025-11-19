@@ -8,6 +8,8 @@ import string
 
 from app.models.user import User, UserSession
 from app.auth.jwt_handler import JWTHandler
+from app.auth.oauth import OAuthHandler
+from app.services.verification_service import VerificationService
 from app.utils.email_service import EmailService
 from app.utils.phone_service import PhoneService
 
@@ -18,6 +20,7 @@ class UserService:
         self.db = db
         self.email_service = EmailService()
         self.phone_service = PhoneService()
+        self.verification_service = VerificationService(db)
     
     def create_user(self, username: str, email: str, password: str, **kwargs) -> User:
         """Create a new user"""
@@ -90,6 +93,163 @@ class UserService:
             "token_type": "bearer",
             "expires_in": 1800  # 30 minutes
         }
+    
+    async def authenticate_with_oauth(self, provider: str, code: str, request_info: Dict[str, str]) -> Optional[Dict[str, Any]]:
+        """Authenticate user with OAuth provider"""
+        try:
+            # Get user info from OAuth provider
+            if provider == "google":
+                oauth_user_info = await OAuthHandler.get_google_user_info(code)
+            elif provider == "github":
+                oauth_user_info = await OAuthHandler.get_github_user_info(code)
+            else:
+                raise ValueError(f"Unsupported OAuth provider: {provider}")
+            
+            # Check if user exists
+            user = self.get_user_by_oauth_id(provider, oauth_user_info["provider_id"])
+            
+            if not user:
+                # Check if user exists by email
+                user = self.get_user_by_email(oauth_user_info["email"])
+                
+                if user:
+                    # Link OAuth account to existing user
+                    self.link_oauth_account(user, provider, oauth_user_info["provider_id"])
+                else:
+                    # Create new user
+                    user = self.create_oauth_user(oauth_user_info)
+            
+            # Create session
+            tokens = self.create_user_session(
+                user,
+                ip_address=request_info.get("ip_address"),
+                user_agent=request_info.get("user_agent")
+            )
+            
+            return {
+                "user": user.to_dict(),
+                "tokens": tokens,
+                "is_new_user": user.created_at > datetime.utcnow() - timedelta(minutes=5)
+            }
+            
+        except Exception as e:
+            logger.error(f"OAuth authentication error: {str(e)}")
+            raise ValueError(f"OAuth authentication failed: {str(e)}")
+    
+    def get_user_by_oauth_id(self, provider: str, provider_id: str) -> Optional[User]:
+        """Get user by OAuth provider ID"""
+        # This would need to be implemented based on your OAuth linking strategy
+        # For now, we'll check by email
+        return None
+    
+    def get_user_by_email(self, email: str) -> Optional[User]:
+        """Get user by email"""
+        return self.db.query(User).filter(User.email == email).first()
+    
+    def link_oauth_account(self, user: User, provider: str, provider_id: str):
+        """Link OAuth account to existing user"""
+        # Update user's OAuth information
+        if not user.preferences:
+            user.preferences = {}
+        
+        if "oauth" not in user.preferences:
+            user.preferences["oauth"] = {}
+        
+        user.preferences["oauth"][provider] = {
+            "provider_id": provider_id,
+            "linked_at": datetime.utcnow().isoformat()
+        }
+        
+        self.db.commit()
+        logger.info(f"Linked {provider} account to user {user.id}")
+    
+    def create_oauth_user(self, oauth_user_info: Dict[str, Any]) -> User:
+        """Create new user from OAuth information"""
+        # Generate unique username
+        base_username = oauth_user_info.get("first_name", "user").lower()
+        username = base_username
+        counter = 1
+        
+        while self.db.query(User).filter(User.username == username).first():
+            username = f"{base_username}{counter}"
+            counter += 1
+        
+        # Create user
+        user = User(
+            username=username,
+            email=oauth_user_info["email"],
+            first_name=oauth_user_info.get("first_name", ""),
+            last_name=oauth_user_info.get("last_name", ""),
+            is_verified=oauth_user_info.get("verified", False),
+            profile_picture=oauth_user_info.get("avatar"),
+            preferences={
+                "oauth": {
+                    oauth_user_info["provider"]: {
+                        "provider_id": oauth_user_info["provider_id"],
+                        "linked_at": datetime.utcnow().isoformat()
+                    }
+                }
+            }
+        )
+        
+        # Set a random password for OAuth users
+        user.set_password(secrets.token_urlsafe(32))
+        
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        
+        logger.info(f"Created new OAuth user: {user.username}")
+        return user
+    
+    async def send_verification_email(self, user: User) -> bool:
+        """Send email verification"""
+        return await self.verification_service.send_email_verification(user)
+    
+    async def send_verification_sms(self, user: User, phone_number: str) -> bool:
+        """Send SMS verification"""
+        return await self.verification_service.send_sms_verification(user, phone_number)
+    
+    def verify_email_code(self, user_id: int, code: str) -> bool:
+        """Verify email verification code"""
+        return self.verification_service.verify_code(user_id, "email", code)
+    
+    def verify_phone_code(self, user_id: int, code: str) -> bool:
+        """Verify phone verification code"""
+        return self.verification_service.verify_code(user_id, "phone", code)
+    
+    async def resend_verification(self, user_id: int, contact_type: str) -> bool:
+        """Resend verification code"""
+        return self.verification_service.resend_verification_code(user_id, contact_type)
+    
+    def create_guest_user(self) -> User:
+        """Create a temporary guest user for demo purposes"""
+        guest_id = f"guest_{secrets.token_hex(8)}"
+        
+        user = User(
+            username=guest_id,
+            email=f"{guest_id}@guest.omnilife.com",
+            first_name="Guest",
+            last_name="User",
+            is_active=True,
+            is_verified=True,
+            preferences={
+                "theme": "light",
+                "notifications": {"email": False, "push": False, "sms": False},
+                "privacy": {"profile_visibility": "private"},
+                "is_guest": True
+            }
+        )
+        
+        # Set a temporary password
+        user.set_password(secrets.token_urlsafe(32))
+        
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        
+        logger.info(f"Created guest user: {user.username}")
+        return user
     
     def refresh_access_token(self, refresh_token: str) -> Optional[Dict[str, str]]:
         """Refresh access token using refresh token"""
