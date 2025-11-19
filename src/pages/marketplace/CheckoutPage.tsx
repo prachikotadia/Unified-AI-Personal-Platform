@@ -104,7 +104,7 @@ const CheckoutPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Checkout Steps */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Step 1: Shipping Address */}
+          {/* Shipping Address */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -159,7 +159,7 @@ const CheckoutPage = () => {
             </div>
           </motion.div>
 
-          {/* Step 2: Payment Method */}
+          {/* Payment Method */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -218,7 +218,7 @@ const CheckoutPage = () => {
             </div>
           </motion.div>
 
-          {/* Step 3: Order Review */}
+          {/* Order Review */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
