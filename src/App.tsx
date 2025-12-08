@@ -71,7 +71,6 @@ import RecentlyViewedPage from './pages/marketplace/RecentlyViewedPage'
 import QAModerationPage from './pages/marketplace/QAModerationPage'
 import TestPage from './pages/marketplace/TestPage'
 import DebugCheckoutPage from './pages/marketplace/DebugCheckoutPage'
-import TestCheckoutFlow from './pages/marketplace/TestCheckoutFlow'
 import SimplePaymentTest from './pages/marketplace/SimplePaymentTest'
 import MinimalPaymentPage from './pages/marketplace/MinimalPaymentPage'
 import AIInsightsDemo from './pages/AIInsightsDemo'
@@ -174,7 +173,6 @@ function App() {
                 <Route path="marketplace/qa-moderation" element={<QAModerationPage />} />
                 <Route path="marketplace/test" element={<TestPage />} />
                 <Route path="marketplace/debug-checkout" element={<DebugCheckoutPage />} />
-                <Route path="marketplace/test-checkout" element={<TestCheckoutFlow />} />
                 <Route path="marketplace/simple-payment" element={<SimplePaymentTest />} />
                 <Route path="marketplace/minimal-payment" element={<MinimalPaymentPage />} />
           

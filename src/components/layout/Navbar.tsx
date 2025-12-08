@@ -129,9 +129,9 @@ const Navbar = () => {
                     className="w-8 h-8 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
-                    <User size={16} className="text-white" />
-                  </div>
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                  <User size={16} className="text-white" />
+                </div>
                 )}
                 <span className="hidden md:block text-sm font-medium">
                   {user?.displayName || user?.username || 'User'}
