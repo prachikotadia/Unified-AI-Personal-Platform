@@ -13,10 +13,12 @@ import {
   CreditCard as CreditCardIcon,
   Wallet
 } from 'lucide-react';
+import { useAuthStore } from '../../store/auth';
 // import { useToastHelpers } from '../../components/ui/Toast';
 
 const PaymentPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   // const { success, error: showError } = useToastHelpers();
   
   // Simple toast functions for now
@@ -58,9 +60,9 @@ const PaymentPage = () => {
   const defaultAddressData = {
     id: '1',
     type: 'home',
-    name: 'John Doe',
+    name: user?.displayName || user?.username || 'User',
     phone: '+1 (555) 123-4567',
-    email: 'john@example.com',
+    email: user?.email || '',
     addressLine1: '123 Test Street',
     addressLine2: '',
     city: 'Test City',
@@ -450,7 +452,7 @@ const PaymentPage = () => {
                       value={cardData.cardholderName}
                       onChange={handleCardInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="John Doe"
+                        placeholder={user?.displayName || user?.username || "Full Name"}
                     />
                   </div>
                   

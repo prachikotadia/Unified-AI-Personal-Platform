@@ -16,10 +16,12 @@ import {
   MessageCircle,
   Users
 } from 'lucide-react';
+import { useAuthStore } from '@/store/auth';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { user } = useAuthStore();
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: <Home size={20} /> },
@@ -119,12 +121,22 @@ const Navbar = () => {
 
             {/* User menu */}
             <div className="relative">
-              <button className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
-                  <User size={16} className="text-white" />
-                </div>
-                <span className="hidden md:block text-sm font-medium">John Doe</span>
-              </button>
+              <Link to="/profile" className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+                {user?.avatar ? (
+                  <img 
+                    src={user.avatar} 
+                    alt={user.displayName || 'User'} 
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                    <User size={16} className="text-white" />
+                  </div>
+                )}
+                <span className="hidden md:block text-sm font-medium">
+                  {user?.displayName || user?.username || 'User'}
+                </span>
+              </Link>
             </div>
 
             {/* Mobile menu button */}

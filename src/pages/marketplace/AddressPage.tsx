@@ -19,6 +19,7 @@ import {
   Mail
 } from 'lucide-react';
 import { useToastHelpers } from '../../components/ui/Toast';
+import { useAuthStore } from '../../store/auth';
 
 interface Address {
   id: string;
@@ -51,14 +52,15 @@ interface AddressFormData {
 const AddressPage: React.FC = () => {
   const navigate = useNavigate();
   const { success, error: showError } = useToastHelpers();
+  const { user } = useAuthStore();
   
   const [addresses, setAddresses] = useState<Address[]>([
     {
       id: '1',
       type: 'home',
-      name: 'John Doe',
+      name: user?.displayName || user?.username || 'User',
       phone: '+1 (555) 123-4567',
-      email: 'john.doe@example.com',
+      email: user?.email || '',
       addressLine1: '123 Main Street',
       addressLine2: 'Apt 4B',
       city: 'New York',
@@ -70,9 +72,9 @@ const AddressPage: React.FC = () => {
     {
       id: '2',
       type: 'work',
-      name: 'John Doe',
+      name: user?.displayName || user?.username || 'User',
       phone: '+1 (555) 123-4567',
-      email: 'john.doe@company.com',
+      email: user?.email || '',
       addressLine1: '456 Business Ave',
       addressLine2: 'Suite 200',
       city: 'New York',
@@ -459,7 +461,7 @@ const AddressPage: React.FC = () => {
                         value={formData.name}
                         onChange={handleInputChange}
                         className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="John Doe"
+                        placeholder={user?.displayName || user?.username || "Full Name"}
                       />
                     </div>
                   </div>
@@ -493,7 +495,7 @@ const AddressPage: React.FC = () => {
                         value={formData.email}
                         onChange={handleInputChange}
                         className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="john.doe@example.com"
+                        placeholder={user?.email || "email@example.com"}
                       />
                     </div>
                   </div>

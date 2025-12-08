@@ -23,10 +23,12 @@ import AIRecommendations from '../../components/marketplace/AIRecommendations';
 import { useCartStore } from '../../store/cart';
 import { useWishlistStore } from '../../store/wishlist';
 import { useToastHelpers } from '../../components/ui/Toast';
+import { useAuthStore } from '../../store/auth';
 
 const CartPage = () => {
   const navigate = useNavigate();
   const { success, error: showError, info } = useToastHelpers();
+  const { user } = useAuthStore();
   
   // Store hooks
   const { 
@@ -118,13 +120,13 @@ const CartPage = () => {
       checkoutDate: new Date().toISOString()
     };
 
-    // Create default address data
+    // Create default address data using actual user data
     const addressData = {
       id: '1',
       type: 'home',
-      name: 'John Doe',
+      name: user?.displayName || user?.username || 'User',
       phone: '+1 (555) 123-4567',
-      email: 'john@example.com',
+      email: user?.email || '',
       addressLine1: '123 Main Street',
       addressLine2: '',
       city: 'New York',

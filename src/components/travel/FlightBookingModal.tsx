@@ -16,6 +16,7 @@ import {
   Clock
 } from 'lucide-react';
 import travelAPI, { FlightBookingCreate } from '../../services/travelAPI';
+import { useAuthStore } from '../../store/auth';
 
 interface FlightBookingModalProps {
   isOpen: boolean;
@@ -47,6 +48,7 @@ interface PaymentDetails {
 }
 
 const FlightBookingModal: React.FC<FlightBookingModalProps> = ({ isOpen, onClose, flight }) => {
+  const { user } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [passengerDetails, setPassengerDetails] = useState<PassengerDetails>({
     firstName: '',
@@ -518,7 +520,7 @@ const FlightBookingModal: React.FC<FlightBookingModalProps> = ({ isOpen, onClose
                         type="text"
                         value={paymentDetails.cardHolder}
                         onChange={(e) => handlePaymentDetailsChange('cardHolder', e.target.value)}
-                        placeholder="John Doe"
+                        placeholder={user?.displayName || user?.username || "Cardholder Name"}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />

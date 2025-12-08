@@ -16,8 +16,10 @@ import {
 } from 'lucide-react';
 import { marketplaceAPI, Address, PaymentMethod } from '../../services/api';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { useAuthStore } from '../../store/auth';
 
 const AccountSettingsPage: React.FC = () => {
+  const { user } = useAuthStore();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,9 +62,9 @@ const AccountSettingsPage: React.FC = () => {
       const mockAddresses: Address[] = [
         {
           id: '1',
-          first_name: 'John',
-          last_name: 'Doe',
-          email: 'john.doe@example.com',
+          first_name: user?.displayName?.split(' ')[0] || user?.username || 'User',
+          last_name: user?.displayName?.split(' ')[1] || '',
+          email: user?.email || '',
           phone: '+1 (555) 123-4567',
           address: '123 Main Street',
           city: 'New York',

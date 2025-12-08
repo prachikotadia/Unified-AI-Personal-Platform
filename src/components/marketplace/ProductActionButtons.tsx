@@ -11,6 +11,7 @@ import { useCartStore } from '../../store/cart';
 import { useWishlistStore } from '../../store/wishlist';
 import { useBuyNowStore } from '../../store/buyNow';
 import { useToast } from '../../components/ui/Toast';
+import { useAuthStore } from '../../store/auth';
 
 interface ProductActionButtonsProps {
   product: {
@@ -113,13 +114,14 @@ const ProductActionButtons: React.FC<ProductActionButtonsProps> = ({
         checkoutDate: new Date().toISOString()
       };
 
-      // Create default address data
+      // Create default address data using actual user data
+      const { user } = useAuthStore.getState();
       const addressData = {
         id: '1',
         type: 'home',
-        name: 'John Doe',
+        name: user?.displayName || user?.username || 'User',
         phone: '+1 (555) 123-4567',
-        email: 'john@example.com',
+        email: user?.email || '',
         addressLine1: '123 Main Street',
         addressLine2: '',
         city: 'New York',

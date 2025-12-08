@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/auth';
 
 const DebugCheckoutPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [sessionData, setSessionData] = useState<any>({});
 
   useEffect(() => {
@@ -48,9 +50,9 @@ const DebugCheckoutPage = () => {
     const testAddressData = {
       id: '1',
       type: 'home',
-      name: 'John Doe',
+      name: user?.displayName || user?.username || 'User',
       phone: '+1 (555) 123-4567',
-      email: 'john@example.com',
+      email: user?.email || '',
       addressLine1: '123 Test Street',
       addressLine2: '',
       city: 'Test City',

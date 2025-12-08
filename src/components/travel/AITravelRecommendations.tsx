@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useToastHelpers } from '../ui/Toast';
 import travelAPI from '../../services/travelAPI';
+import { useAuthStore } from '../../store/auth';
 
 interface TravelDestination {
   id: string;
@@ -470,6 +471,7 @@ const TripPlanningModal: React.FC<TripPlanningModalProps> = ({
   onClose
 }) => {
   const { success, error } = useToastHelpers();
+  const { user } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [tripDetails, setTripDetails] = useState({
     startDate: '',
@@ -791,7 +793,7 @@ const TripPlanningModal: React.FC<TripPlanningModalProps> = ({
                     value={paymentDetails.cardHolder}
                     onChange={(e) => handlePaymentDetailsChange('cardHolder', e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="John Doe"
+                    placeholder={user?.displayName || user?.username || "Cardholder Name"}
                   />
                 </div>
               </div>
