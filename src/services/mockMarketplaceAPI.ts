@@ -174,6 +174,334 @@ const mockProducts: Product[] = [
     dealEndsIn: '5 days',
     fastDelivery: true,
     isPrime: true
+  },
+  {
+    id: 6,
+    name: 'Dyson V15 Detect Cordless Vacuum Cleaner',
+    price: 699.99,
+    originalPrice: 749.99,
+    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop',
+    brand: 'Dyson',
+    inStock: true,
+    rating: 4.9,
+    reviewCount: 3421,
+    description: 'Laser technology reveals microscopic dust. 60 minutes of fade-free power.',
+    category: 'home',
+    subcategory: 'Cleaning',
+    images: [
+      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=800&fit=crop'
+    ],
+    specifications: {
+      'Power': '230 AW',
+      'Battery Life': '60 minutes',
+      'Weight': '2.9 kg',
+      'Dust Capacity': '0.77L'
+    },
+    features: [
+      'Laser technology',
+      '60 minutes fade-free power',
+      'HEPA filtration',
+      '5 cleaning modes'
+    ],
+    isDeal: true,
+    dealEndsIn: '4 days',
+    fastDelivery: true,
+    isPrime: true
+  },
+  {
+    id: 7,
+    name: 'Canon EOS R6 Mark II Mirrorless Camera',
+    price: 2499.99,
+    originalPrice: 2799.99,
+    image: 'https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=400&h=400&fit=crop',
+    brand: 'Canon',
+    inStock: true,
+    rating: 4.8,
+    reviewCount: 567,
+    description: '24.2MP Full-Frame CMOS Sensor with 40fps continuous shooting.',
+    category: 'electronics',
+    subcategory: 'Cameras',
+    images: [
+      'https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=800&h=800&fit=crop'
+    ],
+    specifications: {
+      'Sensor': '24.2MP Full-Frame CMOS',
+      'ISO Range': '100-102400',
+      'Video': '4K 60p',
+      'Burst Rate': '40fps'
+    },
+    features: [
+      '24.2MP Full-Frame sensor',
+      '40fps continuous shooting',
+      '4K 60p video',
+      'In-body image stabilization'
+    ],
+    isDeal: false,
+    fastDelivery: true,
+    isPrime: true
+  },
+  {
+    id: 8,
+    name: 'Vitamix Professional Series 750 Blender',
+    price: 549.99,
+    originalPrice: 629.99,
+    image: 'https://images.unsplash.com/photo-1571167530272-4c9b8c0b8b0b?w=400&h=400&fit=crop',
+    brand: 'Vitamix',
+    inStock: true,
+    rating: 4.7,
+    reviewCount: 2134,
+    description: 'Professional-grade blender with 5 pre-programmed settings and 2.2L container.',
+    category: 'home',
+    subcategory: 'Kitchen Appliances',
+    images: [
+      'https://images.unsplash.com/photo-1571167530272-4c9b8c0b8b0b?w=800&h=800&fit=crop'
+    ],
+    specifications: {
+      'Power': '2.2 HP motor',
+      'Capacity': '2.2L',
+      'Speed Settings': '10 variable speeds',
+      'Weight': '5.1 kg'
+    },
+    features: [
+      '2.2 HP motor',
+      '5 pre-programmed settings',
+      'Self-cleaning',
+      '7-year warranty'
+    ],
+    isDeal: true,
+    dealEndsIn: '6 days',
+    fastDelivery: true,
+    isPrime: true
+  },
+  {
+    id: 9,
+    name: 'Herman Miller Aeron Office Chair',
+    price: 1299.99,
+    originalPrice: 1499.99,
+    image: 'https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=400&h=400&fit=crop',
+    brand: 'Herman Miller',
+    inStock: true,
+    rating: 4.9,
+    reviewCount: 892,
+    description: 'Ergonomic office chair with PostureFit SL support and 12-year warranty.',
+    category: 'home',
+    subcategory: 'Furniture',
+    images: [
+      'https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=800&h=800&fit=crop'
+    ],
+    specifications: {
+      'Material': 'Mesh',
+      'Weight Capacity': '159 kg',
+      'Warranty': '12 years',
+      'Adjustments': '8-way'
+    },
+    features: [
+      'PostureFit SL support',
+      '8-way adjustments',
+      '12-year warranty',
+      'Recyclable materials'
+    ],
+    isDeal: false,
+    fastDelivery: true,
+    isPrime: true
+  },
+  {
+    id: 10,
+    name: 'Apple MacBook Pro 16" M3 Max Chip',
+    price: 3999.99,
+    originalPrice: 4299.99,
+    image: 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=400&h=400&fit=crop',
+    brand: 'Apple',
+    inStock: true,
+    rating: 4.9,
+    reviewCount: 234,
+    description: '16-inch MacBook Pro with M3 Max chip, 36GB unified memory, and 1TB SSD.',
+    category: 'electronics',
+    subcategory: 'Laptops',
+    images: [
+      'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=800&h=800&fit=crop'
+    ],
+    specifications: {
+      'Chip': 'M3 Max',
+      'Memory': '36GB unified',
+      'Storage': '1TB SSD',
+      'Display': '16.2-inch Liquid Retina XDR'
+    },
+    features: [
+      'M3 Max chip',
+      '36GB unified memory',
+      'Liquid Retina XDR display',
+      'Up to 22 hours battery'
+    ],
+    isDeal: true,
+    dealEndsIn: '7 days',
+    fastDelivery: true,
+    isPrime: true
+  },
+  {
+    id: 11,
+    name: 'Nespresso Vertuo Next Coffee Machine',
+    price: 199.99,
+    originalPrice: 249.99,
+    image: 'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=400&h=400&fit=crop',
+    brand: 'Nespresso',
+    inStock: true,
+    rating: 4.6,
+    reviewCount: 4567,
+    description: 'One-touch coffee machine with Centrifusion technology for perfect crema.',
+    category: 'home',
+    subcategory: 'Kitchen Appliances',
+    images: [
+      'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=800&h=800&fit=crop'
+    ],
+    specifications: {
+      'Capacity': '1.2L water tank',
+      'Cup Sizes': '5 sizes',
+      'Heat Up Time': '25 seconds',
+      'Weight': '3.5 kg'
+    },
+    features: [
+      'Centrifusion technology',
+      '5 cup sizes',
+      'One-touch operation',
+      'Automatic capsule recognition'
+    ],
+    isDeal: true,
+    dealEndsIn: '2 days',
+    fastDelivery: true,
+    isPrime: true
+  },
+  {
+    id: 12,
+    name: 'Adidas Ultraboost 22 Running Shoes',
+    price: 179.99,
+    originalPrice: 199.99,
+    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop',
+    brand: 'Adidas',
+    inStock: true,
+    rating: 4.7,
+    reviewCount: 3456,
+    description: 'Premium running shoes with Boost midsole and Primeknit upper.',
+    category: 'fashion',
+    subcategory: 'Shoes',
+    images: [
+      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&h=800&fit=crop'
+    ],
+    specifications: {
+      'Upper': 'Primeknit',
+      'Midsole': 'Boost',
+      'Outsole': 'Continental Rubber',
+      'Weight': '310g'
+    },
+    features: [
+      'Boost midsole',
+      'Primeknit upper',
+      'Continental rubber outsole',
+      'Energy return'
+    ],
+    isDeal: true,
+    dealEndsIn: '3 days',
+    fastDelivery: true,
+    isPrime: true
+  },
+  {
+    id: 13,
+    name: 'Breville Barista Express Espresso Machine',
+    price: 599.99,
+    originalPrice: 699.99,
+    image: 'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=400&h=400&fit=crop',
+    brand: 'Breville',
+    inStock: true,
+    rating: 4.8,
+    reviewCount: 1234,
+    description: 'Semi-automatic espresso machine with built-in conical burr grinder.',
+    category: 'home',
+    subcategory: 'Kitchen Appliances',
+    images: [
+      'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=800&h=800&fit=crop'
+    ],
+    specifications: {
+      'Grinder': 'Conical burr',
+      'Pressure': '15 bar',
+      'Water Tank': '2L',
+      'Weight': '11.8 kg'
+    },
+    features: [
+      'Built-in grinder',
+      '15 bar pressure',
+      'Steam wand',
+      'PID temperature control'
+    ],
+    isDeal: true,
+    dealEndsIn: '5 days',
+    fastDelivery: true,
+    isPrime: true
+  },
+  {
+    id: 14,
+    name: 'GoPro HERO12 Black Action Camera',
+    price: 399.99,
+    originalPrice: 499.99,
+    image: 'https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=400&h=400&fit=crop',
+    brand: 'GoPro',
+    inStock: true,
+    rating: 4.7,
+    reviewCount: 2345,
+    description: 'Waterproof action camera with 5.3K video and HyperSmooth 6.0 stabilization.',
+    category: 'electronics',
+    subcategory: 'Cameras',
+    images: [
+      'https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=800&h=800&fit=crop'
+    ],
+    specifications: {
+      'Video': '5.3K 60fps',
+      'Photo': '27MP',
+      'Waterproof': '10m',
+      'Battery': 'Enduro'
+    },
+    features: [
+      '5.3K video',
+      'HyperSmooth 6.0',
+      'Waterproof 10m',
+      'TimeWarp 3.0'
+    ],
+    isDeal: true,
+    dealEndsIn: '4 days',
+    fastDelivery: true,
+    isPrime: true
+  },
+  {
+    id: 15,
+    name: 'Le Creuset Dutch Oven 5.5 Quart',
+    price: 349.99,
+    originalPrice: 399.99,
+    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=400&fit=crop',
+    brand: 'Le Creuset',
+    inStock: true,
+    rating: 4.9,
+    reviewCount: 1789,
+    description: 'Enameled cast iron Dutch oven perfect for braising, baking, and slow cooking.',
+    category: 'home',
+    subcategory: 'Kitchen Appliances',
+    images: [
+      'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=800&fit=crop'
+    ],
+    specifications: {
+      'Capacity': '5.5 quarts',
+      'Material': 'Enameled cast iron',
+      'Lifetime Warranty': 'Yes',
+      'Oven Safe': 'Up to 500°F'
+    },
+    features: [
+      'Enameled cast iron',
+      'Lifetime warranty',
+      'Oven safe to 500°F',
+      'Even heat distribution'
+    ],
+    isDeal: true,
+    dealEndsIn: '6 days',
+    fastDelivery: true,
+    isPrime: true
   }
 ];
 

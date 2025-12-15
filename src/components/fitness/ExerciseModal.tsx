@@ -136,7 +136,7 @@ const ExerciseModal: React.FC<ExerciseModalProps> = ({ isOpen, onClose, onSelect
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="glass-card w-full max-w-4xl p-6 max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-4xl p-6 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
@@ -196,7 +196,7 @@ const ExerciseModal: React.FC<ExerciseModalProps> = ({ isOpen, onClose, onSelect
                   key={exercise.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`glass-card p-4 cursor-pointer transition-all hover:scale-105 ${
+                  className={`bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 cursor-pointer transition-all hover:scale-105 ${
                     isExerciseSelected(exercise) ? 'ring-2 ring-blue-500 bg-blue-500/10' : ''
                   }`}
                   onClick={() => handleExerciseSelect(exercise)}

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, TrendingUp, PiggyBank, TrendingDown, Calculator, Activity, Target, Apple, Heart, MapPin, CreditCard, Calendar, ShoppingBag, Star, Tag, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { API_BASE_URL } from '../../config/api';
 
 interface AIInsight {
   id: string;
@@ -73,7 +74,7 @@ export default function AIInsightsPanel({ module, count = 3, className }: AIInsi
     setError(null);
     
     try {
-      const endpoint = module ? `http://localhost:5000/ai-insights/${module}` : 'http://localhost:5000/ai-insights/generate';
+      const endpoint = module ? `${API_BASE_URL}/ai-insights/${module}` : `${API_BASE_URL}/ai-insights/generate`;
       const params = new URLSearchParams({
         count: count.toString(),
       });

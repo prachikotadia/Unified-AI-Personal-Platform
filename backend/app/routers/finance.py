@@ -5,6 +5,12 @@ from datetime import datetime, date, timedelta
 import structlog
 import uuid
 import json
+import csv
+import io
+import base64
+import os
+import asyncio
+from pathlib import Path
 
 from app.models.finance import (
     Transaction, BankAccount, CreditScore, FinancialOffer, Budget, FinancialGoal,
@@ -100,6 +106,83 @@ recurring_transactions = []
 financial_insights = []
 debt_trackers = []
 investments = []
+receipts = {}  # Store receipts by transaction ID
+bank_connections = []  # Store bank OAuth connections
+notifications = []  # Store finance notifications
+reports = []  # Store generated reports
+
+# Additional request models
+class BulkTransactionCreate(BaseModel):
+    transactions: List[TransactionCreate]
+
+class ReceiptUpload(BaseModel):
+    transaction_id: str
+    receipt_data: str  # Base64 encoded image
+    receipt_type: str = "image/jpeg"
+
+class BankConnectionCreate(BaseModel):
+    bank_name: str
+    account_type: str
+    oauth_token: Optional[str] = None
+
+class InvestmentTransactionCreate(BaseModel):
+    investment_id: str
+    type: str  # 'buy', 'sell', 'dividend', 'split'
+    quantity: float
+    price: float
+    date: date
+    fees: Optional[float] = 0.0
+    notes: Optional[str] = None
+
+class DebtPaymentCreate(BaseModel):
+    debt_id: str
+    amount: float
+    payment_date: date
+    notes: Optional[str] = None
+
+class GoalProgressUpdate(BaseModel):
+    current_amount: float
+    notes: Optional[str] = None
+
+class RecurringTransactionCreate(BaseModel):
+    account_id: str
+    type: TransactionType
+    category: str
+    amount: float
+    description: str
+    frequency: str  # 'daily', 'weekly', 'monthly', 'yearly'
+    start_date: date
+    end_date: Optional[date] = None
+    next_occurrence: date
+
+class ReportGenerateRequest(BaseModel):
+    report_type: str
+    start_date: date
+    end_date: date
+    include_charts: bool = True
+    format: str = "pdf"  # 'pdf', 'csv', 'excel', 'json'
+
+class ExportRequest(BaseModel):
+    data_type: str  # 'transactions', 'budgets', 'goals', 'all'
+    format: str = "csv"  # 'csv', 'json', 'excel'
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+
+class ShareRequest(BaseModel):
+    share_type: str  # 'dashboard', 'budget', 'report'
+    resource_id: Optional[str] = None
+    recipients: List[str]  # List of email addresses
+    message: Optional[str] = None
+    expires_in_days: Optional[int] = 30
+
+class AICategorizeRequest(BaseModel):
+    transaction_ids: List[str]
+
+class AICategorizeResponse(BaseModel):
+    transaction_id: str
+    suggested_category: str
+    confidence: float
+    reasoning: str
 
 # Transaction Management
 @router.post("/transactions", response_model=Transaction)
@@ -183,10 +266,219 @@ async def delete_transaction(transaction_id: str):
     for i, transaction in enumerate(transactions):
         if transaction["id"] == transaction_id and transaction["user_id"] == user["id"]:
             del transactions[i]
+            # Also delete associated receipt if exists
+            if transaction_id in receipts:
+                del receipts[transaction_id]
             logger.info(f"Deleted transaction {transaction_id}")
             return {"message": "Transaction deleted successfully"}
     
     raise HTTPException(status_code=404, detail="Transaction not found")
+
+# Bulk Transaction Operations
+@router.post("/transactions/bulk", response_model=Dict[str, Any])
+async def bulk_create_transactions(bulk_data: BulkTransactionCreate):
+    """Bulk import transactions"""
+    user = get_mock_user()
+    
+    created = []
+    failed = []
+    
+    for transaction_data in bulk_data.transactions:
+        try:
+            transaction = Transaction(
+                id=str(uuid.uuid4()),
+                user_id=user["id"],
+                **transaction_data.dict()
+            )
+            transactions.append(transaction.dict())
+            created.append(transaction.id)
+        except Exception as e:
+            failed.append({"data": transaction_data.dict(), "error": str(e)})
+    
+    logger.info(f"Bulk imported {len(created)} transactions for user {user['id']}")
+    
+    return {
+        "created": len(created),
+        "failed": len(failed),
+        "created_ids": created,
+        "failed_items": failed
+    }
+
+@router.post("/transactions/import")
+async def import_transactions_from_file(
+    file: UploadFile = File(...),
+    format: str = Form("csv")
+):
+    """Import transactions from file (CSV, JSON, Excel)"""
+    user = get_mock_user()
+    
+    try:
+        contents = await file.read()
+        
+        if format == "csv":
+            # Parse CSV
+            csv_content = contents.decode('utf-8')
+            csv_reader = csv.DictReader(io.StringIO(csv_content))
+            imported = []
+            
+            for row in csv_reader:
+                try:
+                    transaction = Transaction(
+                        id=str(uuid.uuid4()),
+                        user_id=user["id"],
+                        account_id=row.get("account_id", ""),
+                        type=TransactionType(row.get("type", "expense")),
+                        category=row.get("category", "other"),
+                        amount=float(row.get("amount", 0)),
+                        description=row.get("description", ""),
+                        date=datetime.strptime(row.get("date", date.today().isoformat()), "%Y-%m-%d").date()
+                    )
+                    transactions.append(transaction.dict())
+                    imported.append(transaction.id)
+                except Exception as e:
+                    logger.error(f"Failed to import row: {e}")
+            
+            return {"imported": len(imported), "transaction_ids": imported}
+        
+        elif format == "json":
+            # Parse JSON
+            json_data = json.loads(contents.decode('utf-8'))
+            imported = []
+            
+            for item in json_data if isinstance(json_data, list) else [json_data]:
+                try:
+                    transaction = Transaction(
+                        id=str(uuid.uuid4()),
+                        user_id=user["id"],
+                        **item
+                    )
+                    transactions.append(transaction.dict())
+                    imported.append(transaction.id)
+                except Exception as e:
+                    logger.error(f"Failed to import item: {e}")
+            
+            return {"imported": len(imported), "transaction_ids": imported}
+        
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported format: {format}")
+    
+    except Exception as e:
+        logger.error(f"Failed to import transactions: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to import transactions: {str(e)}")
+
+# Receipt Management
+@router.post("/transactions/{transaction_id}/receipt")
+async def upload_receipt(
+    transaction_id: str,
+    file: UploadFile = File(...)
+):
+    """Upload receipt for a transaction"""
+    user = get_mock_user()
+    
+    # Verify transaction exists and belongs to user
+    transaction = None
+    for t in transactions:
+        if t["id"] == transaction_id and t["user_id"] == user["id"]:
+            transaction = t
+            break
+    
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    try:
+        # Read file content
+        contents = await file.read()
+        receipt_data = base64.b64encode(contents).decode('utf-8')
+        
+        # Store receipt
+        receipts[transaction_id] = {
+            "transaction_id": transaction_id,
+            "user_id": user["id"],
+            "receipt_data": receipt_data,
+            "receipt_type": file.content_type or "image/jpeg",
+            "uploaded_at": datetime.utcnow().isoformat(),
+            "file_name": file.filename
+        }
+        
+        logger.info(f"Uploaded receipt for transaction {transaction_id}")
+        return {"message": "Receipt uploaded successfully", "transaction_id": transaction_id}
+    
+    except Exception as e:
+        logger.error(f"Failed to upload receipt: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload receipt: {str(e)}")
+
+@router.get("/transactions/{transaction_id}/receipt")
+async def get_receipt(transaction_id: str):
+    """Get receipt for a transaction"""
+    user = get_mock_user()
+    
+    # Verify transaction exists and belongs to user
+    transaction = None
+    for t in transactions:
+        if t["id"] == transaction_id and t["user_id"] == user["id"]:
+            transaction = t
+            break
+    
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if transaction_id not in receipts:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+    
+    receipt = receipts[transaction_id]
+    if receipt["user_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    return receipt
+
+# AI Transaction Categorization
+@router.post("/transactions/ai/categorize", response_model=List[AICategorizeResponse])
+async def ai_categorize_transactions(request: AICategorizeRequest):
+    """AI-powered transaction categorization"""
+    user = get_mock_user()
+    
+    results = []
+    
+    for transaction_id in request.transaction_ids:
+        # Find transaction
+        transaction = None
+        for t in transactions:
+            if t["id"] == transaction_id and t["user_id"] == user["id"]:
+                transaction = t
+                break
+        
+        if not transaction:
+            continue
+        
+        # Mock AI categorization (in real app, this would call AI service)
+        # Simple rule-based categorization for demo
+        description_lower = transaction.get("description", "").lower()
+        
+        suggested_category = "other"
+        confidence = 0.7
+        reasoning = "Based on transaction description"
+        
+        if any(word in description_lower for word in ["grocery", "food", "restaurant", "cafe", "dining"]):
+            suggested_category = "food_dining"
+            confidence = 0.9
+            reasoning = "Transaction description contains food-related keywords"
+        elif any(word in description_lower for word in ["gas", "fuel", "uber", "lyft", "parking", "toll"]):
+            suggested_category = "transportation"
+            confidence = 0.85
+            reasoning = "Transaction description contains transportation-related keywords"
+        elif any(word in description_lower for word in ["rent", "mortgage", "utilities", "electric", "water"]):
+            suggested_category = "housing"
+            confidence = 0.9
+            reasoning = "Transaction description contains housing-related keywords"
+        
+        results.append(AICategorizeResponse(
+            transaction_id=transaction_id,
+            suggested_category=suggested_category,
+            confidence=confidence,
+            reasoning=reasoning
+        ))
+    
+    return results
 
 # Bank Account Management
 @router.post("/accounts", response_model=BankAccount)
@@ -250,6 +542,97 @@ async def delete_bank_account(account_id: str):
     
     raise HTTPException(status_code=404, detail="Bank account not found")
 
+# Account Sync Operations
+@router.get("/accounts/{account_id}/sync")
+async def get_account_sync_status(account_id: str):
+    """Get bank account sync status"""
+    user = get_mock_user()
+    
+    # Verify account exists
+    account = None
+    for acc in bank_accounts:
+        if acc["id"] == account_id and acc["user_id"] == user["id"]:
+            account = acc
+            break
+    
+    if not account:
+        raise HTTPException(status_code=404, detail="Bank account not found")
+    
+    # Mock sync status
+    return {
+        "account_id": account_id,
+        "sync_status": "synced",
+        "last_sync": datetime.utcnow().isoformat(),
+        "next_sync": (datetime.utcnow() + timedelta(hours=6)).isoformat(),
+        "sync_frequency": "6 hours",
+        "transactions_synced": len([t for t in transactions if t.get("account_id") == account_id])
+    }
+
+@router.post("/accounts/{account_id}/sync")
+async def manual_sync_account(account_id: str):
+    """Manually sync bank account"""
+    user = get_mock_user()
+    
+    # Verify account exists
+    account = None
+    for acc in bank_accounts:
+        if acc["id"] == account_id and acc["user_id"] == user["id"]:
+            account = acc
+            break
+    
+    if not account:
+        raise HTTPException(status_code=404, detail="Bank account not found")
+    
+    # Mock sync operation
+    logger.info(f"Manual sync initiated for account {account_id}")
+    
+    # Simulate sync delay
+    await asyncio.sleep(1)
+    
+    return {
+        "message": "Account sync completed",
+        "account_id": account_id,
+        "synced_at": datetime.utcnow().isoformat(),
+        "transactions_added": 0,  # Mock value
+        "transactions_updated": 0  # Mock value
+    }
+
+@router.get("/accounts/{account_id}/transactions", response_model=List[Transaction])
+async def get_account_transactions(
+    account_id: str,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    limit: int = Query(50, le=100),
+    offset: int = Query(0, ge=0)
+):
+    """Get transactions for a specific account"""
+    user = get_mock_user()
+    
+    # Verify account exists
+    account = None
+    for acc in bank_accounts:
+        if acc["id"] == account_id and acc["user_id"] == user["id"]:
+            account = acc
+            break
+    
+    if not account:
+        raise HTTPException(status_code=404, detail="Bank account not found")
+    
+    # Filter transactions
+    account_transactions = [
+        t for t in transactions 
+        if t.get("account_id") == account_id and t["user_id"] == user["id"]
+    ]
+    
+    if start_date:
+        account_transactions = [t for t in account_transactions if t["date"] >= start_date]
+    
+    if end_date:
+        account_transactions = [t for t in account_transactions if t["date"] <= end_date]
+    
+    account_transactions.sort(key=lambda x: x["date"], reverse=True)
+    return account_transactions[offset:offset + limit]
+
 # Credit Score
 @router.get("/credit-score", response_model=CreditScore)
 async def get_credit_score():
@@ -300,6 +683,86 @@ async def get_credit_score_history():
     return {"history": history, "trend": "improving"}
 
 # Financial Offers
+# Bank Connection Management
+@router.post("/bank/connect")
+async def connect_bank(connection_data: BankConnectionCreate):
+    """Connect bank account via OAuth flow"""
+    user = get_mock_user()
+    
+    # Mock OAuth connection
+    connection = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "bank_name": connection_data.bank_name,
+        "account_type": connection_data.account_type,
+        "status": "connected",
+        "connected_at": datetime.utcnow().isoformat(),
+        "last_sync": datetime.utcnow().isoformat(),
+        "oauth_token": connection_data.oauth_token  # In real app, this would be encrypted
+    }
+    
+    bank_connections.append(connection)
+    logger.info(f"Connected bank {connection_data.bank_name} for user {user['id']}")
+    
+    return connection
+
+@router.get("/bank/connections")
+async def get_bank_connections():
+    """List all bank connections"""
+    user = get_mock_user()
+    
+    user_connections = [
+        {**conn, "oauth_token": None}  # Don't expose OAuth token
+        for conn in bank_connections 
+        if conn["user_id"] == user["id"]
+    ]
+    
+    return user_connections
+
+@router.delete("/bank/connections/{connection_id}")
+async def disconnect_bank(connection_id: str):
+    """Disconnect a bank connection"""
+    user = get_mock_user()
+    
+    for i, connection in enumerate(bank_connections):
+        if connection["id"] == connection_id and connection["user_id"] == user["id"]:
+            del bank_connections[i]
+            logger.info(f"Disconnected bank connection {connection_id}")
+            return {"message": "Bank connection disconnected successfully"}
+    
+    raise HTTPException(status_code=404, detail="Bank connection not found")
+
+@router.get("/bank/live-transactions")
+async def get_live_transactions(
+    connection_id: Optional[str] = None,
+    limit: int = Query(50, le=100)
+):
+    """Get live transactions from connected banks"""
+    user = get_mock_user()
+    
+    # Filter by connection if provided
+    if connection_id:
+        connection = None
+        for conn in bank_connections:
+            if conn["id"] == connection_id and conn["user_id"] == user["id"]:
+                connection = conn
+                break
+        
+        if not connection:
+            raise HTTPException(status_code=404, detail="Bank connection not found")
+    
+    # Mock live transactions (in real app, this would fetch from bank API)
+    live_transactions = [
+        t for t in transactions 
+        if t["user_id"] == user["id"] and t.get("is_live", False)
+    ][:limit]
+    
+    return {
+        "transactions": live_transactions,
+        "count": len(live_transactions),
+        "last_updated": datetime.utcnow().isoformat()
+    }
+
 @router.get("/offers", response_model=List[FinancialOffer])
 async def get_financial_offers():
     """Get personalized financial offers"""
@@ -361,6 +824,48 @@ async def get_financial_offers():
     ]
     
     return mock_offers
+
+@router.get("/offers/{offer_id}")
+async def get_offer_details(offer_id: str):
+    """Get details of a specific financial offer"""
+    user = get_mock_user()
+    
+    for offer in financial_offers:
+        if offer["id"] == offer_id and offer["user_id"] == user["id"]:
+            return offer
+    
+    raise HTTPException(status_code=404, detail="Financial offer not found")
+
+@router.post("/offers/{offer_id}/apply")
+async def apply_for_offer(offer_id: str):
+    """Apply for a financial offer"""
+    user = get_mock_user()
+    
+    offer = None
+    for o in financial_offers:
+        if o["id"] == offer_id and o["user_id"] == user["id"]:
+            offer = o
+            break
+    
+    if not offer:
+        raise HTTPException(status_code=404, detail="Financial offer not found")
+    
+    if not offer.get("is_active", True):
+        raise HTTPException(status_code=400, detail="Offer is no longer active")
+    
+    # Mock application process
+    application = {
+        "application_id": str(uuid.uuid4()),
+        "offer_id": offer_id,
+        "user_id": user["id"],
+        "status": "pending",
+        "applied_at": datetime.utcnow().isoformat(),
+        "estimated_decision_date": (datetime.utcnow() + timedelta(days=7)).isoformat()
+    }
+    
+    logger.info(f"User {user['id']} applied for offer {offer_id}")
+    
+    return application
 
 # Budget Management
 @router.post("/budgets", response_model=Budget)
@@ -426,19 +931,82 @@ async def get_financial_goals():
     user_goals = [g for g in financial_goals if g["user_id"] == user["id"]]
     return user_goals
 
-@router.put("/goals/{goal_id}/progress")
-async def update_goal_progress(goal_id: str, current_amount: float):
+@router.get("/goals/{goal_id}/progress")
+async def get_goal_progress(goal_id: str):
+    """Get goal progress details"""
+    user = get_mock_user()
+    
+    goal = None
+    for g in financial_goals:
+        if g["id"] == goal_id and g["user_id"] == user["id"]:
+            goal = g
+            break
+    
+    if not goal:
+        raise HTTPException(status_code=404, detail="Financial goal not found")
+    
+    current_amount = goal.get("current_amount", 0)
+    target_amount = goal["target_amount"]
+    progress_percentage = (current_amount / target_amount * 100) if target_amount > 0 else 0
+    remaining = max(0, target_amount - current_amount)
+    
+    # Calculate time remaining if target date exists
+    time_remaining = None
+    if goal.get("target_date"):
+        target_date = datetime.strptime(goal["target_date"], "%Y-%m-%d").date() if isinstance(goal["target_date"], str) else goal["target_date"]
+        days_remaining = (target_date - date.today()).days
+        time_remaining = {
+            "days": days_remaining,
+            "months": round(days_remaining / 30, 1),
+            "on_track": True  # Simplified calculation
+        }
+    
+    return {
+        "goal_id": goal_id,
+        "goal_name": goal["name"],
+        "current_amount": current_amount,
+        "target_amount": target_amount,
+        "progress_percentage": round(progress_percentage, 2),
+        "remaining": remaining,
+        "time_remaining": time_remaining,
+        "last_updated": goal.get("updated_at", goal.get("created_at"))
+    }
+
+@router.post("/goals/{goal_id}/progress")
+async def update_goal_progress(goal_id: str, progress_data: GoalProgressUpdate):
     """Update goal progress"""
     user = get_mock_user()
     
-    for goal in financial_goals:
-        if goal["id"] == goal_id and goal["user_id"] == user["id"]:
-            goal["current_amount"] = current_amount
-            goal["progress_percentage"] = (current_amount / goal["target_amount"]) * 100
-            goal["updated_at"] = datetime.utcnow().isoformat()
-            return {"message": "Goal progress updated"}
+    goal = None
+    for g in financial_goals:
+        if g["id"] == goal_id and g["user_id"] == user["id"]:
+            goal = g
+            break
     
-    raise HTTPException(status_code=404, detail="Financial goal not found")
+    if not goal:
+        raise HTTPException(status_code=404, detail="Financial goal not found")
+    
+    goal["current_amount"] = progress_data.current_amount
+    goal["progress_percentage"] = (progress_data.current_amount / goal["target_amount"] * 100) if goal["target_amount"] > 0 else 0
+    goal["updated_at"] = datetime.utcnow().isoformat()
+    
+    if progress_data.notes:
+        if "progress_notes" not in goal:
+            goal["progress_notes"] = []
+        goal["progress_notes"].append({
+            "date": datetime.utcnow().isoformat(),
+            "amount": progress_data.current_amount,
+            "notes": progress_data.notes
+        })
+    
+    logger.info(f"Updated progress for goal {goal_id}")
+    
+    return {
+        "message": "Goal progress updated",
+        "goal_id": goal_id,
+        "current_amount": progress_data.current_amount,
+        "progress_percentage": round(goal["progress_percentage"], 2)
+    }
 
 # Monthly Spending Analytics
 @router.get("/analytics/monthly/{year}/{month}")
@@ -490,6 +1058,116 @@ async def get_monthly_spending(year: int, month: int):
     }
     
     return monthly_data
+
+# Recurring Transactions
+@router.get("/recurring", response_model=List[RecurringTransaction])
+async def get_recurring_transactions():
+    """Get recurring transactions"""
+    user = get_mock_user()
+    
+    user_recurring = [r for r in recurring_transactions if r["user_id"] == user["id"]]
+    return user_recurring
+
+@router.post("/recurring", response_model=RecurringTransaction)
+async def create_recurring_transaction(recurring_data: RecurringTransactionCreate):
+    """Create a recurring transaction"""
+    user = get_mock_user()
+    
+    recurring = RecurringTransaction(
+        id=str(uuid.uuid4()),
+        user_id=user["id"],
+        is_active=True,
+        **recurring_data.dict()
+    )
+    
+    recurring_transactions.append(recurring.dict())
+    logger.info(f"Created recurring transaction for user {user['id']}")
+    
+    return recurring
+
+# Analytics Endpoints
+@router.get("/analytics/trends")
+async def get_trend_analysis(
+    period: str = Query("6m", regex="^(1m|3m|6m|1y|all)$"),
+    category: Optional[str] = None
+):
+    """Get trend analysis"""
+    user = get_mock_user()
+    
+    user_transactions = [t for t in transactions if t["user_id"] == user["id"]]
+    
+    # Filter by category if provided
+    if category:
+        user_transactions = [t for t in user_transactions if t.get("category") == category]
+    
+    # Mock trend data
+    trends = {
+        "period": period,
+        "category": category,
+        "income_trend": "increasing",
+        "expense_trend": "stable",
+        "savings_trend": "improving",
+        "monthly_data": [
+            {"month": "Jan", "income": 8000, "expenses": 6000, "savings": 2000},
+            {"month": "Feb", "income": 8200, "expenses": 6100, "savings": 2100},
+            {"month": "Mar", "income": 8500, "expenses": 6200, "savings": 2300},
+            {"month": "Apr", "income": 8500, "expenses": 6000, "savings": 2500},
+            {"month": "May", "income": 8800, "expenses": 6300, "savings": 2500},
+            {"month": "Jun", "income": 9000, "expenses": 6200, "savings": 2800}
+        ],
+        "predictions": {
+            "next_month_income": 9200,
+            "next_month_expenses": 6400,
+            "next_month_savings": 2800
+        }
+    }
+    
+    return trends
+
+@router.get("/analytics/categories")
+async def get_category_breakdown(
+    period: str = Query("1m", regex="^(1m|3m|6m|1y|all)$"),
+    transaction_type: Optional[str] = None
+):
+    """Get category breakdown"""
+    user = get_mock_user()
+    
+    user_transactions = [t for t in transactions if t["user_id"] == user["id"]]
+    
+    # Filter by type if provided
+    if transaction_type:
+        user_transactions = [t for t in user_transactions if t.get("type") == transaction_type]
+    
+    # Calculate category totals
+    category_totals = {}
+    for t in user_transactions:
+        cat = t.get("category", "other")
+        if cat not in category_totals:
+            category_totals[cat] = {"amount": 0, "count": 0}
+        category_totals[cat]["amount"] += abs(t.get("amount", 0))
+        category_totals[cat]["count"] += 1
+    
+    total = sum(cat["amount"] for cat in category_totals.values())
+    
+    # Calculate percentages
+    category_breakdown = [
+        {
+            "category": cat,
+            "amount": data["amount"],
+            "count": data["count"],
+            "percentage": round((data["amount"] / total * 100) if total > 0 else 0, 2)
+        }
+        for cat, data in category_totals.items()
+    ]
+    
+    category_breakdown.sort(key=lambda x: x["amount"], reverse=True)
+    
+    return {
+        "period": period,
+        "total": total,
+        "category_breakdown": category_breakdown,
+        "top_category": category_breakdown[0] if category_breakdown else None
+    }
 
 # Spending Analytics
 @router.get("/analytics/spending")
@@ -579,6 +1257,155 @@ async def get_debt_trackers():
     user_debts = [d for d in debt_trackers if d["user_id"] == user["id"]]
     return user_debts
 
+# Debt Payment Operations
+@router.post("/debt/{debt_id}/payment")
+async def make_debt_payment(
+    debt_id: str,
+    payment_data: DebtPaymentCreate
+):
+    """Make a payment towards a debt"""
+    user = get_mock_user()
+    
+    # Find debt
+    debt = None
+    for d in debt_trackers:
+        if d["id"] == debt_id and d["user_id"] == user["id"]:
+            debt = d
+            break
+    
+    if not debt:
+        raise HTTPException(status_code=404, detail="Debt tracker not found")
+    
+    # Update debt balance
+    old_balance = debt["current_balance"]
+    debt["current_balance"] = max(0, debt["current_balance"] - payment_data.amount)
+    debt["updated_at"] = datetime.utcnow().isoformat()
+    
+    # Create transaction record
+    payment_transaction = Transaction(
+        id=str(uuid.uuid4()),
+        user_id=user["id"],
+        account_id="",  # Could link to payment account
+        type=TransactionType.expense,
+        category="debt_payment",
+        amount=-payment_data.amount,
+        description=f"Payment for {debt['name']}",
+        date=payment_data.payment_date,
+        notes=payment_data.notes
+    )
+    transactions.append(payment_transaction.dict())
+    
+    logger.info(f"Payment of {payment_data.amount} made towards debt {debt_id}")
+    
+    return {
+        "message": "Payment recorded successfully",
+        "debt_id": debt_id,
+        "previous_balance": old_balance,
+        "new_balance": debt["current_balance"],
+        "payment_amount": payment_data.amount
+    }
+
+@router.get("/debt/payoff-strategies")
+async def get_payoff_strategies():
+    """Get debt payoff strategies"""
+    user = get_mock_user()
+    
+    user_debts = [d for d in debt_trackers if d["user_id"] == user["id"] and d.get("is_active", True)]
+    
+    if not user_debts:
+        return {"strategies": []}
+    
+    # Calculate strategies
+    total_debt = sum(d["current_balance"] for d in user_debts)
+    total_minimum_payments = sum(d["minimum_payment"] for d in user_debts)
+    
+    # Avalanche strategy (highest interest first)
+    avalanche_debts = sorted(user_debts, key=lambda x: x["interest_rate"], reverse=True)
+    avalanche_strategy = {
+        "name": "Debt Avalanche",
+        "description": "Pay off debts with highest interest rates first",
+        "order": [{"name": d["name"], "interest_rate": d["interest_rate"]} for d in avalanche_debts],
+        "estimated_savings": 500.0,  # Mock value
+        "estimated_time_months": 24  # Mock value
+    }
+    
+    # Snowball strategy (lowest balance first)
+    snowball_debts = sorted(user_debts, key=lambda x: x["current_balance"])
+    snowball_strategy = {
+        "name": "Debt Snowball",
+        "description": "Pay off smallest debts first for quick wins",
+        "order": [{"name": d["name"], "balance": d["current_balance"]} for d in snowball_debts],
+        "estimated_savings": 300.0,  # Mock value
+        "estimated_time_months": 28  # Mock value
+    }
+    
+    return {
+        "total_debt": total_debt,
+        "total_minimum_payments": total_minimum_payments,
+        "strategies": [avalanche_strategy, snowball_strategy]
+    }
+
+@router.post("/debt/calculate-payoff")
+async def calculate_payoff(
+    debt_id: str,
+    monthly_payment: float = Form(...),
+    strategy: str = Form("avalanche")
+):
+    """Calculate debt payoff timeline"""
+    user = get_mock_user()
+    
+    # Find debt
+    debt = None
+    for d in debt_trackers:
+        if d["id"] == debt_id and d["user_id"] == user["id"]:
+            debt = d
+            break
+    
+    if not debt:
+        raise HTTPException(status_code=404, detail="Debt tracker not found")
+    
+    # Calculate payoff (simplified calculation)
+    balance = debt["current_balance"]
+    interest_rate = debt["interest_rate"] / 100 / 12  # Monthly interest rate
+    monthly_interest = balance * interest_rate
+    principal_payment = monthly_payment - monthly_interest
+    
+    if principal_payment <= 0:
+        raise HTTPException(status_code=400, detail="Monthly payment must be greater than interest")
+    
+    # Calculate months to payoff
+    months = 0
+    remaining_balance = balance
+    payment_schedule = []
+    
+    while remaining_balance > 0.01 and months < 600:  # Max 50 years
+        monthly_interest_payment = remaining_balance * interest_rate
+        principal_payment_amount = min(monthly_payment - monthly_interest_payment, remaining_balance)
+        remaining_balance -= principal_payment_amount
+        months += 1
+        
+        if months <= 12 or remaining_balance < 0.01:  # Include first year and last payment
+            payment_schedule.append({
+                "month": months,
+                "balance": round(remaining_balance, 2),
+                "interest_paid": round(monthly_interest_payment, 2),
+                "principal_paid": round(principal_payment_amount, 2)
+            })
+    
+    total_interest = (monthly_payment * months) - balance
+    
+    return {
+        "debt_id": debt_id,
+        "debt_name": debt["name"],
+        "current_balance": balance,
+        "monthly_payment": monthly_payment,
+        "months_to_payoff": months,
+        "years_to_payoff": round(months / 12, 1),
+        "total_interest": round(total_interest, 2),
+        "total_paid": round(monthly_payment * months, 2),
+        "payment_schedule": payment_schedule
+    }
+
 # Investment Tracking
 @router.post("/investments", response_model=Investment)
 async def create_investment(investment_data: InvestmentCreate):
@@ -610,6 +1437,126 @@ async def get_investments():
     
     user_investments = [i for i in investments if i["user_id"] == user["id"]]
     return user_investments
+
+# Investment Transaction Management
+@router.post("/investments/{investment_id}/transaction")
+async def add_investment_transaction(
+    investment_id: str,
+    transaction_data: InvestmentTransactionCreate
+):
+    """Add a transaction to an investment (buy, sell, dividend, etc.)"""
+    user = get_mock_user()
+    
+    # Verify investment exists
+    investment = None
+    for inv in investments:
+        if inv["id"] == investment_id and inv["user_id"] == user["id"]:
+            investment = inv
+            break
+    
+    if not investment:
+        raise HTTPException(status_code=404, detail="Investment not found")
+    
+    # Update investment based on transaction type
+    if transaction_data.type == "buy":
+        new_quantity = investment["quantity"] + transaction_data.quantity
+        # Recalculate average purchase price
+        total_cost = (investment["quantity"] * investment["purchase_price"]) + (transaction_data.quantity * transaction_data.price)
+        new_purchase_price = total_cost / new_quantity
+        investment["quantity"] = new_quantity
+        investment["purchase_price"] = new_purchase_price
+    elif transaction_data.type == "sell":
+        if investment["quantity"] < transaction_data.quantity:
+            raise HTTPException(status_code=400, detail="Insufficient quantity to sell")
+        investment["quantity"] -= transaction_data.quantity
+    elif transaction_data.type == "dividend":
+        # Dividends don't change quantity, just add to income
+        pass
+    
+    # Update current value
+    investment["total_value"] = investment["quantity"] * investment["current_price"]
+    investment["gain_loss"] = investment["total_value"] - (investment["quantity"] * investment["purchase_price"])
+    investment["gain_loss_percentage"] = (investment["gain_loss"] / (investment["quantity"] * investment["purchase_price"])) * 100
+    
+    logger.info(f"Added {transaction_data.type} transaction to investment {investment_id}")
+    
+    return {
+        "message": "Investment transaction added successfully",
+        "investment": investment
+    }
+
+@router.get("/investments/portfolio")
+async def get_portfolio_view():
+    """Get portfolio view with all investments"""
+    user = get_mock_user()
+    
+    user_investments = [i for i in investments if i["user_id"] == user["id"]]
+    
+    total_value = sum(i["total_value"] for i in user_investments)
+    total_cost = sum(i["quantity"] * i["purchase_price"] for i in user_investments)
+    total_gain_loss = sum(i["gain_loss"] for i in user_investments)
+    total_gain_loss_percentage = (total_gain_loss / total_cost * 100) if total_cost > 0 else 0
+    
+    # Group by type
+    by_type = {}
+    for inv in user_investments:
+        inv_type = inv.get("type", "other")
+        if inv_type not in by_type:
+            by_type[inv_type] = {"count": 0, "value": 0, "gain_loss": 0}
+        by_type[inv_type]["count"] += 1
+        by_type[inv_type]["value"] += inv["total_value"]
+        by_type[inv_type]["gain_loss"] += inv["gain_loss"]
+    
+    return {
+        "total_value": total_value,
+        "total_cost": total_cost,
+        "total_gain_loss": total_gain_loss,
+        "total_gain_loss_percentage": total_gain_loss_percentage,
+        "investment_count": len(user_investments),
+        "by_type": by_type,
+        "investments": user_investments
+    }
+
+@router.get("/investments/performance")
+async def get_investment_performance(
+    period: str = Query("1y", regex="^(1m|3m|6m|1y|all)$")
+):
+    """Get investment performance data"""
+    user = get_mock_user()
+    
+    user_investments = [i for i in investments if i["user_id"] == user["id"]]
+    
+    # Mock performance data
+    performance_data = {
+        "period": period,
+        "total_return": 12.5,  # Percentage
+        "total_return_amount": sum(i["gain_loss"] for i in user_investments),
+        "best_performer": {
+            "name": user_investments[0]["name"] if user_investments else None,
+            "return": 25.3,
+            "gain_loss": user_investments[0]["gain_loss"] if user_investments else 0
+        } if user_investments else None,
+        "worst_performer": {
+            "name": user_investments[-1]["name"] if len(user_investments) > 1 else None,
+            "return": -5.2,
+            "gain_loss": user_investments[-1]["gain_loss"] if len(user_investments) > 1 else 0
+        } if len(user_investments) > 1 else None,
+        "monthly_returns": [
+            {"month": "Jan", "return": 2.1},
+            {"month": "Feb", "return": -1.5},
+            {"month": "Mar", "return": 3.2},
+            {"month": "Apr", "return": 1.8},
+            {"month": "May", "return": 2.5},
+            {"month": "Jun", "return": 4.2}
+        ],
+        "asset_allocation": {
+            "stocks": 60.0,
+            "bonds": 30.0,
+            "cash": 10.0
+        }
+    }
+    
+    return performance_data
 
 # Financial Dashboard
 @router.get("/dashboard")

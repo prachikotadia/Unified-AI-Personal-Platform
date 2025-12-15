@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Target, Calendar, TrendingUp } from 'lucide-react';
 import { useFitnessStore } from '../../store/fitness';
+import { useToastHelpers } from '../ui/Toast';
 
 interface GoalModalProps {
   isOpen: boolean;
@@ -10,11 +11,13 @@ interface GoalModalProps {
 }
 
 const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
-  const { createHealthGoal, updateHealthGoal, isLoading } = useFitnessStore();
+  const { createHealthGoal, updateHealthGoal, deleteHealthGoal, isLoading } = useFitnessStore();
+  const { success, error: showError } = useToastHelpers();
+  const isSaving = isLoading.healthGoals;
   const [formData, setFormData] = useState({
-    title: '',
+    name: '',
     description: '',
-    goal_type: 'weight',
+    type: 'weight',
     target_value: 0,
     current_value: 0,
     unit: '',
@@ -25,20 +28,20 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
   useEffect(() => {
     if (goal) {
       setFormData({
-        title: goal.title || '',
+        name: goal.name || '',
         description: goal.description || '',
-        goal_type: goal.goal_type || 'weight',
+        type: goal.type || 'weight',
         target_value: goal.target_value || 0,
         current_value: goal.current_value || 0,
         unit: goal.unit || '',
         deadline: goal.deadline ? goal.deadline.split('T')[0] : '',
-        priority: goal.priority || 'medium'
+        priority: (goal as any).priority || 'medium'
       });
     } else {
       setFormData({
-        title: '',
+        name: '',
         description: '',
-        goal_type: 'weight',
+        type: 'weight',
         target_value: 0,
         current_value: 0,
         unit: '',
@@ -53,20 +56,43 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
     
     try {
       const goalData = {
-        ...formData,
-        deadline: formData.deadline ? new Date(formData.deadline).toISOString() : null
+        name: formData.name,
+        description: formData.description,
+        type: formData.type,
+        target_value: formData.target_value,
+        unit: formData.unit,
+        deadline: formData.deadline ? new Date(formData.deadline).toISOString() : new Date().toISOString(),
+        current_value: formData.current_value,
+        priority: formData.priority
       };
 
       if (goal) {
         await updateHealthGoal(goal.id, goalData);
+        success('Goal Updated', 'Your goal has been updated successfully');
       } else {
-        await createHealthGoal(goalData);
+        await createHealthGoal(goalData as any);
+        success('Goal Created', 'Your new goal has been set successfully');
       }
       onClose();
     } catch (error) {
       console.error('Error saving goal:', error);
+      showError('Failed to save goal', 'Please try again');
     }
   };
+
+      const handleDelete = async () => {
+        if (!goal) return;
+        if (confirm('Are you sure you want to delete this goal?')) {
+          try {
+            await deleteHealthGoal(goal.id);
+            success('Goal Deleted', 'Your goal has been deleted successfully');
+            onClose();
+          } catch (error) {
+            console.error('Error deleting goal:', error);
+            showError('Failed to delete goal', 'Please try again');
+          }
+        }
+      };
 
   const goalTypes = [
     { value: 'weight', label: 'Weight Goal', unit: 'kg' },
@@ -85,7 +111,7 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
     { value: 'high', label: 'High Priority' }
   ];
 
-  const selectedGoalType = goalTypes.find(type => type.value === formData.goal_type);
+  const selectedGoalType = goalTypes.find(type => type.value === formData.type);
 
   return (
     <AnimatePresence>
@@ -94,14 +120,14 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="glass-card w-full max-w-md p-6"
+            className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 rounded-xl shadow-2xl w-full max-w-[95vw] sm:max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
@@ -122,9 +148,9 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
                 <label className="block text-sm font-medium mb-2">Goal Title</label>
                 <input
                   type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
                   placeholder="e.g., Lose 10kg, Run 5km"
                   required
                 />
@@ -136,7 +162,7 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
                   rows={3}
                   placeholder="Describe your goal and motivation..."
                 />
@@ -146,16 +172,16 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
               <div>
                 <label className="block text-sm font-medium mb-2">Goal Type</label>
                 <select
-                  value={formData.goal_type}
+                  value={formData.type}
                   onChange={(e) => {
                     const selectedType = goalTypes.find(type => type.value === e.target.value);
                     setFormData({ 
                       ...formData, 
-                      goal_type: e.target.value,
+                      type: e.target.value,
                       unit: selectedType?.unit || ''
                     });
                   }}
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
                 >
                   {goalTypes.map((type) => (
                     <option key={type.value} value={type.value}>
@@ -172,7 +198,7 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
                   type="number"
                   value={formData.current_value}
                   onChange={(e) => setFormData({ ...formData, current_value: parseFloat(e.target.value) })}
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
                   min="0"
                   step="0.1"
                   required
@@ -186,7 +212,7 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
                   type="number"
                   value={formData.target_value}
                   onChange={(e) => setFormData({ ...formData, target_value: parseFloat(e.target.value) })}
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
                   min="0"
                   step="0.1"
                   required
@@ -194,14 +220,14 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
               </div>
 
               {/* Unit (for custom goals) */}
-              {formData.goal_type === 'custom' && (
+              {formData.type === 'custom' && (
                 <div>
                   <label className="block text-sm font-medium mb-2">Unit</label>
                   <input
                     type="text"
                     value={formData.unit}
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
                     placeholder="e.g., km, reps, minutes"
                     required
                   />
@@ -215,7 +241,7 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
                   type="date"
                   value={formData.deadline}
                   onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
                   min={new Date().toISOString().split('T')[0]}
                 />
               </div>
@@ -226,7 +252,7 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
                 <select
                   value={formData.priority}
                   onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
                 >
                   {priorities.map((priority) => (
                     <option key={priority.value} value={priority.value}>
@@ -262,6 +288,15 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
 
               {/* Submit Button */}
               <div className="flex space-x-3 pt-4">
+                {goal && (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                  >
+                    Delete
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={onClose}
@@ -271,10 +306,10 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isSaving}
                   className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-gradient-from to-purple-gradient-to text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
-                  {isLoading ? 'Saving...' : (goal ? 'Update Goal' : 'Set Goal')}
+                  {isSaving ? 'Saving...' : (goal ? 'Update Goal' : 'Set Goal')}
                 </button>
               </div>
             </form>
@@ -286,3 +321,4 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, goal }) => {
 };
 
 export default GoalModal;
+

@@ -9,22 +9,28 @@ import {
   Investment,
   FinancialAnalytics,
   FinancialReport,
+  Forecast,
+  ForecastCreate,
+  ForecastUpdate,
   financeAPIService,
 } from '../services/financeAPI';
+import { isGuestMode, generateLocalId } from '../utils/financeHelpers';
 
-// Finance Store State Interface
+/**
+ * Finance module state management interface.
+ * Handles all financial data operations with optimistic updates and localStorage persistence.
+ */
 interface FinanceState {
-  // Data
   bankAccounts: BankAccount[];
   transactions: Transaction[];
   budgets: Budget[];
   financialGoals: FinancialGoal[];
   debtTrackers: DebtTracker[];
   investments: Investment[];
+  forecasts: Forecast[];
   analytics: FinancialAnalytics | null;
   reports: FinancialReport | null;
   
-  // Loading States
   isLoading: {
     bankAccounts: boolean;
     transactions: boolean;
@@ -32,11 +38,11 @@ interface FinanceState {
     financialGoals: boolean;
     debtTrackers: boolean;
     investments: boolean;
+    forecasts: boolean;
     analytics: boolean;
     reports: boolean;
   };
   
-  // Error States
   errors: {
     bankAccounts: string | null;
     transactions: string | null;
@@ -44,50 +50,53 @@ interface FinanceState {
     financialGoals: string | null;
     debtTrackers: string | null;
     investments: string | null;
+    forecasts: string | null;
     analytics: string | null;
     reports: string | null;
   };
   
-  // Actions
-  // Bank Account Actions
   fetchBankAccounts: () => Promise<void>;
   createBankAccount: (account: BankAccount) => Promise<void>;
   updateBankAccount: (id: string, account: Partial<BankAccount>) => Promise<void>;
   deleteBankAccount: (id: string) => Promise<void>;
   
-  // Transaction Actions
   fetchTransactions: (limit?: number, offset?: number) => Promise<void>;
   createTransaction: (transaction: Transaction) => Promise<void>;
   updateTransaction: (id: string, transaction: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   
-  // Budget Actions
   fetchBudgets: () => Promise<void>;
   createBudget: (budget: Budget) => Promise<void>;
   updateBudget: (id: string, budget: Partial<Budget>) => Promise<void>;
   deleteBudget: (id: string) => Promise<void>;
   
-  // Financial Goals Actions
   fetchFinancialGoals: () => Promise<void>;
   createFinancialGoal: (goal: FinancialGoal) => Promise<void>;
   updateFinancialGoal: (id: string, goal: Partial<FinancialGoal>) => Promise<void>;
   deleteFinancialGoal: (id: string) => Promise<void>;
   
-  // Debt Tracker Actions
   fetchDebtTrackers: () => Promise<void>;
   createDebtTracker: (debt: DebtTracker) => Promise<void>;
   updateDebtTracker: (id: string, debt: Partial<DebtTracker>) => Promise<void>;
   deleteDebtTracker: (id: string) => Promise<void>;
   
-  // Investment Actions
   fetchInvestments: () => Promise<void>;
   createInvestment: (investment: Investment) => Promise<void>;
   updateInvestment: (id: string, investment: Partial<Investment>) => Promise<void>;
   deleteInvestment: (id: string) => Promise<void>;
   
+  fetchForecasts: () => Promise<void>;
+  createForecast: (forecast: ForecastCreate) => Promise<void>;
+  updateForecast: (id: string, forecast: Partial<ForecastUpdate>) => Promise<void>;
+  deleteForecast: (id: string) => Promise<void>;
+  
   // Analytics and Reports Actions
   fetchAnalytics: () => Promise<void>;
   fetchReports: (reportType?: 'summary' | 'detailed' | 'budget') => Promise<void>;
+  
+  // Import/Export Actions
+  exportFinanceData: () => string;
+  importFinanceData: (jsonData: string, merge?: boolean) => Promise<void>;
   
   // Utility Actions
   clearErrors: () => void;
@@ -109,6 +118,7 @@ const initialState = {
   financialGoals: [],
   debtTrackers: [],
   investments: [],
+  forecasts: [],
   analytics: null,
   reports: null,
   
@@ -119,6 +129,7 @@ const initialState = {
     financialGoals: false,
     debtTrackers: false,
     investments: false,
+    forecasts: false,
     analytics: false,
     reports: false,
   },
@@ -130,6 +141,7 @@ const initialState = {
     financialGoals: null,
     debtTrackers: null,
     investments: null,
+    forecasts: null,
     analytics: null,
     reports: null,
   },
@@ -144,6 +156,13 @@ export const useFinanceStore = create<FinanceState>()(
         
         // Bank Account Actions
         fetchBankAccounts: async () => {
+          const guest = isGuestMode();
+          
+          if (guest) {
+            // Guest mode: Data is already loaded from localStorage via persist middleware
+            return;
+          }
+          
           set(state => ({
             isLoading: { ...state.isLoading, bankAccounts: true },
             errors: { ...state.errors, bankAccounts: null },
@@ -165,10 +184,26 @@ export const useFinanceStore = create<FinanceState>()(
         
         createBankAccount: async (account: BankAccount) => {
           try {
-            const newAccount = await financeAPIService.createBankAccount(account);
+            const guest = isGuestMode();
+            let newAccount: BankAccount;
+            
+            if (guest) {
+              // Guest mode: Create locally only, no API call
+              newAccount = {
+                ...account,
+                id: account.id || generateLocalId(),
+                created_at: account.created_at || new Date().toISOString(),
+                last_updated: account.last_updated || new Date().toISOString(),
+              };
+            } else {
+              // Logged-in mode: Call API
+              newAccount = await financeAPIService.createBankAccount(account);
+            }
+            
             set(state => ({
               bankAccounts: [...state.bankAccounts, newAccount],
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, bankAccounts: error.message || 'Failed to create bank account' },
@@ -179,12 +214,29 @@ export const useFinanceStore = create<FinanceState>()(
         
         updateBankAccount: async (id: string, account: Partial<BankAccount>) => {
           try {
-            const updatedAccount = await financeAPIService.updateBankAccount(id, account);
+            const guest = isGuestMode();
+            let updatedAccount: BankAccount;
+            
+            if (guest) {
+              // Guest mode: Update locally only
+              const existing = get().bankAccounts.find(acc => acc.id === id);
+              if (!existing) throw new Error('Account not found');
+              updatedAccount = {
+                ...existing,
+                ...account,
+                last_updated: new Date().toISOString(),
+              };
+            } else {
+              // Logged-in mode: Call API
+              updatedAccount = await financeAPIService.updateBankAccount(id, account);
+            }
+            
             set(state => ({
               bankAccounts: state.bankAccounts.map(acc => 
                 acc.id === id ? updatedAccount : acc
               ),
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, bankAccounts: error.message || 'Failed to update bank account' },
@@ -195,10 +247,18 @@ export const useFinanceStore = create<FinanceState>()(
         
         deleteBankAccount: async (id: string) => {
           try {
-            await financeAPIService.deleteBankAccount(id);
+            const guest = isGuestMode();
+            
+            if (!guest) {
+              // Logged-in mode: Call API
+              await financeAPIService.deleteBankAccount(id);
+            }
+            // Guest mode: Just update state (no API call)
+            
             set(state => ({
               bankAccounts: state.bankAccounts.filter(acc => acc.id !== id),
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, bankAccounts: error.message || 'Failed to delete bank account' },
@@ -209,6 +269,13 @@ export const useFinanceStore = create<FinanceState>()(
         
         // Transaction Actions
         fetchTransactions: async (limit = 100, offset = 0) => {
+          const guest = isGuestMode();
+          
+          if (guest) {
+            // Guest mode: Data is already loaded from localStorage via persist middleware
+            return;
+          }
+          
           set(state => ({
             isLoading: { ...state.isLoading, transactions: true },
             errors: { ...state.errors, transactions: null },
@@ -230,10 +297,26 @@ export const useFinanceStore = create<FinanceState>()(
         
         createTransaction: async (transaction: Transaction) => {
           try {
-            const newTransaction = await financeAPIService.createTransaction(transaction);
+            const guest = isGuestMode();
+            let newTransaction: Transaction;
+            
+            if (guest) {
+              // Guest mode: Create locally only, no API call
+              newTransaction = {
+                ...transaction,
+                id: transaction.id || generateLocalId(),
+                created_at: transaction.created_at || new Date().toISOString(),
+                updated_at: transaction.updated_at || new Date().toISOString(),
+              };
+            } else {
+              // Logged-in mode: Call API
+              newTransaction = await financeAPIService.createTransaction(transaction);
+            }
+            
             set(state => ({
               transactions: [newTransaction, ...state.transactions],
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, transactions: error.message || 'Failed to create transaction' },
@@ -244,12 +327,29 @@ export const useFinanceStore = create<FinanceState>()(
         
         updateTransaction: async (id: string, transaction: Partial<Transaction>) => {
           try {
-            const updatedTransaction = await financeAPIService.updateTransaction(id, transaction);
+            const guest = isGuestMode();
+            let updatedTransaction: Transaction;
+            
+            if (guest) {
+              // Guest mode: Update locally only
+              const existing = get().transactions.find(txn => txn.id === id);
+              if (!existing) throw new Error('Transaction not found');
+              updatedTransaction = {
+                ...existing,
+                ...transaction,
+                updated_at: new Date().toISOString(),
+              };
+            } else {
+              // Logged-in mode: Call API
+              updatedTransaction = await financeAPIService.updateTransaction(id, transaction);
+            }
+            
             set(state => ({
               transactions: state.transactions.map(txn => 
                 txn.id === id ? updatedTransaction : txn
               ),
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, transactions: error.message || 'Failed to update transaction' },
@@ -260,10 +360,18 @@ export const useFinanceStore = create<FinanceState>()(
         
         deleteTransaction: async (id: string) => {
           try {
-            await financeAPIService.deleteTransaction(id);
+            const guest = isGuestMode();
+            
+            if (!guest) {
+              // Logged-in mode: Call API
+              await financeAPIService.deleteTransaction(id);
+            }
+            // Guest mode: Just update state (no API call)
+            
             set(state => ({
               transactions: state.transactions.filter(txn => txn.id !== id),
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, transactions: error.message || 'Failed to delete transaction' },
@@ -274,6 +382,13 @@ export const useFinanceStore = create<FinanceState>()(
         
         // Budget Actions
         fetchBudgets: async () => {
+          const guest = isGuestMode();
+          
+          if (guest) {
+            // Guest mode: Data is already loaded from localStorage via persist middleware
+            return;
+          }
+          
           set(state => ({
             isLoading: { ...state.isLoading, budgets: true },
             errors: { ...state.errors, budgets: null },
@@ -295,10 +410,26 @@ export const useFinanceStore = create<FinanceState>()(
         
         createBudget: async (budget: Budget) => {
           try {
-            const newBudget = await financeAPIService.createBudget(budget);
+            const guest = isGuestMode();
+            let newBudget: Budget;
+            
+            if (guest) {
+              // Guest mode: Create locally only, no API call
+              newBudget = {
+                ...budget,
+                id: budget.id || generateLocalId(),
+                created_at: budget.created_at || new Date().toISOString(),
+                updated_at: budget.updated_at || new Date().toISOString(),
+              };
+            } else {
+              // Logged-in mode: Call API
+              newBudget = await financeAPIService.createBudget(budget);
+            }
+            
             set(state => ({
               budgets: [...state.budgets, newBudget],
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, budgets: error.message || 'Failed to create budget' },
@@ -309,12 +440,29 @@ export const useFinanceStore = create<FinanceState>()(
         
         updateBudget: async (id: string, budget: Partial<Budget>) => {
           try {
-            const updatedBudget = await financeAPIService.updateBudget(id, budget);
+            const guest = isGuestMode();
+            let updatedBudget: Budget;
+            
+            if (guest) {
+              // Guest mode: Update locally only
+              const existing = get().budgets.find(b => b.id === id);
+              if (!existing) throw new Error('Budget not found');
+              updatedBudget = {
+                ...existing,
+                ...budget,
+                updated_at: new Date().toISOString(),
+              };
+            } else {
+              // Logged-in mode: Call API
+              updatedBudget = await financeAPIService.updateBudget(id, budget);
+            }
+            
             set(state => ({
               budgets: state.budgets.map(b => 
                 b.id === id ? updatedBudget : b
               ),
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, budgets: error.message || 'Failed to update budget' },
@@ -325,10 +473,18 @@ export const useFinanceStore = create<FinanceState>()(
         
         deleteBudget: async (id: string) => {
           try {
-            await financeAPIService.deleteBudget(id);
+            const guest = isGuestMode();
+            
+            if (!guest) {
+              // Logged-in mode: Call API
+              await financeAPIService.deleteBudget(id);
+            }
+            // Guest mode: Just update state (no API call)
+            
             set(state => ({
               budgets: state.budgets.filter(b => b.id !== id),
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, budgets: error.message || 'Failed to delete budget' },
@@ -339,6 +495,13 @@ export const useFinanceStore = create<FinanceState>()(
         
         // Financial Goals Actions
         fetchFinancialGoals: async () => {
+          const guest = isGuestMode();
+          
+          if (guest) {
+            // Guest mode: Data is already loaded from localStorage via persist middleware
+            return;
+          }
+          
           set(state => ({
             isLoading: { ...state.isLoading, financialGoals: true },
             errors: { ...state.errors, financialGoals: null },
@@ -360,10 +523,26 @@ export const useFinanceStore = create<FinanceState>()(
         
         createFinancialGoal: async (goal: FinancialGoal) => {
           try {
-            const newGoal = await financeAPIService.createFinancialGoal(goal);
+            const guest = isGuestMode();
+            let newGoal: FinancialGoal;
+            
+            if (guest) {
+              // Guest mode: Create locally only, no API call
+              newGoal = {
+                ...goal,
+                id: goal.id || generateLocalId(),
+                created_at: goal.created_at || new Date().toISOString(),
+                updated_at: goal.updated_at || new Date().toISOString(),
+              };
+            } else {
+              // Logged-in mode: Call API
+              newGoal = await financeAPIService.createFinancialGoal(goal);
+            }
+            
             set(state => ({
               financialGoals: [...state.financialGoals, newGoal],
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, financialGoals: error.message || 'Failed to create financial goal' },
@@ -374,12 +553,29 @@ export const useFinanceStore = create<FinanceState>()(
         
         updateFinancialGoal: async (id: string, goal: Partial<FinancialGoal>) => {
           try {
-            const updatedGoal = await financeAPIService.updateFinancialGoal(id, goal);
+            const guest = isGuestMode();
+            let updatedGoal: FinancialGoal;
+            
+            if (guest) {
+              // Guest mode: Update locally only
+              const existing = get().financialGoals.find(g => g.id === id);
+              if (!existing) throw new Error('Financial goal not found');
+              updatedGoal = {
+                ...existing,
+                ...goal,
+                updated_at: new Date().toISOString(),
+              };
+            } else {
+              // Logged-in mode: Call API
+              updatedGoal = await financeAPIService.updateFinancialGoal(id, goal);
+            }
+            
             set(state => ({
               financialGoals: state.financialGoals.map(g => 
                 g.id === id ? updatedGoal : g
               ),
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, financialGoals: error.message || 'Failed to update financial goal' },
@@ -390,10 +586,18 @@ export const useFinanceStore = create<FinanceState>()(
         
         deleteFinancialGoal: async (id: string) => {
           try {
-            await financeAPIService.deleteFinancialGoal(id);
+            const guest = isGuestMode();
+            
+            if (!guest) {
+              // Logged-in mode: Call API
+              await financeAPIService.deleteFinancialGoal(id);
+            }
+            // Guest mode: Just update state (no API call)
+            
             set(state => ({
               financialGoals: state.financialGoals.filter(g => g.id !== id),
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, financialGoals: error.message || 'Failed to delete financial goal' },
@@ -404,6 +608,13 @@ export const useFinanceStore = create<FinanceState>()(
         
         // Debt Tracker Actions
         fetchDebtTrackers: async () => {
+          const guest = isGuestMode();
+          
+          if (guest) {
+            // Guest mode: Data is already loaded from localStorage via persist middleware
+            return;
+          }
+          
           set(state => ({
             isLoading: { ...state.isLoading, debtTrackers: true },
             errors: { ...state.errors, debtTrackers: null },
@@ -425,10 +636,26 @@ export const useFinanceStore = create<FinanceState>()(
         
         createDebtTracker: async (debt: DebtTracker) => {
           try {
-            const newDebt = await financeAPIService.createDebtTracker(debt);
+            const guest = isGuestMode();
+            let newDebt: DebtTracker;
+            
+            if (guest) {
+              // Guest mode: Create locally only, no API call
+              newDebt = {
+                ...debt,
+                id: debt.id || generateLocalId(),
+                created_at: debt.created_at || new Date().toISOString(),
+                updated_at: debt.updated_at || new Date().toISOString(),
+              };
+            } else {
+              // Logged-in mode: Call API
+              newDebt = await financeAPIService.createDebtTracker(debt);
+            }
+            
             set(state => ({
               debtTrackers: [...state.debtTrackers, newDebt],
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, debtTrackers: error.message || 'Failed to create debt tracker' },
@@ -439,12 +666,29 @@ export const useFinanceStore = create<FinanceState>()(
         
         updateDebtTracker: async (id: string, debt: Partial<DebtTracker>) => {
           try {
-            const updatedDebt = await financeAPIService.updateDebtTracker(id, debt);
+            const guest = isGuestMode();
+            let updatedDebt: DebtTracker;
+            
+            if (guest) {
+              // Guest mode: Update locally only
+              const existing = get().debtTrackers.find(d => d.id === id);
+              if (!existing) throw new Error('Debt tracker not found');
+              updatedDebt = {
+                ...existing,
+                ...debt,
+                updated_at: new Date().toISOString(),
+              };
+            } else {
+              // Logged-in mode: Call API
+              updatedDebt = await financeAPIService.updateDebtTracker(id, debt);
+            }
+            
             set(state => ({
               debtTrackers: state.debtTrackers.map(d => 
                 d.id === id ? updatedDebt : d
               ),
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, debtTrackers: error.message || 'Failed to update debt tracker' },
@@ -455,10 +699,18 @@ export const useFinanceStore = create<FinanceState>()(
         
         deleteDebtTracker: async (id: string) => {
           try {
-            await financeAPIService.deleteDebtTracker(id);
+            const guest = isGuestMode();
+            
+            if (!guest) {
+              // Logged-in mode: Call API
+              await financeAPIService.deleteDebtTracker(id);
+            }
+            // Guest mode: Just update state (no API call)
+            
             set(state => ({
               debtTrackers: state.debtTrackers.filter(d => d.id !== id),
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, debtTrackers: error.message || 'Failed to delete debt tracker' },
@@ -469,6 +721,13 @@ export const useFinanceStore = create<FinanceState>()(
         
         // Investment Actions
         fetchInvestments: async () => {
+          const guest = isGuestMode();
+          
+          if (guest) {
+            // Guest mode: Data is already loaded from localStorage via persist middleware
+            return;
+          }
+          
           set(state => ({
             isLoading: { ...state.isLoading, investments: true },
             errors: { ...state.errors, investments: null },
@@ -490,10 +749,26 @@ export const useFinanceStore = create<FinanceState>()(
         
         createInvestment: async (investment: Investment) => {
           try {
-            const newInvestment = await financeAPIService.createInvestment(investment);
+            const guest = isGuestMode();
+            let newInvestment: Investment;
+            
+            if (guest) {
+              // Guest mode: Create locally only, no API call
+              newInvestment = {
+                ...investment,
+                id: investment.id || generateLocalId(),
+                created_at: investment.created_at || new Date().toISOString(),
+                updated_at: investment.updated_at || new Date().toISOString(),
+              };
+            } else {
+              // Logged-in mode: Call API
+              newInvestment = await financeAPIService.createInvestment(investment);
+            }
+            
             set(state => ({
               investments: [...state.investments, newInvestment],
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, investments: error.message || 'Failed to create investment' },
@@ -504,12 +779,29 @@ export const useFinanceStore = create<FinanceState>()(
         
         updateInvestment: async (id: string, investment: Partial<Investment>) => {
           try {
-            const updatedInvestment = await financeAPIService.updateInvestment(id, investment);
+            const guest = isGuestMode();
+            let updatedInvestment: Investment;
+            
+            if (guest) {
+              // Guest mode: Update locally only
+              const existing = get().investments.find(inv => inv.id === id);
+              if (!existing) throw new Error('Investment not found');
+              updatedInvestment = {
+                ...existing,
+                ...investment,
+                updated_at: new Date().toISOString(),
+              };
+            } else {
+              // Logged-in mode: Call API
+              updatedInvestment = await financeAPIService.updateInvestment(id, investment);
+            }
+            
             set(state => ({
               investments: state.investments.map(inv => 
                 inv.id === id ? updatedInvestment : inv
               ),
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, investments: error.message || 'Failed to update investment' },
@@ -520,15 +812,120 @@ export const useFinanceStore = create<FinanceState>()(
         
         deleteInvestment: async (id: string) => {
           try {
-            await financeAPIService.deleteInvestment(id);
+            const guest = isGuestMode();
+            
+            if (!guest) {
+              // Logged-in mode: Call API
+              await financeAPIService.deleteInvestment(id);
+            }
+            // Guest mode: Just update state (no API call)
+            
             set(state => ({
               investments: state.investments.filter(inv => inv.id !== id),
             }));
+            // localStorage is automatically updated via persist middleware
           } catch (error: any) {
             set(state => ({
               errors: { ...state.errors, investments: error.message || 'Failed to delete investment' },
             }));
             throw error;
+          }
+        },
+        
+        // Forecast Actions (localStorage only - no API)
+        fetchForecasts: async () => {
+          // Forecasts are stored in localStorage only, no API call needed
+          // Data is automatically loaded via persist middleware
+        },
+        
+        createForecast: async (forecastData: ForecastCreate) => {
+          const guest = isGuestMode();
+          const now = new Date().toISOString();
+          const userId = guest ? `guest_${Date.now()}` : 'user_123'; // Get from auth store in real app
+          
+          const newForecast: Forecast = {
+            id: generateLocalId(),
+            user_id: userId,
+            ...forecastData,
+            created_at: now,
+            updated_at: now,
+          };
+          
+          set(state => ({
+            forecasts: [...state.forecasts, newForecast],
+          }));
+          
+          // localStorage is automatically updated via persist middleware
+        },
+        
+        updateForecast: async (id: string, forecastData: Partial<ForecastUpdate>) => {
+          set(state => ({
+            forecasts: state.forecasts.map(f => 
+              f.id === id 
+                ? { ...f, ...forecastData, updated_at: new Date().toISOString() }
+                : f
+            ),
+          }));
+          
+          // localStorage is automatically updated via persist middleware
+        },
+        
+        deleteForecast: async (id: string) => {
+          set(state => ({
+            forecasts: state.forecasts.filter(f => f.id !== id),
+          }));
+          
+          // localStorage is automatically updated via persist middleware
+        },
+        
+        // Import/Export Actions
+        exportFinanceData: () => {
+          const state = get();
+          const exportData = {
+            bankAccounts: state.bankAccounts,
+            transactions: state.transactions,
+            budgets: state.budgets,
+            financialGoals: state.financialGoals,
+            debtTrackers: state.debtTrackers,
+            investments: state.investments,
+            forecasts: state.forecasts,
+            exportedAt: new Date().toISOString(),
+            version: '1.0',
+          };
+          return JSON.stringify(exportData, null, 2);
+        },
+        
+        importFinanceData: async (jsonData: string, merge = true) => {
+          try {
+            const importedData = JSON.parse(jsonData);
+            
+            if (merge) {
+              // Merge with existing data
+              set(state => ({
+                bankAccounts: [...state.bankAccounts, ...(importedData.bankAccounts || [])],
+                transactions: [...state.transactions, ...(importedData.transactions || [])],
+                budgets: [...state.budgets, ...(importedData.budgets || [])],
+                financialGoals: [...state.financialGoals, ...(importedData.financialGoals || [])],
+                debtTrackers: [...state.debtTrackers, ...(importedData.debtTrackers || [])],
+                investments: [...state.investments, ...(importedData.investments || [])],
+                forecasts: [...state.forecasts, ...(importedData.forecasts || [])],
+              }));
+            } else {
+              // Replace existing data
+              set({
+                bankAccounts: importedData.bankAccounts || [],
+                transactions: importedData.transactions || [],
+                budgets: importedData.budgets || [],
+                financialGoals: importedData.financialGoals || [],
+                debtTrackers: importedData.debtTrackers || [],
+                investments: importedData.investments || [],
+                forecasts: importedData.forecasts || [],
+              });
+            }
+            
+            // localStorage is automatically updated via persist middleware
+          } catch (error: any) {
+            throw new Error(`Failed to import finance data: ${error.message}`);
           }
         },
         
@@ -631,6 +1028,7 @@ export const useFinanceStore = create<FinanceState>()(
               financialGoals: null,
               debtTrackers: null,
               investments: null,
+              forecasts: null,
               analytics: null,
               reports: null,
             },
@@ -650,13 +1048,80 @@ export const useFinanceStore = create<FinanceState>()(
           financialGoals: state.financialGoals,
           debtTrackers: state.debtTrackers,
           investments: state.investments,
+          forecasts: state.forecasts,
           analytics: state.analytics,
           reports: state.reports,
         }),
+        version: 1,
+        migrate: (persistedState: any, version: number) => {
+          // Migration logic for future structure changes
+          if (version === 0) {
+            // Ensure all arrays exist
+            return {
+              ...persistedState,
+              bankAccounts: persistedState.bankAccounts || [],
+              transactions: persistedState.transactions || [],
+              budgets: persistedState.budgets || [],
+              financialGoals: persistedState.financialGoals || [],
+              debtTrackers: persistedState.debtTrackers || [],
+              investments: persistedState.investments || [],
+              forecasts: persistedState.forecasts || [],
+            };
+          }
+          return persistedState;
+        },
+        storage: {
+          getItem: (name) => {
+            try {
+              const str = localStorage.getItem(name);
+              if (!str) return null;
+              const parsed = JSON.parse(str);
+              // Validate structure
+              if (!parsed.state) {
+                console.warn(`[Finance Store] Invalid localStorage structure for ${name}, resetting...`);
+                return null;
+              }
+              return parsed;
+            } catch (error) {
+              // Attempt data recovery for corrupted data
+              console.error(`[Finance Store] Failed to parse localStorage for ${name}:`, error);
+              try {
+                // Try to recover using data recovery utility
+                const { recoverCorruptedData } = require('../utils/dataRecovery');
+                const recovery = recoverCorruptedData(name, {
+                  backupBeforeRecovery: true,
+                  attemptRepair: true,
+                  fallbackToDefaults: true,
+                });
+                if (recovery.success && recovery.recovered) {
+                  console.log(`[Finance Store] Successfully recovered data for ${name}`);
+                  return recovery.recovered;
+                }
+              } catch (recoveryError) {
+                console.error(`[Finance Store] Data recovery failed for ${name}:`, recoveryError);
+              }
+              return null;
+            }
+          },
+          setItem: (name, value) => {
+            try {
+              localStorage.setItem(name, JSON.stringify(value));
+            } catch (error) {
+              console.error(`[Finance Store] Failed to save to localStorage for ${name}:`, error);
+            }
+          },
+          removeItem: (name) => {
+            try {
+              localStorage.removeItem(name);
+            } catch (error) {
+              console.error(`[Finance Store] Failed to remove from localStorage for ${name}:`, error);
+            }
+          },
+        },
       }
     ),
     {
-      name: 'finance-store',
+      name: 'finance-store-devtools',
     }
   )
 );
@@ -668,6 +1133,7 @@ export const useBudgets = () => useFinanceStore(state => state.budgets);
 export const useFinancialGoals = () => useFinanceStore(state => state.financialGoals);
 export const useDebtTrackers = () => useFinanceStore(state => state.debtTrackers);
 export const useInvestments = () => useFinanceStore(state => state.investments);
+export const useForecasts = () => useFinanceStore(state => state.forecasts);
 export const useAnalytics = () => useFinanceStore(state => state.analytics);
 export const useReports = () => useFinanceStore(state => state.reports);
 

@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Search, Plane, Clock, DollarSign, Star, ExternalLink, BookOpen } from 'lucide-react'
+import { X, Search, Plane, Clock, DollarSign, Star, ExternalLink, BookOpen, Wifi, WifiOff, AlertCircle } from 'lucide-react'
 import { FlightSearchRequest, FlightSearchResult } from '../../services/travelAPI'
 import FlightBookingModal from './FlightBookingModal'
 import { useToastHelpers } from '../ui/Toast'
+import { isBackendAvailable } from '../../config/api'
 
 interface FlightSearchModalProps {
   isOpen: boolean
@@ -38,6 +39,27 @@ const FlightSearchModal: React.FC<FlightSearchModalProps> = ({
   const [hasSearched, setHasSearched] = useState(false)
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [selectedFlight, setSelectedFlight] = useState<FlightSearchResult | null>(null)
+  const [isBackendOnline, setIsBackendOnline] = useState<boolean | null>(null)
+  const [isUsingFallback, setIsUsingFallback] = useState(false)
+
+  // Check backend availability on mount
+  useEffect(() => {
+    if (isOpen) {
+      checkBackendStatus()
+    }
+  }, [isOpen])
+
+  const checkBackendStatus = async () => {
+    try {
+      const available = await isBackendAvailable()
+      setIsBackendOnline(available)
+      if (!available) {
+        info('Offline Mode', 'Flight search is using sample data. Connect to backend for real-time flight prices.')
+      }
+    } catch (err) {
+      setIsBackendOnline(false)
+    }
+  }
 
   const handleInputChange = (field: keyof FlightSearchRequest, value: any) => {
     setSearchData(prev => ({ ...prev, [field]: value }))
@@ -52,22 +74,29 @@ const FlightSearchModal: React.FC<FlightSearchModalProps> = ({
     }
 
     setLoading(true)
+    setIsUsingFallback(false)
     try {
       const results = await onSearch(searchData)
       setSearchResults(results)
       setHasSearched(true)
       
       // Check if we're using fallback data
+      const usingFallback = (results as any).isFallbackData || !isBackendOnline
+      setIsUsingFallback(usingFallback)
+      
       if (results.length > 0) {
-        if ((results as any).isFallbackData) {
-          info(`Showing ${results.length} sample flights (offline mode)`)
+        if (usingFallback) {
+          info('Sample Flights', `Showing ${results.length} sample flights (offline mode). Connect to backend for real-time prices.`)
         } else {
-          info(`Found ${results.length} flights for your search`)
+          info('Flights Found', `Found ${results.length} flights for your search`)
         }
+      } else {
+        info('No Results', 'No flights found for your search criteria. Try different dates or destinations.')
       }
-    } catch (error) {
-      console.error('Flight search failed:', error)
-      error('Flight search failed. Please try again.')
+    } catch (err: any) {
+      console.error('Flight search failed:', err)
+      setIsUsingFallback(true)
+      error('Search Error', err.message || 'Flight search failed. Using sample data.')
     } finally {
       setLoading(false)
     }
@@ -113,14 +142,14 @@ const FlightSearchModal: React.FC<FlightSearchModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="glass-card w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+            className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
@@ -133,6 +162,27 @@ const FlightSearchModal: React.FC<FlightSearchModalProps> = ({
                   <X className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* Connection Status Indicator */}
+              {isBackendOnline !== null && (
+                <div className={`mb-4 flex items-center gap-2 px-3 py-2 rounded-lg ${
+                  isBackendOnline 
+                    ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800' 
+                    : 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
+                }`}>
+                  {isBackendOnline ? (
+                    <>
+                      <Wifi className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-sm text-emerald-700 dark:text-emerald-300">Real-time flight search available</span>
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      <span className="text-sm text-amber-700 dark:text-amber-300">Offline mode - showing sample flights</span>
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* Search Form */}
               <form onSubmit={handleSearch} className="space-y-6 mb-6">
@@ -300,7 +350,7 @@ const FlightSearchModal: React.FC<FlightSearchModalProps> = ({
                           key={flight.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="glass-card p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                          className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow cursor-pointer"
                           onClick={() => handleSelectFlight(flight)}
                         >
                           <div className="flex items-center justify-between">

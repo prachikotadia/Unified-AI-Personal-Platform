@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { jsPDF } from 'jspdf';
 
-const API_BASE_URL = 'http://localhost:8001';
+import { API_BASE_URL } from '../config/api';
 
 // Types
 export interface Trip {
@@ -252,9 +252,13 @@ class TravelAPIService {
   // Check if backend is accessible
   private async isBackendAccessible(): Promise<boolean> {
     try {
-      const response = await axios.get(`${this.baseURL}/health`, { timeout: 2000 });
+      const response = await axios.get(`${this.baseURL}/health`, { 
+        timeout: 2000,
+        validateStatus: () => true // Don't throw on any status code
+      });
       return response.status === 200;
     } catch {
+      // Silently return false - expected when backend is not available
       return false;
     }
   }
@@ -266,7 +270,7 @@ class TravelAPIService {
       // First, check if backend is accessible
       const isAccessible = await this.isBackendAccessible();
       if (!isAccessible) {
-        console.log(`Backend not accessible, using fallback data for ${endpoint}`);
+        // Silently use fallback data - don't log to console
         return this.getFallbackData<T>(endpoint);
       }
 
@@ -495,81 +499,121 @@ class TravelAPIService {
       // Check if this is a trip booking (AI recommendation) or flight booking
       const isTripBooking = bookingData.flight?.airline === 'AI Travel Airlines';
       
-      // Title
-      doc.setFontSize(24);
+      // Title Section
+      doc.setFontSize(28);
       doc.setTextColor(...primaryColor);
-      doc.text(isTripBooking ? '🌍 TRIP TICKET' : '✈️ FLIGHT TICKET', 105, 20, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.text(isTripBooking ? 'TRIP TICKET' : 'FLIGHT TICKET', 105, 25, { align: 'center' });
       
       // Booking Reference
-      doc.setFontSize(12);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(...secondaryColor);
-      doc.text(`Booking Reference: ${bookingData.bookingReference}`, 20, 35);
-      doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 42);
+      doc.text(`Booking Reference: ${bookingData.bookingReference}`, 20, 40);
+      const generatedDate = new Date().toLocaleString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      doc.text(`Generated: ${generatedDate}`, 20, 47);
       
       // Passenger Information Section
-      doc.setFontSize(16);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(...successColor);
-      doc.text('👤 PASSENGER INFORMATION', 20, 60);
+      doc.text('PASSENGER INFORMATION', 20, 65);
       
       doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(0, 0, 0);
-      doc.text(`Name: ${bookingData.passenger.firstName} ${bookingData.passenger.lastName}`, 20, 75);
-      doc.text(`Email: ${bookingData.passenger.email}`, 20, 82);
-      doc.text(`Phone: ${bookingData.passenger.phone}`, 20, 89);
-      doc.text(`Passport: ${bookingData.passenger.passportNumber}`, 20, 96);
-      doc.text(`Nationality: ${bookingData.passenger.nationality}`, 20, 103);
+      doc.text(`Name: ${bookingData.passenger.firstName} ${bookingData.passenger.lastName}`, 20, 78);
+      doc.text(`Email: ${bookingData.passenger.email}`, 20, 85);
+      doc.text(`Phone: ${bookingData.passenger.phone}`, 20, 92);
+      doc.text(`Passport: ${bookingData.passenger.passportNumber}`, 20, 99);
+      doc.text(`Nationality: ${bookingData.passenger.nationality}`, 20, 106);
       
       // Trip/Flight Information Section
-      doc.setFontSize(16);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(...successColor);
-      doc.text(isTripBooking ? '🌍 TRIP INFORMATION' : '🛫 FLIGHT INFORMATION', 20, 125);
+      doc.text(isTripBooking ? 'TRIP INFORMATION' : 'FLIGHT INFORMATION', 20, 130);
       
       doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(0, 0, 0);
-      doc.text(`Airline: ${bookingData.flight.airline}`, 20, 140);
-      doc.text(`Flight Number: ${bookingData.flight.flightNumber}`, 20, 147);
-      doc.text(`Origin: ${bookingData.flight.origin}`, 20, 154);
-      doc.text(`Destination: ${bookingData.flight.destination}`, 20, 161);
-      doc.text(`Departure: ${bookingData.flight.departureTime}`, 20, 168);
-      doc.text(`Arrival: ${bookingData.flight.arrivalTime}`, 20, 175);
-      doc.text(`Duration: ${bookingData.flight.duration}`, 20, 182);
-      doc.text(`Cabin Class: ${bookingData.flight.cabinClass}`, 20, 189);
-      doc.text(`Aircraft: ${bookingData.flight.aircraft}`, 20, 196);
+      doc.text(`Airline: ${bookingData.flight.airline}`, 20, 145);
+      doc.text(`Flight Number: ${bookingData.flight.flightNumber}`, 20, 152);
+      doc.text(`Origin: ${bookingData.flight.origin}`, 20, 159);
+      doc.text(`Destination: ${bookingData.flight.destination}`, 20, 166);
+      
+      // Format dates properly
+      const formatDate = (dateStr: string) => {
+        try {
+          const date = new Date(dateStr);
+          return date.toLocaleString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          });
+        } catch {
+          return dateStr;
+        }
+      };
+      
+      doc.text(`Departure: ${formatDate(bookingData.flight.departureTime)}`, 20, 173);
+      doc.text(`Arrival: ${formatDate(bookingData.flight.arrivalTime)}`, 20, 180);
+      doc.text(`Duration: ${bookingData.flight.duration}`, 20, 187);
+      doc.text(`Cabin Class: ${bookingData.flight.cabinClass}`, 20, 194);
+      if (bookingData.flight.aircraft) {
+        doc.text(`Aircraft: ${bookingData.flight.aircraft}`, 20, 201);
+      }
       
       // Seat Information Section
       if (bookingData.seat) {
-        doc.setFontSize(16);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
         doc.setTextColor(...successColor);
-        doc.text('💺 SEAT INFORMATION', 20, 215);
+        doc.text('SEAT INFORMATION', 20, 220);
         
         doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
         doc.setTextColor(0, 0, 0);
-        doc.text(`Seat Number: ${bookingData.seat.seatNumber}`, 20, 230);
-        doc.text(`Seat Type: ${bookingData.seat.seatType}`, 20, 237);
-        doc.text(`Price: $${bookingData.seat.price}`, 20, 244);
+        doc.text(`Seat Number: ${bookingData.seat.seatNumber}`, 20, 235);
+        doc.text(`Seat Type: ${bookingData.seat.seatType.charAt(0).toUpperCase() + bookingData.seat.seatType.slice(1)}`, 20, 242);
+        doc.text(`Seat Price: $${bookingData.seat.price.toFixed(2)}`, 20, 249);
       }
       
       // Price Information Section
-      doc.setFontSize(16);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(...successColor);
-      doc.text('💰 PRICE INFORMATION', 20, 260);
+      doc.text('PRICE INFORMATION', 20, 265);
       
       doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(...primaryColor);
-      doc.text(`Total Price: $${bookingData.totalPrice}`, 20, 275);
+      const totalPrice = typeof bookingData.totalPrice === 'number' ? bookingData.totalPrice.toFixed(2) : bookingData.totalPrice;
+      doc.text(`Total Price: $${totalPrice}`, 20, 280);
       doc.setFontSize(10);
-      doc.text('Currency: USD', 20, 282);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Currency: USD', 20, 287);
       
       // Boarding Information Section
-      doc.setFontSize(16);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(...warningColor);
-      doc.text('🚪 BOARDING INFORMATION', 20, 300);
+      doc.text('BOARDING INFORMATION', 20, 305);
       
       doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(0, 0, 0);
-      doc.text('Boarding Time: 09:30', 20, 315);
-      doc.text('Gate: B12', 20, 322);
-      doc.text('Status: Confirmed', 20, 329);
+      doc.text('Boarding Time: 09:30 AM', 20, 320);
+      doc.text('Gate: B12', 20, 327);
+      doc.text('Status: Confirmed', 20, 334);
       
       // Footer
       doc.setFontSize(10);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Trophy, 
@@ -10,10 +10,17 @@ import {
   Star,
   Medal,
   Crown,
-  Flame
+  Flame,
+  Share2,
+  Eye,
+  ArrowRight
 } from 'lucide-react';
+import { useToastHelpers } from '../../components/ui/Toast';
 
 const AchievementsPage = () => {
+  const { success } = useToastHelpers();
+  const [selectedAchievement, setSelectedAchievement] = useState<any>(null);
+  
   const achievements = [
     { id: 1, name: 'First Steps', description: 'Complete your first workout', icon: <Target size={24} />, unlocked: true, progress: 100 },
     { id: 2, name: 'Consistency King', description: 'Work out for 7 days in a row', icon: <TrendingUp size={24} />, unlocked: true, progress: 100 },
@@ -39,8 +46,28 @@ const AchievementsPage = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Achievements</h1>
-          <p className="text-gray-600">Track your fitness milestones and celebrate your progress</p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-left">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Achievements</h1>
+              <p className="text-gray-600">Track your fitness milestones and celebrate your progress</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => success('Achievement Shared', 'Achievement link copied to clipboard')}
+                className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center space-x-2 font-medium shadow-sm"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Share Achievement</span>
+              </button>
+              <button
+                onClick={() => success('Viewing All', 'Showing all achievements')}
+                className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center space-x-2 font-medium shadow-sm"
+              >
+                <ArrowRight className="w-4 h-4" />
+                <span>View All</span>
+              </button>
+            </div>
+          </div>
         </motion.div>
 
         {/* Progress Overview */}
@@ -121,14 +148,74 @@ const AchievementsPage = () => {
               )}
 
               {achievement.unlocked && (
-                <div className="flex items-center text-green-600 text-sm font-medium">
-                  <Trophy size={16} className="mr-1" />
-                  Unlocked!
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center text-green-600 text-sm font-medium">
+                    <Trophy size={16} className="mr-1" />
+                    Unlocked!
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedAchievement(achievement)}
+                      className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                      title="View Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => success('Shared to Social', 'Achievement shared to social media')}
+                      className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
+                      title="Share to Social"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               )}
             </motion.div>
           ))}
         </div>
+
+        {/* Achievement Details Modal */}
+        {selectedAchievement && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-xl p-6 w-full max-w-md mx-4"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Achievement Details</h2>
+                <button
+                  onClick={() => setSelectedAchievement(null)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <span className="text-xl">×</span>
+                </button>
+              </div>
+              <div className="text-center py-8">
+                <div className="text-6xl mb-4">{selectedAchievement.icon}</div>
+                <h3 className="text-2xl font-bold mb-2">{selectedAchievement.name}</h3>
+                <p className="text-gray-600 mb-4">{selectedAchievement.description}</p>
+                {selectedAchievement.unlocked ? (
+                  <div className="flex items-center justify-center text-green-600">
+                    <Trophy size={20} className="mr-2" />
+                    <span className="font-medium">Unlocked!</span>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="text-sm text-gray-500 mb-2">Progress: {selectedAchievement.progress}%</div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-500 h-2 rounded-full"
+                        style={{ width: `${selectedAchievement.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
 
         {/* Recent Achievements */}
         {unlockedCount > 0 && (

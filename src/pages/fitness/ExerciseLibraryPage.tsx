@@ -10,134 +10,60 @@ import {
   Play,
   BookOpen,
   Star,
-  TrendingUp
+  TrendingUp,
+  Plus,
+  Eye,
+  Brain,
+  Sparkles
 } from 'lucide-react';
+import { useToastHelpers } from '../../components/ui/Toast';
+import ExerciseModal from '../../components/fitness/ExerciseModal';
+import AIExerciseSuggestions from '../../components/fitness/AIExerciseSuggestions';
+import { useExerciseStore } from '../../store/exercises';
 
 const ExerciseLibraryPage = () => {
+  const { success } = useToastHelpers();
+  const {
+    exercises,
+    favorites,
+    toggleFavorite,
+    addToRecent,
+    getExercise,
+  } = useExerciseStore();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [selectedEquipment, setSelectedEquipment] = useState('all');
-
-  // Mock exercise database
-  const exercises = [
-    {
-      id: '1',
-      name: 'Push-ups',
-      category: 'strength',
-      muscle_groups: ['chest', 'triceps', 'shoulders'],
-      equipment: ['bodyweight'],
-      difficulty: 'beginner',
-      instructions: 'Start in a plank position, lower your body until your chest nearly touches the floor, then push back up.',
-      video_url: 'https://example.com/pushups',
-      image_url: '/exercises/pushups.jpg',
-      rating: 4.8,
-      favorites: 1250,
-      calories_per_minute: 8
-    },
-    {
-      id: '2',
-      name: 'Squats',
-      category: 'strength',
-      muscle_groups: ['quadriceps', 'glutes', 'hamstrings'],
-      equipment: ['bodyweight'],
-      difficulty: 'beginner',
-      instructions: 'Stand with feet shoulder-width apart, lower your body as if sitting back into a chair, then return to standing.',
-      video_url: 'https://example.com/squats',
-      image_url: '/exercises/squats.jpg',
-      rating: 4.9,
-      favorites: 2100,
-      calories_per_minute: 10
-    },
-    {
-      id: '3',
-      name: 'Deadlift',
-      category: 'strength',
-      muscle_groups: ['back', 'glutes', 'hamstrings'],
-      equipment: ['barbell', 'dumbbells'],
-      difficulty: 'intermediate',
-      instructions: 'Stand with feet hip-width apart, bend at hips and knees to lower hands to bar, then stand up while keeping bar close to body.',
-      video_url: 'https://example.com/deadlift',
-      image_url: '/exercises/deadlift.jpg',
-      rating: 4.7,
-      favorites: 890,
-      calories_per_minute: 12
-    },
-    {
-      id: '4',
-      name: 'Bench Press',
-      category: 'strength',
-      muscle_groups: ['chest', 'triceps', 'shoulders'],
-      equipment: ['barbell', 'bench'],
-      difficulty: 'intermediate',
-      instructions: 'Lie on bench, lower bar to chest, then press back up to starting position.',
-      video_url: 'https://example.com/benchpress',
-      image_url: '/exercises/benchpress.jpg',
-      rating: 4.6,
-      favorites: 750,
-      calories_per_minute: 11
-    },
-    {
-      id: '5',
-      name: 'Pull-ups',
-      category: 'strength',
-      muscle_groups: ['back', 'biceps'],
-      equipment: ['pull-up bar'],
-      difficulty: 'advanced',
-      instructions: 'Hang from pull-up bar, pull your body up until chin is over bar, then lower back down.',
-      video_url: 'https://example.com/pullups',
-      image_url: '/exercises/pullups.jpg',
-      rating: 4.5,
-      favorites: 680,
-      calories_per_minute: 9
-    },
-    {
-      id: '6',
-      name: 'Plank',
-      category: 'core',
-      muscle_groups: ['core', 'shoulders'],
-      equipment: ['bodyweight'],
-      difficulty: 'beginner',
-      instructions: 'Hold a plank position with body in a straight line from head to heels.',
-      video_url: 'https://example.com/plank',
-      image_url: '/exercises/plank.jpg',
-      rating: 4.8,
-      favorites: 1500,
-      calories_per_minute: 4
-    },
-    {
-      id: '7',
-      name: 'Burpees',
-      category: 'cardio',
-      muscle_groups: ['full body'],
-      equipment: ['bodyweight'],
-      difficulty: 'intermediate',
-      instructions: 'Combine a squat, push-up, and jump in one fluid movement.',
-      video_url: 'https://example.com/burpees',
-      image_url: '/exercises/burpees.jpg',
-      rating: 4.4,
-      favorites: 920,
-      calories_per_minute: 15
-    },
-    {
-      id: '8',
-      name: 'Lunges',
-      category: 'strength',
-      muscle_groups: ['quadriceps', 'glutes', 'hamstrings'],
-      equipment: ['bodyweight'],
-      difficulty: 'beginner',
-      instructions: 'Step forward with one leg, lower your body until both knees are bent at 90 degrees, then return to starting position.',
-      video_url: 'https://example.com/lunges',
-      image_url: '/exercises/lunges.jpg',
-      rating: 4.7,
-      favorites: 1100,
-      calories_per_minute: 8
-    }
-  ];
+  const [showExerciseModal, setShowExerciseModal] = useState(false);
+  const [showAIRecommendations, setShowAIRecommendations] = useState(false);
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState('all');
 
   const categories = ['all', 'strength', 'cardio', 'core', 'flexibility', 'balance'];
   const difficulties = ['all', 'beginner', 'intermediate', 'advanced'];
   const equipment = ['all', 'bodyweight', 'dumbbells', 'barbell', 'resistance bands', 'kettlebell'];
+
+  const muscleGroups = ['all', 'chest', 'back', 'shoulders', 'arms', 'legs', 'core', 'full body'];
+
+  const handleAddToWorkout = (exercise: any) => {
+    success('Exercise Added', `${exercise.name} has been added to your workout`);
+  };
+
+  const handleToggleFavorite = (exerciseId: string) => {
+    toggleFavorite(exerciseId);
+    const exercise = getExercise(exerciseId);
+    if (exercise) {
+      success(
+        favorites.has(exerciseId) ? 'Removed from Favorites' : 'Added to Favorites',
+        `${exercise.name} ${favorites.has(exerciseId) ? 'removed from' : 'added to'} favorites`
+      );
+    }
+  };
+
+  const handleViewDetails = (exercise: any) => {
+    addToRecent(exercise.id);
+    setShowExerciseModal(true);
+  };
 
   const filteredExercises = exercises.filter(exercise => {
     const matchesSearch = exercise.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -145,8 +71,9 @@ const ExerciseLibraryPage = () => {
     const matchesCategory = selectedCategory === 'all' || exercise.category === selectedCategory;
     const matchesDifficulty = selectedDifficulty === 'all' || exercise.difficulty === selectedDifficulty;
     const matchesEquipment = selectedEquipment === 'all' || exercise.equipment.includes(selectedEquipment);
+    const matchesMuscleGroup = selectedMuscleGroup === 'all' || exercise.muscle_groups.includes(selectedMuscleGroup);
     
-    return matchesSearch && matchesCategory && matchesDifficulty && matchesEquipment;
+    return matchesSearch && matchesCategory && matchesDifficulty && matchesEquipment && matchesMuscleGroup;
   });
 
   const getDifficultyColor = (difficulty: string) => {
@@ -160,11 +87,12 @@ const ExerciseLibraryPage = () => {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'strength': return 'from-blue-gradient-from to-blue-gradient-to';
-      case 'cardio': return 'from-red-gradient-from to-red-gradient-to';
-      case 'core': return 'from-green-gradient-from to-green-gradient-to';
-      case 'flexibility': return 'from-purple-gradient-from to-purple-gradient-to';
-      default: return 'from-gray-gradient-from to-gray-gradient-to';
+      case 'strength': return 'from-indigo-500 to-indigo-600';
+      case 'cardio': return 'from-red-500 to-red-600';
+      case 'core': return 'from-emerald-500 to-emerald-600';
+      case 'flexibility': return 'from-violet-500 to-violet-600';
+      case 'balance': return 'from-amber-500 to-amber-600';
+      default: return 'from-gray-500 to-gray-600';
     }
   };
 
@@ -173,7 +101,7 @@ const ExerciseLibraryPage = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-card p-6"
+        className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700"
       >
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -182,9 +110,21 @@ const ExerciseLibraryPage = () => {
               Browse our comprehensive database of exercises
             </p>
           </div>
-          <div className="flex items-center space-x-2">
-            <BookOpen className="w-6 h-6 text-blue-500" />
-            <span className="text-sm text-gray-400">{exercises.length} exercises</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAIRecommendations(true)}
+              className="btn-secondary flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              <Brain className="w-4 h-4" />
+              <span>AI Recommendations</span>
+            </button>
+            <button
+              onClick={() => setShowExerciseModal(true)}
+              className="btn-primary flex items-center space-x-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Exercise</span>
+            </button>
           </div>
         </div>
 
@@ -197,7 +137,7 @@ const ExerciseLibraryPage = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search exercises by name or muscle group..."
-              className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
             />
           </div>
 
@@ -205,7 +145,7 @@ const ExerciseLibraryPage = () => {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
             >
               {categories.map(category => (
                 <option key={category} value={category}>
@@ -215,9 +155,21 @@ const ExerciseLibraryPage = () => {
             </select>
 
             <select
+              value={selectedMuscleGroup}
+              onChange={(e) => setSelectedMuscleGroup(e.target.value)}
+              className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+            >
+              {muscleGroups.map(group => (
+                <option key={group} value={group}>
+                  {group === 'all' ? 'All Muscle Groups' : group.charAt(0).toUpperCase() + group.slice(1)}
+                </option>
+              ))}
+            </select>
+
+            <select
               value={selectedDifficulty}
               onChange={(e) => setSelectedDifficulty(e.target.value)}
-              className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
             >
               {difficulties.map(difficulty => (
                 <option key={difficulty} value={difficulty}>
@@ -229,7 +181,7 @@ const ExerciseLibraryPage = () => {
             <select
               value={selectedEquipment}
               onChange={(e) => setSelectedEquipment(e.target.value)}
-              className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
             >
               {equipment.map(equip => (
                 <option key={equip} value={equip}>
@@ -249,7 +201,7 @@ const ExerciseLibraryPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="glass-card p-6 hover:scale-105 transition-transform duration-300"
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:scale-105 transition-all duration-300 hover:shadow-lg"
           >
             {/* Exercise Header */}
             <div className="flex items-start justify-between mb-4">
@@ -264,46 +216,59 @@ const ExerciseLibraryPage = () => {
                   </span>
                 </div>
               </div>
-              <button className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                <Heart className="w-4 h-4" />
+              <button
+                onClick={() => handleToggleFavorite(exercise.id)}
+                className={`p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ${
+                  favorites.has(exercise.id) ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'
+                }`}
+                title="Favorite"
+              >
+                <Heart className={`w-5 h-5 ${favorites.has(exercise.id) ? 'fill-current' : ''}`} />
               </button>
             </div>
 
             {/* Exercise Details */}
             <div className="space-y-3 mb-4">
-              <div className="flex items-center space-x-2 text-sm">
-                <Target className="w-4 h-4 text-gray-400" />
+              <div className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
+                <Target className="w-4 h-4 text-indigo-500" />
                 <span>{exercise.muscle_groups.join(', ')}</span>
               </div>
 
-              <div className="flex items-center space-x-2 text-sm">
-                <TrendingUp className="w-4 h-4 text-gray-400" />
+              <div className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
+                <TrendingUp className="w-4 h-4 text-emerald-500" />
                 <span>{exercise.calories_per_minute} cal/min</span>
               </div>
 
-              <div className="flex items-center space-x-2 text-sm">
-                <Star className="w-4 h-4 text-yellow-500" />
-                <span>{exercise.rating} ({exercise.favorites} favorites)</span>
+              <div className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
+                <Star className="w-4 h-4 text-amber-500 fill-current" />
+                <span>{exercise.rating.toFixed(1)} ({exercise.favorites} favorites)</span>
               </div>
 
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 dark:text-gray-400">
                 Equipment: {exercise.equipment.join(', ')}
               </div>
             </div>
 
             {/* Exercise Instructions */}
-            <p className="text-sm text-gray-300 mb-4 line-clamp-3">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-3">
               {exercise.instructions}
             </p>
 
             {/* Action Buttons */}
             <div className="flex space-x-2">
-              <button className="flex-1 px-3 py-2 bg-gradient-to-r from-blue-gradient-from to-blue-gradient-to text-white rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center space-x-1">
-                <Play className="w-4 h-4" />
-                <span>Watch</span>
+              <button
+                onClick={() => handleViewDetails(exercise)}
+                className="flex-1 px-3 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center space-x-1 font-medium"
+              >
+                <Eye className="w-4 h-4" />
+                <span>View Details</span>
               </button>
-              <button className="px-3 py-2 border border-white/20 rounded-lg hover:bg-white/10 transition-colors">
-                <BookOpen className="w-4 h-4" />
+              <button
+                onClick={() => handleAddToWorkout(exercise)}
+                className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                title="Add to Workout"
+              >
+                <Plus className="w-4 h-4" />
               </button>
             </div>
           </motion.div>
@@ -314,7 +279,7 @@ const ExerciseLibraryPage = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-6 text-center"
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700 text-center"
         >
           <div className="text-gray-500 dark:text-gray-400 mb-4">
             <Dumbbell className="w-16 h-16 mx-auto mb-4 text-gray-300" />
@@ -322,6 +287,51 @@ const ExerciseLibraryPage = () => {
             <p className="text-sm">Try adjusting your search criteria or filters.</p>
           </div>
         </motion.div>
+      )}
+
+      {/* Exercise Modal */}
+      <ExerciseModal
+        isOpen={showExerciseModal}
+        onClose={() => setShowExerciseModal(false)}
+        onSelect={(exercise) => {
+          console.log('Selected exercise:', exercise);
+          setShowExerciseModal(false);
+        }}
+      />
+
+      {/* AI Exercise Suggestions Modal */}
+      {showAIRecommendations && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <Brain className="text-blue-600" size={24} />
+                <h2 className="text-xl font-semibold">AI Exercise Recommendations</h2>
+              </div>
+              <button
+                onClick={() => setShowAIRecommendations(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <span className="text-xl">×</span>
+              </button>
+            </div>
+            <AIExerciseSuggestions
+              userProfile={{
+                fitnessLevel: 'intermediate',
+                goals: ['strength', 'muscle_gain'],
+                preferences: ['strength_training', 'cardio']
+              }}
+              onAddExercise={(exercise) => {
+                console.log('Exercise added:', exercise);
+                success('Exercise Added', `${exercise.name} has been added to your workout`);
+              }}
+            />
+          </motion.div>
+        </div>
       )}
     </div>
   );

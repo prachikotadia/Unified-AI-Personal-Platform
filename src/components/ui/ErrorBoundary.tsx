@@ -36,7 +36,7 @@ class ErrorBoundary extends Component<Props, State> {
     }
 
     // Log to external service in production
-    if (import.meta.env.PROD) {
+    if ((import.meta as any).env?.MODE === 'production') {
       // Example: log to Sentry, LogRocket, etc.
       // logErrorToService(error, errorInfo);
     }
@@ -77,7 +77,7 @@ class ErrorBoundary extends Component<Props, State> {
               We encountered an unexpected error. Please try again or contact support if the problem persists.
             </p>
 
-            {import.meta.env.DEV && this.state.error && (
+            {((import.meta as any).env?.MODE === 'development') && this.state.error && (
               <details className="mb-6 text-left">
                 <summary className="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Error Details (Development)
@@ -144,7 +144,7 @@ export const useErrorHandler = () => {
     console.error(`Error in ${context || 'component'}:`, error);
     
     // Log to external service in production
-    if (import.meta.env.PROD) {
+    if ((import.meta as any).env?.MODE === 'production') {
       // Example: log to Sentry, LogRocket, etc.
       // logErrorToService(error, { context });
     }

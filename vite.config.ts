@@ -11,7 +11,23 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: 3001,
     host: true,
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 3001,
+      clientPort: 3001,
+    },
+    watch: {
+      usePolling: false,
+    },
+    strictPort: false,
+  },
+  // Suppress WebSocket connection errors in console
+  logLevel: 'error', // Only show actual errors, suppress warnings
+  clearScreen: false, // Don't clear screen on errors
+  build: {
+    sourcemap: false,
   },
 })

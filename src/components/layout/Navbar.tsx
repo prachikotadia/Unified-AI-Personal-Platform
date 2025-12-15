@@ -17,11 +17,15 @@ import {
   Users
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import { useNotificationStore } from '@/store/notifications';
+import NotificationCenter from '@/components/notifications/NotificationCenter';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const location = useLocation();
   const { user } = useAuthStore();
+  const { unreadCount } = useNotificationStore();
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: <Home size={20} /> },
@@ -115,9 +119,22 @@ const Navbar = () => {
             )}
 
             {/* Notifications */}
-            <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+            <button 
+              onClick={() => setShowNotifications(true)}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors relative"
+            >
               <Bell size={20} />
+              {unreadCount > 0 && (
+                <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
+            
+            <NotificationCenter 
+              isOpen={showNotifications} 
+              onClose={() => setShowNotifications(false)} 
+            />
 
             {/* User menu */}
             <div className="relative">

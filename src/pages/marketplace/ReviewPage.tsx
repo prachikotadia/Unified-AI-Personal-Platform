@@ -11,9 +11,13 @@ import {
   MapPin,
   Clock,
   Shield,
-  Truck as TruckIcon
+  Truck as TruckIcon,
+  Edit,
+  Tag,
+  X
 } from 'lucide-react';
 import { useToastHelpers } from '../../components/ui/Toast';
+import CouponModal from '../../components/marketplace/CouponModal';
 
 const ReviewPage = () => {
   const navigate = useNavigate();
@@ -21,12 +25,17 @@ const ReviewPage = () => {
   
   const [orderData, setOrderData] = useState<any>(null);
   const [addressData, setAddressData] = useState<any>(null);
+  const [paymentMethodData, setPaymentMethodData] = useState<any>(null);
   const [shippingMethod, setShippingMethod] = useState('standard');
+  const [showCouponModal, setShowCouponModal] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   useEffect(() => {
-    // Get order and address data from session storage
+    // Get order, address, and payment data from session storage
     const orderDataStr = sessionStorage.getItem('checkoutOrderData');
     const addressDataStr = sessionStorage.getItem('checkoutAddressData');
+    const paymentDataStr = sessionStorage.getItem('checkoutPaymentMethod');
     
     if (!orderDataStr || !addressDataStr) {
       showError('Missing checkout data', 'Please start the checkout process again');
@@ -37,6 +46,9 @@ const ReviewPage = () => {
     try {
       setOrderData(JSON.parse(orderDataStr));
       setAddressData(JSON.parse(addressDataStr));
+      if (paymentDataStr) {
+        setPaymentMethodData(JSON.parse(paymentDataStr));
+      }
     } catch (error) {
       showError('Invalid checkout data', 'Please start the checkout process again');
       navigate('/marketplace/cart');
@@ -72,36 +84,84 @@ const ReviewPage = () => {
     return method?.price || 0;
   };
 
-  const getTotal = () => {
-    if (!orderData) return 0;
-    return orderData.subtotal + getShippingPrice() + orderData.tax;
+  const getCouponDiscount = () => {
+    if (!appliedCoupon || !orderData) return 0;
+    if (appliedCoupon.type === 'percentage') {
+      return (orderData.subtotal * appliedCoupon.discount) / 100;
+    }
+    return appliedCoupon.discount;
   };
 
-  const handleContinue = () => {
-    console.log('ReviewPage: Continue button clicked');
-    
-    // Store shipping method in session storage
-    const checkoutData = {
-      ...orderData,
-      shippingMethod,
-      shippingPrice: getShippingPrice(),
-      total: getTotal()
-    };
-    sessionStorage.setItem('checkoutOrderData', JSON.stringify(checkoutData));
-    
-    // Ensure address data is preserved
-    if (addressData) {
-      sessionStorage.setItem('checkoutAddressData', JSON.stringify(addressData));
-    }
-    
-    console.log('ReviewPage: Navigating to payment page');
-    console.log('ReviewPage: Order data stored:', checkoutData);
-    console.log('ReviewPage: Address data stored:', addressData);
+  const getTotal = () => {
+    if (!orderData) return 0;
+    return orderData.subtotal - getCouponDiscount() + getShippingPrice() + orderData.tax;
+  };
+
+  const handleApplyCoupon = (coupon: any) => {
+    setAppliedCoupon(coupon);
+    success('Coupon Applied', `Coupon ${coupon.code} applied successfully!`);
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    success('Coupon Removed', 'Coupon removed successfully');
+  };
+
+  const handleEditAddress = () => {
+    navigate('/marketplace/checkout/address');
+  };
+
+  const handleEditPayment = () => {
     navigate('/marketplace/checkout/payment');
   };
 
+  const handleEditShipping = () => {
+    // Shipping is editable on this page, so just scroll to shipping section
+    document.getElementById('shipping-section')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handlePlaceOrder = async () => {
+    setIsPlacingOrder(true);
+    
+    try {
+      // Simulate order placement
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const order = {
+        id: Date.now().toString(),
+        items: orderData.items,
+        address: addressData,
+        paymentMethod: paymentMethodData,
+        shippingMethod,
+        coupon: appliedCoupon,
+        subtotal: orderData.subtotal,
+        shipping: getShippingPrice(),
+        tax: orderData.tax,
+        couponDiscount: getCouponDiscount(),
+        total: getTotal(),
+        status: 'confirmed',
+        createdAt: new Date().toISOString()
+      };
+
+      // Store order in session storage
+      sessionStorage.setItem('lastOrder', JSON.stringify(order));
+      
+      // Clear checkout data
+      sessionStorage.removeItem('checkoutOrderData');
+      sessionStorage.removeItem('checkoutAddressData');
+      sessionStorage.removeItem('checkoutPaymentMethod');
+
+      success('Order Placed!', 'Your order has been confirmed');
+      navigate('/marketplace/checkout/success');
+    } catch (error) {
+      showError('Order Failed', 'There was an error placing your order. Please try again.');
+    } finally {
+      setIsPlacingOrder(false);
+    }
+  };
+
   const handleBack = () => {
-    navigate('/marketplace/checkout/address');
+    navigate('/marketplace/checkout/payment');
   };
 
   if (!orderData || !addressData) {
@@ -204,11 +264,20 @@ const ReviewPage = () => {
 
             {/* Delivery Address */}
             <div className="bg-white rounded-lg shadow-sm border p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Delivery Address</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Delivery Address</h2>
+                <button
+                  onClick={handleEditAddress}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
+                >
+                  <Edit size={16} />
+                  Edit
+                </button>
+              </div>
               
               <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
                 <MapPin className="w-5 h-5 text-gray-600 mt-1" />
-                <div>
+                <div className="flex-1">
                   <h3 className="font-medium text-gray-900">{addressData.name}</h3>
                   <p className="text-sm text-gray-600 mb-1">{addressData.phone}</p>
                   <p className="text-sm text-gray-900">
@@ -223,9 +292,55 @@ const ReviewPage = () => {
               </div>
             </div>
 
+            {/* Payment Method */}
+            {paymentMethodData && (
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">Payment Method</h2>
+                  <button
+                    onClick={handleEditPayment}
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
+                  >
+                    <Edit size={16} />
+                    Edit
+                  </button>
+                </div>
+                
+                <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                  <CreditCard className="w-5 h-5 text-gray-600 mt-1" />
+                  <div>
+                    <h3 className="font-medium text-gray-900">
+                      {paymentMethodData.type === 'card' 
+                        ? `${paymentMethodData.brand} •••• ${paymentMethodData.last4}`
+                        : paymentMethodData.type === 'wallet'
+                        ? 'Digital Wallet'
+                        : 'Cash on Delivery'}
+                    </h3>
+                    {paymentMethodData.cardholderName && (
+                      <p className="text-sm text-gray-600">{paymentMethodData.cardholderName}</p>
+                    )}
+                    {paymentMethodData.expiryMonth && paymentMethodData.expiryYear && (
+                      <p className="text-sm text-gray-600">
+                        Expires {paymentMethodData.expiryMonth}/{paymentMethodData.expiryYear}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Shipping Method */}
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Shipping Method</h2>
+            <div id="shipping-section" className="bg-white rounded-lg shadow-sm border p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Shipping Method</h2>
+                <button
+                  onClick={handleEditShipping}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
+                >
+                  <Edit size={16} />
+                  Edit
+                </button>
+              </div>
               
               <div className="space-y-3">
                 {shippingMethods.map((method) => (
@@ -272,6 +387,24 @@ const ReviewPage = () => {
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium">${orderData.subtotal.toFixed(2)}</span>
                 </div>
+                
+                {/* Coupon Discount */}
+                {appliedCoupon && (
+                  <div className="flex justify-between text-blue-600">
+                    <div className="flex items-center gap-2">
+                      <span>Coupon ({appliedCoupon.code})</span>
+                      <button
+                        onClick={handleRemoveCoupon}
+                        className="text-red-600 hover:text-red-700"
+                        title="Remove coupon"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <span>-${getCouponDiscount().toFixed(2)}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
                   <span className="font-medium">${getShippingPrice().toFixed(2)}</span>
@@ -287,6 +420,15 @@ const ReviewPage = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Apply Coupon Button */}
+              <button
+                onClick={() => setShowCouponModal(true)}
+                className="w-full mb-4 flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium"
+              >
+                <Tag size={16} />
+                {appliedCoupon ? 'Change Coupon' : 'Apply Coupon'}
+              </button>
 
               {/* Security Notice */}
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
@@ -317,15 +459,34 @@ const ReviewPage = () => {
               </div>
 
               <button
-                onClick={handleContinue}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium flex items-center justify-center space-x-2"
+                onClick={handlePlaceOrder}
+                disabled={isPlacingOrder}
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center space-x-2"
               >
-                <span>Continue to Payment</span>
-                <ArrowRight className="w-5 h-5" />
+                {isPlacingOrder ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Placing Order...</span>
+                  </>
+                ) : (
+                  <>
+                    <Shield className="w-5 h-5" />
+                    <span>Place Order</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
         </div>
+
+        {/* Coupon Modal */}
+        <CouponModal
+          isOpen={showCouponModal}
+          onClose={() => setShowCouponModal(false)}
+          onApply={handleApplyCoupon}
+          appliedCoupon={appliedCoupon}
+          onRemove={handleRemoveCoupon}
+        />
       </div>
     </div>
   );

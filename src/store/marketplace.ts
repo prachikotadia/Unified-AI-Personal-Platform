@@ -70,6 +70,30 @@ export interface PaymentMethod {
   isDefault: boolean
 }
 
+export interface RecentlyViewedProduct {
+  id: string | number
+  name: string
+  price: number
+  originalPrice?: number
+  image: string
+  brand: string
+  category: string
+  subcategory?: string
+  rating?: number
+  reviewCount?: number
+  inStock?: boolean
+  viewedAt: string
+}
+
+export interface SavedSearch {
+  id: string
+  query: string
+  category?: string
+  priceRange?: [number, number]
+  sortBy?: string
+  createdAt: string
+}
+
 interface MarketplaceState {
   products: Product[]
   cart: CartItem[]
@@ -77,6 +101,9 @@ interface MarketplaceState {
   addresses: Address[]
   paymentMethods: PaymentMethod[]
   wishlist: string[]
+  compareList: (string | number)[]
+  recentlyViewed: RecentlyViewedProduct[]
+  savedSearches: SavedSearch[]
   isLoading: boolean
   error: string | null
   
@@ -87,6 +114,15 @@ interface MarketplaceState {
   clearCart: () => void
   addToWishlist: (productId: string) => void
   removeFromWishlist: (productId: string) => void
+  addToCompare: (productId: string | number) => void
+  removeFromCompare: (productId: string | number) => void
+  clearCompare: () => void
+  addToRecentlyViewed: (product: RecentlyViewedProduct) => void
+  removeFromRecentlyViewed: (productId: string | number) => void
+  clearRecentlyViewed: () => void
+  saveSearch: (search: Omit<SavedSearch, 'id' | 'createdAt'>) => void
+  removeSavedSearch: (searchId: string) => void
+  clearSavedSearches: () => void
   createOrder: (orderData: Omit<Order, 'id' | 'orderDate'>) => void
   addAddress: (address: Omit<Address, 'id'>) => void
   updateAddress: (id: string, updates: Partial<Address>) => void
@@ -376,6 +412,9 @@ export const useMarketplaceStore = create<MarketplaceState>()(
         }
       ],
       wishlist: [],
+      compareList: [],
+      recentlyViewed: [],
+      savedSearches: [],
       isLoading: false,
       error: null,
 
@@ -437,6 +476,53 @@ export const useMarketplaceStore = create<MarketplaceState>()(
         const { wishlist } = get()
         set({ wishlist: wishlist.filter(id => id !== productId) })
       },
+
+      addToCompare: (productId) => {
+        const { compareList } = get()
+        if (!compareList.includes(productId) && compareList.length < 4) {
+          set({ compareList: [...compareList, productId] })
+        }
+      },
+
+      removeFromCompare: (productId) => {
+        const { compareList } = get()
+        set({ compareList: compareList.filter(id => id !== productId) })
+      },
+
+      clearCompare: () => set({ compareList: [] }),
+
+      addToRecentlyViewed: (product) => {
+        const { recentlyViewed } = get()
+        // Remove if already exists (to move to top)
+        const filtered = recentlyViewed.filter(p => p.id !== product.id)
+        // Add to beginning and limit to 50 items
+        const updated = [product, ...filtered].slice(0, 50)
+        set({ recentlyViewed: updated })
+      },
+
+      removeFromRecentlyViewed: (productId) => {
+        const { recentlyViewed } = get()
+        set({ recentlyViewed: recentlyViewed.filter(p => p.id !== productId) })
+      },
+
+      clearRecentlyViewed: () => set({ recentlyViewed: [] }),
+
+      saveSearch: (search) => {
+        const { savedSearches } = get()
+        const newSearch: SavedSearch = {
+          ...search,
+          id: `search_${Date.now()}_${Math.random()}`,
+          createdAt: new Date().toISOString()
+        }
+        set({ savedSearches: [...savedSearches, newSearch] })
+      },
+
+      removeSavedSearch: (searchId) => {
+        const { savedSearches } = get()
+        set({ savedSearches: savedSearches.filter(s => s.id !== searchId) })
+      },
+
+      clearSavedSearches: () => set({ savedSearches: [] }),
 
       createOrder: (orderData) => {
         const { orders } = get()
@@ -500,13 +586,64 @@ export const useMarketplaceStore = create<MarketplaceState>()(
     }),
     {
       name: 'marketplace-storage',
+      version: 1,
       partialize: (state) => ({
         cart: state.cart,
         orders: state.orders,
         addresses: state.addresses,
         paymentMethods: state.paymentMethods,
-        wishlist: state.wishlist
-      })
+        wishlist: state.wishlist,
+        compareList: state.compareList,
+        recentlyViewed: state.recentlyViewed,
+        savedSearches: state.savedSearches
+      }),
+      migrate: (persistedState: any, version: number) => {
+        if (version === 0) {
+          return {
+            ...persistedState,
+            cart: persistedState.cart || [],
+            orders: persistedState.orders || [],
+            addresses: persistedState.addresses || [],
+            paymentMethods: persistedState.paymentMethods || [],
+            wishlist: persistedState.wishlist || [],
+            compareList: persistedState.compareList || [],
+            recentlyViewed: persistedState.recentlyViewed || [],
+            savedSearches: persistedState.savedSearches || [],
+          };
+        }
+        return persistedState;
+      },
+      storage: {
+        getItem: (name) => {
+          try {
+            const str = localStorage.getItem(name);
+            if (!str) return null;
+            const parsed = JSON.parse(str);
+            if (!parsed.state) {
+              console.warn(`[Marketplace Store] Invalid localStorage structure for ${name}, resetting...`);
+              return null;
+            }
+            return parsed;
+          } catch (error) {
+            console.error(`[Marketplace Store] Failed to parse localStorage for ${name}:`, error);
+            return null;
+          }
+        },
+        setItem: (name, value) => {
+          try {
+            localStorage.setItem(name, JSON.stringify(value));
+          } catch (error) {
+            console.error(`[Marketplace Store] Failed to save to localStorage for ${name}:`, error);
+          }
+        },
+        removeItem: (name) => {
+          try {
+            localStorage.removeItem(name);
+          } catch (error) {
+            console.error(`[Marketplace Store] Failed to remove from localStorage for ${name}:`, error);
+          }
+        },
+      },
     }
   )
 )

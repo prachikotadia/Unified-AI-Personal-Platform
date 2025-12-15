@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Lightbulb, 
@@ -38,6 +39,18 @@ const AIInsights = ({ type, limit = 3, className = '' }: AIInsightsProps) => {
     executeAction
   } = useAIStore()
   const { addNotification } = useNotifications()
+  const [error, setError] = useState<string | null>(null);
+  
+  // Error handling wrapper
+  useEffect(() => {
+    try {
+      // Component will render with available data
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load AI insights');
+      console.error('AI Insights error:', err);
+    }
+  }, [insights, recommendations, predictions]);
 
   const filteredInsights = type 
     ? insights.filter(insight => insight.type === type)

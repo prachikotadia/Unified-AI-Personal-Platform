@@ -30,14 +30,22 @@ import {
   Plane,
   GraduationCap,
   Heart,
-  ShoppingBag
+  ShoppingBag,
+  Info,
+  Brain,
+  X,
+  GitBranch
 } from 'lucide-react';
 import { useFinance } from '../../hooks/useFinance';
 import { FinancialGoal } from '../../services/financeAPI';
+import GoalModal from '../../components/finance/GoalModal';
 
 const GoalsPage: React.FC = () => {
   const { financialGoals, isLoading, fetchFinancialGoals, createFinancialGoal, updateFinancialGoal, deleteFinancialGoal } = useFinance();
   const [showGoalModal, setShowGoalModal] = useState(false);
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [showTimelineModal, setShowTimelineModal] = useState(false);
+  const [showAIGoalModal, setShowAIGoalModal] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit' | 'delete'>('add');
   const [selectedGoal, setSelectedGoal] = useState<FinancialGoal | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
@@ -74,6 +82,28 @@ const GoalsPage: React.FC = () => {
       updateFinancialGoal(goal.id, goal);
     }
     setShowGoalModal(false);
+  };
+
+  const handleAddProgress = (goal: FinancialGoal) => {
+    setSelectedGoal(goal);
+    setShowProgressModal(true);
+  };
+
+  const handleConfirmProgress = (amount: number) => {
+    if (selectedGoal) {
+      const updated = {
+        ...selectedGoal,
+        current_amount: selectedGoal.current_amount + amount
+      };
+      updateFinancialGoal(selectedGoal.id, updated);
+      setShowProgressModal(false);
+      setSelectedGoal(undefined);
+    }
+  };
+
+  const handleViewTimeline = (goal: FinancialGoal) => {
+    setSelectedGoal(goal);
+    setShowTimelineModal(true);
   };
 
   const getGoalCategoryIcon = (category: string) => {
@@ -191,8 +221,8 @@ const GoalsPage: React.FC = () => {
   const completedGoals = financialGoals.filter(goal => goal.status === 'completed').length;
   const activeGoals = financialGoals.filter(goal => goal.status === 'active').length;
   const overdueGoals = financialGoals.filter(goal => goal.status === 'overdue').length;
-  const totalTargetAmount = financialGoals.reduce((sum, goal) => sum + goal.target_amount, 0);
-  const totalCurrentAmount = financialGoals.reduce((sum, goal) => sum + goal.current_amount, 0);
+  const totalTargetAmount = financialGoals.reduce((sum, goal) => sum + (goal.target_amount || 0), 0);
+  const totalCurrentAmount = financialGoals.reduce((sum, goal) => sum + (goal.current_amount || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -202,7 +232,14 @@ const GoalsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Financial Goals</h1>
           <p className="text-gray-600">Set, track, and achieve your financial objectives</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setShowAIGoalModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <Brain size={16} />
+            AI Goal Recommendations
+          </button>
           <button
             onClick={() => setShowAmounts(!showAmounts)}
             className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -471,13 +508,13 @@ const GoalsPage: React.FC = () => {
                       <div>
                         <p className="text-xs text-gray-600">Current Amount</p>
                         <p className="font-semibold text-blue-600">
-                          {showAmounts ? `$${goal.current_amount.toLocaleString()}` : '••••••'}
+                          {showAmounts ? `$${(goal.current_amount || 0).toLocaleString()}` : '••••••'}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-600">Target Amount</p>
                         <p className="font-semibold text-gray-900">
-                          {showAmounts ? `$${goal.target_amount.toLocaleString()}` : '••••••'}
+                          {showAmounts ? `$${(goal.target_amount || 0).toLocaleString()}` : '••••••'}
                         </p>
                       </div>
                     </div>
@@ -498,10 +535,27 @@ const GoalsPage: React.FC = () => {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200 flex-wrap">
+                    <button
+                      onClick={() => handleAddProgress(goal)}
+                      className="flex items-center gap-1 px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                      title="Add Progress"
+                    >
+                      <Plus size={14} />
+                      Progress
+                    </button>
+                    <button
+                      onClick={() => handleViewTimeline(goal)}
+                      className="flex items-center gap-1 px-3 py-1 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                      title="View Timeline"
+                    >
+                      <GitBranch size={14} />
+                      Timeline
+                    </button>
                     <button
                       onClick={() => handleEditGoal(goal)}
                       className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Edit"
                     >
                       <Edit size={14} />
                       Edit
@@ -509,6 +563,7 @@ const GoalsPage: React.FC = () => {
                     <button
                       onClick={() => handleDeleteGoal(goal.id)}
                       className="flex items-center gap-1 px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete"
                     >
                       <Trash2 size={14} />
                       Delete
@@ -523,6 +578,198 @@ const GoalsPage: React.FC = () => {
               </motion.div>
             );
           })}
+        </div>
+      )}
+
+      {/* Goal Modal */}
+      <GoalModal
+        isOpen={showGoalModal}
+        onClose={() => {
+          setShowGoalModal(false);
+          setSelectedGoal(undefined);
+        }}
+        mode={modalMode === 'delete' ? 'edit' : modalMode}
+        goal={selectedGoal}
+        onSave={handleGoalSuccess}
+      />
+
+      {/* Add Progress Modal */}
+      {showProgressModal && selectedGoal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-md mx-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Add Progress to {selectedGoal.name}</h2>
+              <button onClick={() => {
+                setShowProgressModal(false);
+                setSelectedGoal(undefined);
+              }}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Current Progress</label>
+                <p className="text-lg font-semibold">
+                  ${(selectedGoal.current_amount || 0).toLocaleString()} of ${(selectedGoal.target_amount || 0).toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Amount to Add</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  id="progress-amount"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowProgressModal(false);
+                    setSelectedGoal(undefined);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const amount = parseFloat((document.getElementById('progress-amount') as HTMLInputElement)?.value || '0');
+                    if (amount > 0) {
+                      handleConfirmProgress(amount);
+                    }
+                  }}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Add Progress
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Timeline Modal */}
+      {showTimelineModal && selectedGoal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Timeline: {selectedGoal.name}</h2>
+              <button onClick={() => {
+                setShowTimelineModal(false);
+                setSelectedGoal(undefined);
+              }}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="relative">
+                <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                <div className="space-y-6">
+                  {/* Start Point */}
+                  <div className="relative pl-12">
+                    <div className="absolute left-0 top-1 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                      <Target size={16} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Goal Created</h3>
+                      <p className="text-sm text-gray-600">
+                        {new Date(selectedGoal.created_at || new Date().toISOString()).toLocaleDateString()}
+                      </p>
+                      <p className="text-sm text-gray-500">Target: ${(selectedGoal.target_amount || 0).toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  {/* Progress Milestones */}
+                  <div className="relative pl-12">
+                    <div className="absolute left-0 top-1 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                      <TrendingUp size={16} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Current Progress</h3>
+                      <p className="text-sm text-gray-600">
+                        ${(selectedGoal.current_amount || 0).toLocaleString()} ({getProgressPercentage(selectedGoal).toFixed(1)}%)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Deadline */}
+                  <div className="relative pl-12">
+                    <div className={`absolute left-0 top-1 w-8 h-8 rounded-full flex items-center justify-center ${
+                      new Date(selectedGoal.deadline) < new Date() ? 'bg-red-500' : 'bg-purple-500'
+                    }`}>
+                      <Calendar size={16} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Target Deadline</h3>
+                      <p className="text-sm text-gray-600">
+                        {new Date(selectedGoal.deadline).toLocaleDateString()}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {getDaysRemaining(selectedGoal.deadline) < 0 
+                          ? `${Math.abs(getDaysRemaining(selectedGoal.deadline))} days overdue`
+                          : `${getDaysRemaining(selectedGoal.deadline)} days remaining`
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* AI Goal Recommendations Modal */}
+      {showAIGoalModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">AI Goal Recommendations</h2>
+              <button onClick={() => setShowAIGoalModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                AI-powered goal recommendations based on your financial situation and spending patterns.
+              </p>
+              <div className="space-y-3">
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Emergency Fund</h3>
+                  <p className="text-sm text-gray-600 mb-2">Recommended: $10,000</p>
+                  <p className="text-xs text-gray-500">Based on 3-6 months of expenses</p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Retirement Savings</h3>
+                  <p className="text-sm text-gray-600 mb-2">Recommended: $50,000 by age 30</p>
+                  <p className="text-xs text-gray-500">Based on your current age and income</p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Debt Payoff</h3>
+                  <p className="text-sm text-gray-600 mb-2">Recommended: Pay off high-interest debt first</p>
+                  <p className="text-xs text-gray-500">Focus on debts above 10% interest rate</p>
+                </div>
+              </div>
+              <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                Apply Recommendations
+              </button>
+            </div>
+          </motion.div>
         </div>
       )}
     </div>

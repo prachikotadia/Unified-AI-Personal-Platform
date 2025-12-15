@@ -44,11 +44,23 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Upload
+  Upload,
+  Copy,
+  Repeat,
+  Camera,
+  Brain,
+  X,
+  FileText,
+  Layers,
+  Image as ImageIcon
 } from 'lucide-react';
 import { transactionSyncService, SyncStatus } from '../../services/transactionSync';
 import TransactionModal from '../../components/finance/TransactionModal';
 import BulkOperationsModal from '../../components/finance/BulkOperationsModal';
+import { useTransactions } from '../../hooks/useFinance';
+import { Transaction as APITransaction } from '../../services/financeAPI';
+import { useFinanceStore } from '../../store/finance';
+import { usePagination } from '../../hooks/usePagination';
 
 interface Transaction {
   id: string;
@@ -73,7 +85,35 @@ interface Category {
 }
 
 const TransactionsPage: React.FC = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  // Use finance store for transactions (persists to localStorage)
+  const { 
+    transactions: storeTransactions, 
+    isLoading: storeLoading,
+    fetchTransactions,
+    createTransaction: createTransactionHandler,
+    updateTransaction: updateTransactionHandler,
+    deleteTransaction: deleteTransactionHandler
+  } = useTransactions();
+  
+  // Also get direct store actions for immediate updates
+  const { createTransaction, updateTransaction, deleteTransaction } = useFinanceStore();
+  
+  // Convert store transactions to local Transaction format
+  const transactions: Transaction[] = storeTransactions.map(t => ({
+    id: t.id,
+    type: t.type as 'income' | 'expense',
+    category: t.category,
+    subcategory: t.subcategory,
+    amount: t.amount,
+    description: t.description,
+    merchant: t.notes || '',
+    location: undefined,
+    date: t.date,
+    tags: [],
+    notes: t.notes,
+    receipt_url: t.receipt_url
+  }));
+  
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -83,7 +123,7 @@ const TransactionsPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'description'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [loading, setLoading] = useState(true);
+  const loading = storeLoading;
   
   // New state for enhanced features
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(transactionSyncService.getStatus());
@@ -92,6 +132,15 @@ const TransactionsPage: React.FC = () => {
   const [modalMode, setModalMode] = useState<'add' | 'edit' | 'delete'>('add');
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<'update' | 'delete' | 'tag'>('update');
+  
+  // Additional modal states
+  const [showFilterSidebar, setShowFilterSidebar] = useState(false);
+  const [showReceiptUploadModal, setShowReceiptUploadModal] = useState(false);
+  const [showReceiptScannerModal, setShowReceiptScannerModal] = useState(false);
+  const [showReceiptViewModal, setShowReceiptViewModal] = useState(false);
+  const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
+  const [groupBy, setGroupBy] = useState<'none' | 'date' | 'category' | 'merchant'>('none');
+  const [isAICategorizing, setIsAICategorizing] = useState(false);
 
   const expenseCategories: Category[] = [
     { value: 'food_dining', label: 'Food & Dining', icon: <Utensils size={20} />, color: '#FF6B6B' },
@@ -125,25 +174,9 @@ const TransactionsPage: React.FC = () => {
   ];
 
   useEffect(() => {
-    // Mock data loading
-    setTimeout(() => {
-      const mockTransactions: Transaction[] = [
-        { id: '1', type: 'expense', category: 'food_dining', amount: 45.50, description: 'Grocery Shopping', merchant: 'Walmart', date: '2024-06-15', tags: ['groceries', 'food'], notes: 'Weekly grocery shopping' },
-        { id: '2', type: 'income', category: 'salary', amount: 8500, description: 'Monthly Salary', merchant: 'Company Inc', date: '2024-06-01', tags: ['salary', 'income'] },
-        { id: '3', type: 'expense', category: 'transportation', amount: 65.00, description: 'Gas Station', merchant: 'Shell', date: '2024-06-14', tags: ['gas', 'transportation'] },
-        { id: '4', type: 'expense', category: 'entertainment', amount: 15.99, description: 'Netflix Subscription', merchant: 'Netflix', date: '2024-06-10', tags: ['subscription', 'entertainment'] },
-        { id: '5', type: 'expense', category: 'utilities', amount: 150.00, description: 'Electric Bill', merchant: 'Power Company', date: '2024-06-05', tags: ['utilities', 'bill'] },
-        { id: '6', type: 'expense', category: 'shopping', amount: 89.99, description: 'Amazon Purchase', merchant: 'Amazon', date: '2024-06-12', tags: ['shopping', 'online'] },
-        { id: '7', type: 'income', category: 'freelance', amount: 500, description: 'Freelance Project', merchant: 'Client XYZ', date: '2024-06-08', tags: ['freelance', 'income'] },
-        { id: '8', type: 'expense', category: 'healthcare', amount: 25.00, description: 'Pharmacy', merchant: 'CVS', date: '2024-06-13', tags: ['healthcare', 'medicine'] },
-        { id: '9', type: 'expense', category: 'travel', amount: 250.00, description: 'Hotel Booking', merchant: 'Marriott', date: '2024-06-07', tags: ['travel', 'hotel'] },
-        { id: '10', type: 'income', category: 'investment', amount: 150, description: 'Dividend Payment', merchant: 'Vanguard', date: '2024-06-03', tags: ['investment', 'dividend'] }
-      ];
-      setTransactions(mockTransactions);
-      setFilteredTransactions(mockTransactions);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    // Load transactions from store (which loads from localStorage)
+    fetchTransactions();
+  }, [fetchTransactions]);
 
   useEffect(() => {
     let filtered = transactions;
@@ -198,6 +231,24 @@ const TransactionsPage: React.FC = () => {
     setFilteredTransactions(filtered);
   }, [transactions, searchTerm, selectedType, selectedCategory, sortBy, sortOrder]);
 
+  // Pagination for large transaction lists
+  const {
+    currentPage,
+    totalPages,
+    paginatedItems: paginatedTransactions,
+    goToPage,
+    nextPage,
+    previousPage,
+    canGoNext,
+    canGoPrevious,
+    startIndex,
+    endIndex,
+  } = usePagination({
+    items: filteredTransactions,
+    itemsPerPage: 50, // Show 50 transactions per page
+    initialPage: 1,
+  });
+
   // Subscribe to sync status updates
   useEffect(() => {
     const unsubscribe = transactionSyncService.subscribeToStatus(setSyncStatus);
@@ -235,10 +286,6 @@ const TransactionsPage: React.FC = () => {
   const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
   const netFlow = totalIncome - totalExpenses;
 
-  const handleDeleteTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
-  };
-
   const handleEditTransaction = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setShowEditModal(true);
@@ -263,46 +310,245 @@ const TransactionsPage: React.FC = () => {
     setShowTransactionModal(true);
   };
 
-  const handleTransactionSuccess = (transaction: Transaction) => {
-    if (modalMode === 'add') {
-      setTransactions(prev => [transaction, ...prev]);
-      setFilteredTransactions(prev => [transaction, ...prev]);
-    } else if (modalMode === 'edit' && selectedTransaction) {
-      setTransactions(prev => prev.map(t => t.id === selectedTransaction.id ? transaction : t));
-      setFilteredTransactions(prev => prev.map(t => t.id === selectedTransaction.id ? transaction : t));
+  const handleTransactionSuccess = async (transaction: Transaction) => {
+    try {
+      if (modalMode === 'add') {
+        // Convert to API format and save to store (persists to localStorage)
+        const apiTransaction: APITransaction = {
+          id: transaction.id || Date.now().toString(),
+          user_id: 'user_123',
+          description: transaction.description,
+          amount: transaction.amount,
+          type: transaction.type,
+          category: transaction.category,
+          date: transaction.date,
+          account_id: undefined,
+          notes: transaction.notes,
+          receipt_url: transaction.receipt_url,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        await createTransaction(apiTransaction);
+        // Store automatically persists to localStorage via persist middleware
+      } else if (modalMode === 'edit' && selectedTransaction) {
+        // Convert to API format and update in store (persists to localStorage)
+        const apiTransaction: Partial<APITransaction> = {
+          description: transaction.description,
+          amount: transaction.amount,
+          type: transaction.type,
+          category: transaction.category,
+          date: transaction.date,
+          notes: transaction.notes,
+          receipt_url: transaction.receipt_url,
+          updated_at: new Date().toISOString()
+        };
+        await updateTransaction(selectedTransaction.id, apiTransaction);
+        // Store automatically persists to localStorage via persist middleware
+      }
+      setShowTransactionModal(false);
+      setSelectedTransaction(null);
+      setModalMode('add');
+    } catch (error) {
+      console.error('Error saving transaction:', error);
     }
   };
 
-  const handleTransactionDelete = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
-    setFilteredTransactions(prev => prev.filter(t => t.id !== id));
+  const handleTransactionDelete = async (id: string) => {
+    try {
+      await deleteTransaction(id);
+      // Store automatically persists to localStorage via persist middleware
+      setShowTransactionModal(false);
+      setSelectedTransaction(null);
+      setModalMode('add');
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+    }
+  };
+
+  const handleConfirmDelete = (transaction: Transaction) => {
+    handleTransactionDelete(transaction.id);
+    setShowTransactionModal(false);
+    setSelectedTransaction(null);
+    setModalMode('add');
   };
 
   // Bulk operations handlers
   const handleBulkUpdate = async (transactionIds: string[], updates: Partial<Transaction>) => {
-    setTransactions(prev => prev.map(t => 
-      transactionIds.includes(t.id) ? { ...t, ...updates } : t
-    ));
-    setFilteredTransactions(prev => prev.map(t => 
-      transactionIds.includes(t.id) ? { ...t, ...updates } : t
-    ));
+    // Update each transaction in the store
+    for (const id of transactionIds) {
+      try {
+        const apiUpdates: Partial<APITransaction> = {
+          description: updates.description,
+          amount: updates.amount,
+          type: updates.type as 'income' | 'expense',
+          category: updates.category,
+          date: updates.date,
+          notes: updates.notes,
+          receipt_url: updates.receipt_url,
+          updated_at: new Date().toISOString()
+        };
+        await updateTransaction(id, apiUpdates);
+      } catch (error) {
+        console.error(`Error updating transaction ${id}:`, error);
+      }
+    }
   };
 
   const handleBulkDelete = async (transactionIds: string[]) => {
-    setTransactions(prev => prev.filter(t => !transactionIds.includes(t.id)));
-    setFilteredTransactions(prev => prev.filter(t => !transactionIds.includes(t.id)));
+    // Delete each transaction from the store
+    for (const id of transactionIds) {
+      try {
+        await deleteTransaction(id);
+      } catch (error) {
+        console.error(`Error deleting transaction ${id}:`, error);
+      }
+    }
   };
 
   const handleImport = async (newTransactions: Transaction[]) => {
-    setTransactions(prev => [...newTransactions, ...prev]);
-    setFilteredTransactions(prev => [...newTransactions, ...prev]);
+    // Import transactions to store
+    for (const transaction of newTransactions) {
+      try {
+        const apiTransaction: APITransaction = {
+          id: transaction.id || Date.now().toString(),
+          user_id: 'user_123',
+          description: transaction.description,
+          amount: transaction.amount,
+          type: transaction.type,
+          category: transaction.category,
+          date: transaction.date,
+          account_id: undefined,
+          notes: transaction.notes,
+          receipt_url: transaction.receipt_url,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        await createTransaction(apiTransaction);
+      } catch (error) {
+        console.error(`Error importing transaction ${transaction.id}:`, error);
+      }
+    }
   };
 
   const handleExport = async (format: 'csv' | 'pdf' | 'excel') => {
     // Simulate export functionality
     console.log(`Exporting transactions in ${format} format`);
     // In a real implementation, this would call the export service
+    if (format === 'csv') {
+      const csvContent = [
+        ['Date', 'Description', 'Category', 'Amount', 'Type', 'Merchant'].join(','),
+        ...filteredTransactions.map(t => [
+          t.date,
+          `"${t.description}"`,
+          t.category,
+          t.amount,
+          t.type,
+          t.merchant || ''
+        ].join(','))
+      ].join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `transactions-${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
   };
+
+  const handleDuplicateTransaction = async (transaction: Transaction) => {
+    try {
+      const duplicated: APITransaction = {
+        id: Date.now().toString(),
+        user_id: 'user_123',
+        description: `${transaction.description} (Copy)`,
+        amount: transaction.amount,
+        type: transaction.type,
+        category: transaction.category,
+        date: new Date().toISOString().split('T')[0],
+        account_id: undefined,
+        notes: transaction.notes,
+        receipt_url: transaction.receipt_url,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      await createTransaction(duplicated);
+    } catch (error) {
+      console.error('Error duplicating transaction:', error);
+    }
+  };
+
+  const handleMarkAsRecurring = async (transaction: Transaction) => {
+    // Note: Recurring flag would need to be added to the Transaction model
+    // For now, just update the transaction with a note
+    try {
+      await updateTransaction(transaction.id, {
+        notes: transaction.notes ? `${transaction.notes} [Recurring]` : '[Recurring]',
+        updated_at: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error marking transaction as recurring:', error);
+    }
+  };
+
+  const handleViewReceipt = (receiptUrl: string) => {
+    setSelectedReceiptUrl(receiptUrl);
+    setShowReceiptViewModal(true);
+  };
+
+  const handleReceiptUpload = async (file: File) => {
+    // Simulate receipt upload
+    console.log('Uploading receipt:', file.name);
+    // In a real implementation, this would upload to a storage service
+    // and return the URL
+    return `https://example.com/receipts/${file.name}`;
+  };
+
+  const handleAICategorize = async () => {
+    setIsAICategorizing(true);
+    try {
+      // Simulate AI categorization
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      // In a real implementation, this would call an AI service
+      // to categorize uncategorized transactions
+      const uncategorized = transactions.filter(t => !t.category || t.category === 'other');
+      // Mock categorization
+      const categorized = uncategorized.map(t => ({
+        ...t,
+        category: t.type === 'expense' ? 'food_dining' : 'salary'
+      }));
+      setTransactions(prev => prev.map(t => {
+        const found = categorized.find(c => c.id === t.id);
+        return found || t;
+      }));
+    } finally {
+      setIsAICategorizing(false);
+    }
+  };
+
+  // Group transactions
+  // Use paginated transactions for grouping
+  const transactionsToGroup = paginatedTransactions.length > 0 ? paginatedTransactions : filteredTransactions;
+  
+  const groupedTransactions = (() => {
+    if (groupBy === 'none') return { 'All': transactionsToGroup };
+    
+    const groups: Record<string, Transaction[]> = {};
+    transactionsToGroup.forEach(t => {
+      let key = 'All';
+      if (groupBy === 'date') {
+        key = new Date(t.date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      } else if (groupBy === 'category') {
+        key = getCategoryLabel(t.category);
+      } else if (groupBy === 'merchant') {
+        key = t.merchant || 'Unknown';
+      }
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(t);
+    });
+    return groups;
+  })();
 
   // Sync handlers
   const handleManualSync = async () => {
@@ -374,7 +620,7 @@ const TransactionsPage: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={handleManualSync}
               disabled={syncStatus.syncInProgress}
@@ -390,6 +636,55 @@ const TransactionsPage: React.FC = () => {
             >
               <Filter size={16} />
               Bulk Operations
+            </button>
+
+            <button
+              onClick={() => setShowBulkModal(true)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+            >
+              <Upload size={16} />
+              Bulk Import
+            </button>
+
+            <button
+              onClick={() => handleExport('csv')}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+            >
+              <Download size={16} />
+              Export
+            </button>
+
+            <button
+              onClick={() => setShowFilterSidebar(true)}
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2"
+            >
+              <Filter size={16} />
+              Filter
+            </button>
+
+            <button
+              onClick={() => setShowReceiptUploadModal(true)}
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
+            >
+              <Upload size={16} />
+              Receipt Upload
+            </button>
+
+            <button
+              onClick={() => setShowReceiptScannerModal(true)}
+              className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors flex items-center gap-2"
+            >
+              <Camera size={16} />
+              Receipt Scanner
+            </button>
+
+            <button
+              onClick={handleAICategorize}
+              disabled={isAICategorizing}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <Brain size={16} className={isAICategorizing ? 'animate-pulse' : ''} />
+              AI Categorize
             </button>
             
             <button 
@@ -519,6 +814,21 @@ const TransactionsPage: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Group By */}
+          <div className="mt-4 flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Group By:</label>
+            <select
+              value={groupBy}
+              onChange={(e) => setGroupBy(e.target.value as 'none' | 'date' | 'category' | 'merchant')}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="none">None</option>
+              <option value="date">Date</option>
+              <option value="category">Category</option>
+              <option value="merchant">Merchant</option>
+            </select>
+          </div>
         </motion.div>
 
         {/* Transactions List */}
@@ -541,84 +851,127 @@ const TransactionsPage: React.FC = () => {
 
           <div className="divide-y divide-gray-200">
             <AnimatePresence>
-              {filteredTransactions.map((transaction) => (
-                <motion.div
-                  key={transaction.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="p-6 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div 
-                        className="w-12 h-12 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: getCategoryColor(transaction.category) + '20' }}
-                      >
-                        <div style={{ color: getCategoryColor(transaction.category) }}>
-                          {getCategoryIcon(transaction.category)}
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-gray-900">{transaction.description}</h3>
-                        <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                          <span className="flex items-center gap-1">
-                            <Tag size={14} />
-                            {getCategoryLabel(transaction.category)}
-                          </span>
-                          {transaction.merchant && (
-                            <span className="flex items-center gap-1">
-                              <MapPin size={14} />
-                              {transaction.merchant}
-                            </span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <Calendar size={14} />
-                            {new Date(transaction.date).toLocaleDateString()}
-                          </span>
-                        </div>
-                        {transaction.tags.length > 0 && (
-                          <div className="flex gap-1 mt-2">
-                            {transaction.tags.map(tag => (
-                              <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                                {tag}
-                              </span>
-                            ))}
+              {Object.entries(groupedTransactions).map(([groupName, groupTransactions]) => (
+                <div key={groupName}>
+                  {groupBy !== 'none' && (
+                    <div className="px-6 py-3 bg-gray-100 border-b border-gray-200">
+                      <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <Layers size={16} />
+                        {groupName} ({groupTransactions.length})
+                      </h3>
+                    </div>
+                  )}
+                  {groupTransactions.map((transaction) => (
+                    <motion.div
+                      key={transaction.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="p-6 hover:bg-gray-50 transition-colors group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 flex-1">
+                          <div 
+                            className="w-12 h-12 rounded-lg flex items-center justify-center"
+                            style={{ backgroundColor: getCategoryColor(transaction.category) + '20' }}
+                          >
+                            <div style={{ color: getCategoryColor(transaction.category) }}>
+                              {getCategoryIcon(transaction.category)}
+                            </div>
                           </div>
-                        )}
+                          <div className="flex-1">
+                            <h3 className="font-medium text-gray-900">{transaction.description}</h3>
+                            <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                              <span className="flex items-center gap-1">
+                                <Tag size={14} />
+                                {getCategoryLabel(transaction.category)}
+                              </span>
+                              {transaction.merchant && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin size={14} />
+                                  {transaction.merchant}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1">
+                                <Calendar size={14} />
+                                {new Date(transaction.date).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {transaction.tags.length > 0 && (
+                              <div className="flex gap-1 mt-2">
+                                {transaction.tags.map(tag => (
+                                  <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <p className={`text-lg font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                              {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
+                            </p>
+                            <p className="text-sm text-gray-600 capitalize">
+                              {transaction.type}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => handleEditTransactionModal(transaction)}
+                              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Edit"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleTransactionDelete(transaction.id)}
+                              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleDuplicateTransaction(transaction)}
+                              className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                              title="Duplicate"
+                            >
+                              <Copy size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleMarkAsRecurring(transaction)}
+                              className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                              title="Mark as Recurring"
+                            >
+                              <Repeat size={16} />
+                            </button>
+                            {transaction.receipt_url ? (
+                              <button 
+                                onClick={() => handleViewReceipt(transaction.receipt_url!)}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                title="View Receipt"
+                              >
+                                <Receipt size={16} />
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => {
+                                  setSelectedTransaction(transaction);
+                                  setShowReceiptUploadModal(true);
+                                }}
+                                className="p-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                                title="Upload Receipt"
+                              >
+                                <Upload size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className={`text-lg font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                          {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
-                        </p>
-                        <p className="text-sm text-gray-600 capitalize">
-                          {transaction.type}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => handleEditTransaction(transaction)}
-                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteTransaction(transaction.id)}
-                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                        {transaction.receipt_url && (
-                          <button className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
-                            <Receipt size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
+                    </motion.div>
+                  ))}
+                </div>
               ))}
             </AnimatePresence>
           </div>
@@ -632,11 +985,63 @@ const TransactionsPage: React.FC = () => {
               <p className="text-gray-600">Try adjusting your filters or add a new transaction.</p>
             </div>
           )}
+
+          {/* Pagination Controls */}
+          {filteredTransactions.length > 50 && totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Showing {startIndex} to {endIndex} of {filteredTransactions.length} transactions
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={previousPage}
+                  disabled={!canGoPrevious}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => goToPage(pageNum)}
+                        className={`px-3 py-1 rounded ${
+                          currentPage === pageNum
+                            ? 'bg-blue-600 text-white'
+                            : 'border border-gray-300 hover:bg-gray-100'
+                        } transition-colors`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={nextPage}
+                  disabled={!canGoNext}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </motion.div>
 
         {/* Add Transaction Modal */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -713,7 +1118,7 @@ const TransactionsPage: React.FC = () => {
 
         {/* Edit Transaction Modal */}
         {showEditModal && selectedTransaction && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -797,14 +1202,57 @@ const TransactionsPage: React.FC = () => {
       </div>
 
       {/* Enhanced Transaction Modal */}
-      <TransactionModal
-        isOpen={showTransactionModal}
-        onClose={() => setShowTransactionModal(false)}
-        mode={modalMode}
-        transaction={selectedTransaction || undefined}
-        onSuccess={handleTransactionSuccess}
-        onDelete={handleTransactionDelete}
-      />
+      {modalMode !== 'delete' && (
+        <TransactionModal
+          isOpen={showTransactionModal}
+          onClose={() => {
+            setShowTransactionModal(false);
+            setSelectedTransaction(null);
+          }}
+          mode={modalMode}
+          transaction={selectedTransaction || undefined}
+          onSave={(transaction) => {
+            if (modalMode === 'add') {
+              handleTransactionSuccess(transaction);
+            } else if (modalMode === 'edit') {
+              handleTransactionSuccess(transaction);
+            }
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {modalMode === 'delete' && selectedTransaction && showTransactionModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-md mx-4"
+          >
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Delete Transaction</h2>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete "{selectedTransaction.description}"? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowTransactionModal(false);
+                  setSelectedTransaction(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleConfirmDelete(selectedTransaction)}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Bulk Operations Modal */}
       <BulkOperationsModal
@@ -816,6 +1264,219 @@ const TransactionsPage: React.FC = () => {
         onImport={handleImport}
         onExport={handleExport}
       />
+
+      {/* Filter Sidebar */}
+      {showFilterSidebar && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex">
+          <motion.div
+            initial={{ x: -300 }}
+            animate={{ x: 0 }}
+            exit={{ x: -300 }}
+            className="bg-white w-80 h-full shadow-xl overflow-y-auto"
+          >
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Filters</h2>
+                <button
+                  onClick={() => setShowFilterSidebar(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value as 'all' | 'income' | 'expense')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="all">All Types</option>
+                  <option value="income">Income</option>
+                  <option value="expense">Expense</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="all">All Categories</option>
+                  {selectedType === 'income' || selectedType === 'all' ? (
+                    <optgroup label="Income">
+                      {incomeCategories.map(cat => (
+                        <option key={cat.value} value={cat.value}>{cat.label}</option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                  {selectedType === 'expense' || selectedType === 'all' ? (
+                    <optgroup label="Expenses">
+                      {expenseCategories.map(cat => (
+                        <option key={cat.value} value={cat.value}>{cat.label}</option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'date' | 'amount' | 'description')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="date">Date</option>
+                  <option value="amount">Amount</option>
+                  <option value="description">Description</option>
+                </select>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedType('all');
+                  setSelectedCategory('all');
+                  setSearchTerm('');
+                }}
+                className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
+          </motion.div>
+          <div className="flex-1" onClick={() => setShowFilterSidebar(false)}></div>
+        </div>
+      )}
+
+      {/* Receipt Upload Modal */}
+      {showReceiptUploadModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-md mx-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Upload Receipt</h2>
+              <button onClick={() => setShowReceiptUploadModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <Upload className="mx-auto mb-4 text-gray-400" size={48} />
+                <p className="text-gray-600 mb-2">Drop receipt image here or click to browse</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  id="receipt-upload"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file && selectedTransaction) {
+                      const url = await handleReceiptUpload(file);
+                      const updated = { ...selectedTransaction, receipt_url: url };
+                      setTransactions(prev => prev.map(t => t.id === selectedTransaction.id ? updated : t));
+                      setShowReceiptUploadModal(false);
+                    }
+                  }}
+                />
+                <label
+                  htmlFor="receipt-upload"
+                  className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
+                >
+                  Select File
+                </label>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Receipt Scanner Modal */}
+      {showReceiptScannerModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-md mx-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Receipt Scanner</h2>
+              <button onClick={() => setShowReceiptScannerModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <Camera className="mx-auto mb-4 text-gray-400" size={48} />
+                <p className="text-gray-600 mb-4">Camera access required for receipt scanning</p>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  Open Camera
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 text-center">
+                This feature will use your device camera to scan and extract information from receipts
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Receipt View Modal */}
+      {showReceiptViewModal && selectedReceiptUrl && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Receipt</h2>
+              <button onClick={() => {
+                setShowReceiptViewModal(false);
+                setSelectedReceiptUrl(null);
+              }}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <img
+                src={selectedReceiptUrl}
+                alt="Receipt"
+                className="w-full rounded-lg border border-gray-200"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  const parent = (e.target as HTMLImageElement).parentElement;
+                  if (parent) {
+                    parent.innerHTML = '<p class="text-gray-500 text-center py-8">Receipt image not available</p>';
+                  }
+                }}
+              />
+              <div className="flex gap-2">
+                <a
+                  href={selectedReceiptUrl}
+                  download
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-center"
+                >
+                  Download
+                </a>
+                <button
+                  onClick={() => {
+                    setShowReceiptViewModal(false);
+                    setSelectedReceiptUrl(null);
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

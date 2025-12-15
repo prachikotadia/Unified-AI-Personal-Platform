@@ -31,12 +31,22 @@ export default {
           from: '#8E2DE2',
           to: '#4A00E0',
         },
+        'pink-gradient': {
+          from: '#FF6B9D',
+          to: '#C44569',
+        },
+        'indigo-gradient': {
+          from: '#6366F1',
+          to: '#8B5CF6',
+        },
       },
       backgroundImage: {
         'blue-gradient': 'linear-gradient(135deg, #4A90E2, #007AFF)',
         'green-gradient': 'linear-gradient(135deg, #43E97B, #38F9D7)',
         'orange-gradient': 'linear-gradient(135deg, #FF6A00, #FF8E53)',
         'purple-gradient': 'linear-gradient(135deg, #8E2DE2, #4A00E0)',
+        'pink-gradient': 'linear-gradient(135deg, #FF6B9D, #C44569)',
+        'indigo-gradient': 'linear-gradient(135deg, #6366F1, #8B5CF6)',
         'glass-light': 'rgba(255, 255, 255, 0.15)',
         'glass-dark': 'rgba(0, 0, 0, 0.25)',
       },

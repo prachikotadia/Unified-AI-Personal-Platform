@@ -9,12 +9,27 @@ import {
   Crown,
   AlertCircle,
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  Share2,
+  Plus,
+  Edit,
+  Folder,
+  MoreVertical
 } from 'lucide-react';
 import { marketplaceAPI, Product } from '../../services/api';
 import { useWishlistStore } from '../../store/wishlist';
 import { useCartStore } from '../../store/cart';
 import { useToastHelpers } from '../../components/ui/Toast';
+import ShareWishlistModal from '../../components/marketplace/ShareWishlistModal';
+import CreateListModal from '../../components/marketplace/CreateListModal';
+import MoveToListModal from '../../components/marketplace/MoveToListModal';
+
+interface Wishlist {
+  id: string;
+  name: string;
+  itemCount: number;
+  isDefault: boolean;
+}
 
 const WishlistPage: React.FC = () => {
   const { success, error: showError } = useToastHelpers();
@@ -30,12 +45,27 @@ const WishlistPage: React.FC = () => {
   } = useWishlistStore();
   
   const { 
+    addToCart,
     isLoading: cartLoading 
   } = useCartStore();
 
+  const [wishlists, setWishlists] = useState<Wishlist[]>([
+    { id: 'default', name: 'My Wishlist', itemCount: wishlistItems.length, isDefault: true }
+  ]);
+  const [selectedListId, setSelectedListId] = useState<string>('default');
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showCreateListModal, setShowCreateListModal] = useState(false);
+  const [showMoveToListModal, setShowMoveToListModal] = useState(false);
+  const [selectedItemForMove, setSelectedItemForMove] = useState<any>(null);
+  const [editingListId, setEditingListId] = useState<string | null>(null);
+  const [editingListName, setEditingListName] = useState('');
+
   useEffect(() => {
     fetchWishlist();
-  }, [fetchWishlist]);
+    setWishlists(prev => prev.map(list => 
+      list.id === 'default' ? { ...list, itemCount: wishlistItems.length } : list
+    ));
+  }, [fetchWishlist, wishlistItems.length]);
 
   const handleRemoveFromWishlist = async (productId: number) => {
     try {
@@ -53,6 +83,73 @@ const WishlistPage: React.FC = () => {
     } catch (err) {
       showError('Move Failed', 'Failed to move item to cart');
     }
+  };
+
+  const handleAddAllToCart = async () => {
+    try {
+      for (const item of wishlistItems) {
+        await addToCart(item.product.id, 1);
+      }
+      success('Added to Cart', 'All items have been added to your cart');
+    } catch (err) {
+      showError('Add Failed', 'Failed to add some items to cart');
+    }
+  };
+
+  const handleCreateList = (listData: { name: string; description?: string; isPublic: boolean }) => {
+    const newList: Wishlist = {
+      id: Date.now().toString(),
+      name: listData.name,
+      itemCount: 0,
+      isDefault: false
+    };
+    setWishlists(prev => [...prev, newList]);
+    setSelectedListId(newList.id);
+    success('List Created', `"${listData.name}" has been created`);
+  };
+
+  const handleDeleteList = (listId: string) => {
+    if (window.confirm('Are you sure you want to delete this list?')) {
+      setWishlists(prev => prev.filter(list => list.id !== listId));
+      if (selectedListId === listId) {
+        setSelectedListId('default');
+      }
+      success('List Deleted', 'List has been deleted');
+    }
+  };
+
+  const handleRenameList = (listId: string) => {
+    const list = wishlists.find(l => l.id === listId);
+    if (list) {
+      setEditingListId(listId);
+      setEditingListName(list.name);
+    }
+  };
+
+  const handleSaveRename = () => {
+    if (!editingListName.trim()) {
+      alert('Please enter a list name');
+      return;
+    }
+    setWishlists(prev => prev.map(list => 
+      list.id === editingListId ? { ...list, name: editingListName } : list
+    ));
+    setEditingListId(null);
+    setEditingListName('');
+    success('List Renamed', 'List name has been updated');
+  };
+
+  const handleMoveToList = (listId: string) => {
+    if (selectedItemForMove) {
+      // In a real app, this would move the item to another list
+      success('Item Moved', 'Item has been moved to the selected list');
+      setSelectedItemForMove(null);
+    }
+  };
+
+  const handleMoveToAnotherList = (item: any) => {
+    setSelectedItemForMove(item);
+    setShowMoveToListModal(true);
   };
 
   const renderStars = (rating: number) => {
@@ -91,22 +188,106 @@ const WishlistPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Link 
-              to="/marketplace" 
-              className="p-2 rounded-lg hover:bg-white dark:hover:bg-gray-800 transition-colors"
-            >
-              <ArrowLeft size={24} />
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                My Wishlist
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Save items for later purchase
-              </p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <Link 
+                to="/marketplace" 
+                className="p-2 rounded-lg hover:bg-white dark:hover:bg-gray-800 transition-colors"
+              >
+                <ArrowLeft size={24} />
+              </Link>
+              <div>
+                {editingListId ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={editingListName}
+                      onChange={(e) => setEditingListName(e.target.value)}
+                      onBlur={handleSaveRename}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSaveRename()}
+                      className="text-3xl font-bold bg-transparent border-b-2 border-blue-600 focus:outline-none"
+                      autoFocus
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                      {wishlists.find(l => l.id === selectedListId)?.name || 'My Wishlist'}
+                    </h1>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Save items for later purchase
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {wishlistItems.length > 0 && (
+                <>
+                  <button
+                    onClick={handleAddAllToCart}
+                    disabled={cartLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    <ShoppingCart size={16} />
+                    Add All to Cart
+                  </button>
+                  <button
+                    onClick={() => setShowShareModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <Share2 size={16} />
+                    Share
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => setShowCreateListModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                <Plus size={16} />
+                Create List
+              </button>
             </div>
           </div>
+
+          {/* Wishlist Selector */}
+          {wishlists.length > 1 && (
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              {wishlists.map(list => (
+                <div key={list.id} className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSelectedListId(list.id)}
+                    className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                      selectedListId === list.id
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
+                    }`}
+                  >
+                    {list.name} ({list.itemCount})
+                  </button>
+                  {!list.isDefault && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleRenameList(list.id)}
+                        className="p-1 text-gray-400 hover:text-blue-600"
+                        title="Rename"
+                      >
+                        <Edit size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteList(list.id)}
+                        className="p-1 text-gray-400 hover:text-red-600"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {wishlistItems.length === 0 ? (
@@ -177,37 +358,77 @@ const WishlistPage: React.FC = () => {
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                                        <button 
-                      onClick={() => handleMoveToCart(product.productId)}
-                      disabled={cartLoading || wishlistLoading}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-medium py-2 px-3 rounded-md transition-colors flex items-center justify-center gap-2"
-                    >
-                      {cartLoading || wishlistLoading ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <ShoppingCart size={16} />
-                      )}
-                      {cartLoading || wishlistLoading ? 'Adding...' : 'Add to Cart'}
-                    </button>
-                    <button 
-                      onClick={() => handleRemoveFromWishlist(product.productId)}
-                      disabled={wishlistLoading}
-                      className="p-2 text-gray-400 hover:text-red-500 disabled:text-gray-300 transition-colors"
-                      title="Remove from wishlist"
-                    >
-                      {wishlistLoading ? (
-                        <Loader2 size={18} className="animate-spin" />
-                      ) : (
-                        <Trash2 size={18} />
-                      )}
-                    </button>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => handleMoveToCart(product.productId)}
+                        disabled={cartLoading || wishlistLoading}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-medium py-2 px-3 rounded-md transition-colors flex items-center justify-center gap-2"
+                      >
+                        {cartLoading || wishlistLoading ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <ShoppingCart size={16} />
+                        )}
+                        {cartLoading || wishlistLoading ? 'Adding...' : 'Add to Cart'}
+                      </button>
+                      <button 
+                        onClick={() => handleRemoveFromWishlist(product.productId)}
+                        disabled={wishlistLoading}
+                        className="p-2 text-gray-400 hover:text-red-500 disabled:text-gray-300 transition-colors"
+                        title="Remove from wishlist"
+                      >
+                        {wishlistLoading ? (
+                          <Loader2 size={18} className="animate-spin" />
+                        ) : (
+                          <Trash2 size={18} />
+                        )}
+                      </button>
+                    </div>
+                    {wishlists.length > 1 && (
+                      <button
+                        onClick={() => handleMoveToAnotherList(product)}
+                        className="w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <Folder size={14} />
+                        Move to Another List
+                      </button>
+                    )}
                   </div>
                 </div>
               </motion.div>
             ))}
           </div>
         )}
+
+        {/* Modals */}
+        <ShareWishlistModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          wishlistName={wishlists.find(l => l.id === selectedListId)?.name}
+          wishlistId={selectedListId}
+        />
+
+        <CreateListModal
+          isOpen={showCreateListModal}
+          onClose={() => setShowCreateListModal(false)}
+          onCreate={handleCreateList}
+        />
+
+        <MoveToListModal
+          isOpen={showMoveToListModal}
+          onClose={() => {
+            setShowMoveToListModal(false);
+            setSelectedItemForMove(null);
+          }}
+          productName={selectedItemForMove?.product?.name || ''}
+          wishlists={wishlists.filter(l => l.id !== selectedListId)}
+          onCreateNewList={() => {
+            setShowMoveToListModal(false);
+            setShowCreateListModal(true);
+          }}
+          onMove={handleMoveToList}
+        />
       </div>
     </div>
   );

@@ -32,6 +32,7 @@ const EXPORT_FORMATS = [
   { value: 'csv', label: 'CSV', icon: <FileSpreadsheet size={20} />, description: 'Spreadsheet format' },
   { value: 'pdf', label: 'PDF', icon: <File size={20} />, description: 'Document format' },
   { value: 'excel', label: 'Excel', icon: <FileSpreadsheet size={20} />, description: 'Excel format' },
+  { value: 'json', label: 'JSON', icon: <FileText size={20} />, description: 'JSON data format' },
 ];
 
 const EXPORT_TYPES = [
@@ -79,6 +80,8 @@ const ExportShareModal: React.FC<ExportShareModalProps> = ({ isOpen, onClose, ty
         data = generatePDFData(exportType);
       } else if (exportFormat === 'excel') {
         data = generateExcelData(exportType);
+      } else if (exportFormat === 'json') {
+        data = generateJSONData(exportType);
       }
 
       // Create and download file
@@ -154,6 +157,33 @@ Date,Description,Category,Amount,Type
 2024-01-22,Online Shopping,Shopping,-67.45,Expense`;
   };
 
+  const generateJSONData = (type: string) => {
+    const mockData = {
+      type: type,
+      generated_at: new Date().toISOString(),
+      date_range: {
+        start: getDateRangeStart(),
+        end: getDateRangeEnd()
+      },
+      transactions: [
+        { date: '2024-01-15', description: 'Grocery Shopping', category: 'Food & Dining', amount: -125.50, type: 'Expense' },
+        { date: '2024-01-16', description: 'Salary Deposit', category: 'Income', amount: 3500.00, type: 'Income' },
+        { date: '2024-01-17', description: 'Gas Station', category: 'Transportation', amount: -45.20, type: 'Expense' },
+        { date: '2024-01-18', description: 'Netflix Subscription', category: 'Entertainment', amount: -15.99, type: 'Expense' },
+        { date: '2024-01-19', description: 'Freelance Payment', category: 'Income', amount: 500.00, type: 'Income' },
+        { date: '2024-01-20', description: 'Restaurant', category: 'Food & Dining', amount: -85.30, type: 'Expense' },
+        { date: '2024-01-21', description: 'Electric Bill', category: 'Utilities', amount: -120.00, type: 'Expense' },
+        { date: '2024-01-22', description: 'Online Shopping', category: 'Shopping', amount: -67.45, type: 'Expense' }
+      ],
+      summary: {
+        total_income: 4000.00,
+        total_expenses: 459.44,
+        net_savings: 3540.56
+      }
+    };
+    return JSON.stringify(mockData, null, 2);
+  };
+
   const getMimeType = (format: string) => {
     switch (format) {
       case 'csv':
@@ -162,6 +192,8 @@ Date,Description,Category,Amount,Type
         return 'application/pdf';
       case 'excel':
         return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      case 'json':
+        return 'application/json';
       default:
         return 'text/plain';
     }
@@ -241,7 +273,7 @@ Date,Description,Category,Amount,Type
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
           onClick={onClose}
         >
           <motion.div
@@ -309,7 +341,7 @@ Date,Description,Category,Amount,Type
                   {/* Export Format */}
                   <div>
                     <h3 className="text-sm font-medium text-gray-900 mb-3">Export Format</h3>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {EXPORT_FORMATS.map((format) => (
                         <button
                           key={format.value}

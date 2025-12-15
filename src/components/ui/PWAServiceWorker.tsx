@@ -19,7 +19,7 @@ const PWAServiceWorker: React.FC = () => {
       navigator.serviceWorker
         .register('/sw.js')
         .then((reg) => {
-          console.log('Service Worker registered successfully:', reg);
+          // Silently register - don't log to console
           setRegistration(reg);
           
           // Check for updates
@@ -35,7 +35,7 @@ const PWAServiceWorker: React.FC = () => {
           });
         })
         .catch((error) => {
-          console.error('Service Worker registration failed:', error);
+          // Silently handle registration failures
         });
     }
 

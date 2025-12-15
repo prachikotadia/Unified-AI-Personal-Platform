@@ -16,10 +16,12 @@ import {
   Building,
   User,
   Phone,
-  Mail
+  Mail,
+  Star
 } from 'lucide-react';
 import { useToastHelpers } from '../../components/ui/Toast';
 import { useAuthStore } from '../../store/auth';
+import AddressModal from '../../components/marketplace/AddressModal';
 
 interface Address {
   id: string;
@@ -86,22 +88,9 @@ const AddressPage: React.FC = () => {
   ]);
   
   const [selectedAddressId, setSelectedAddressId] = useState<string>('1');
-  const [showAddForm, setShowAddForm] = useState<boolean>(false);
+  const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  
-  const [formData, setFormData] = useState<AddressFormData>({
-    type: 'home',
-    name: '',
-    phone: '',
-    email: '',
-    addressLine1: '',
-    addressLine2: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: 'United States'
-  });
 
   useEffect(() => {
     const orderData = sessionStorage.getItem('checkoutOrderData');
@@ -111,63 +100,52 @@ const AddressPage: React.FC = () => {
     }
   }, [navigate, showError]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const validateForm = (): boolean => {
-    const requiredFields = ['name', 'phone', 'email', 'addressLine1', 'city', 'state', 'zipCode'];
-    const missingFields = requiredFields.filter(field => !formData[field as keyof AddressFormData]);
-    
-    if (missingFields.length > 0) {
-      showError('Missing required fields', `Please fill in: ${missingFields.join(', ')}`);
-      return false;
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      showError('Invalid email', 'Please enter a valid email address');
-      return false;
-    }
-
-    // Phone validation
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-    const cleanPhone = formData.phone.replace(/[\s\-\(\)]/g, '');
-    if (!phoneRegex.test(cleanPhone)) {
-      showError('Invalid phone number', 'Please enter a valid phone number');
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleAddAddress = async (): Promise<void> => {
-    if (!validateForm()) return;
-
+  const handleSaveAddress = async (addressData: Omit<Address, 'id'>): Promise<void> => {
     setIsSubmitting(true);
     
     try {
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      const newAddress: Address = {
-        id: Date.now().toString(),
-        ...formData,
-        isDefault: addresses.length === 0
-      };
+      if (editingAddress) {
+        // Update existing address
+        setAddresses(prev => prev.map(addr => {
+          if (addr.id === editingAddress.id) {
+            const updated = { ...addr, ...addressData };
+            // If setting as default, unset others
+            if (addressData.isDefault) {
+              return updated;
+            }
+            return updated;
+          }
+          // Unset other defaults if this is being set as default
+          if (addressData.isDefault) {
+            return { ...addr, isDefault: false };
+          }
+          return addr;
+        }));
+        success('Address updated successfully', 'Your address has been updated');
+      } else {
+        // Add new address
+        const newAddress: Address = {
+          id: Date.now().toString(),
+          ...addressData,
+          isDefault: addresses.length === 0 || addressData.isDefault
+        };
 
-      setAddresses(prev => [...prev, newAddress]);
-      setSelectedAddressId(newAddress.id);
-      setShowAddForm(false);
-      resetForm();
-      success('Address added successfully', 'Your new address has been saved');
+        // If setting as default, unset others
+        if (addressData.isDefault) {
+          setAddresses(prev => prev.map(addr => ({ ...addr, isDefault: false })));
+        }
+
+        setAddresses(prev => [...prev, newAddress]);
+        setSelectedAddressId(newAddress.id);
+        success('Address added successfully', 'Your new address has been saved');
+      }
+
+      setEditingAddress(null);
+      setShowAddressModal(false);
     } catch (error) {
-      showError('Failed to add address', 'Please try again');
+      showError('Failed to save address', 'Please try again');
     } finally {
       setIsSubmitting(false);
     }
@@ -175,44 +153,19 @@ const AddressPage: React.FC = () => {
 
   const handleEditAddress = (address: Address): void => {
     setEditingAddress(address);
-    setFormData({
-      type: address.type,
-      name: address.name,
-      phone: address.phone,
-      email: address.email,
-      addressLine1: address.addressLine1,
-      addressLine2: address.addressLine2 || '',
-      city: address.city,
-      state: address.state,
-      zipCode: address.zipCode,
-      country: address.country
-    });
-    setShowAddForm(true);
+    setShowAddressModal(true);
   };
 
-  const handleUpdateAddress = async (): Promise<void> => {
-    if (!editingAddress || !validateForm()) return;
-
-    setIsSubmitting(true);
-    
+  const handleSetAsDefault = async (addressId: string): Promise<void> => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setAddresses(prev => prev.map(addr => 
-        addr.id === editingAddress.id 
-          ? { ...addr, ...formData }
-          : addr
-      ));
-
-      setEditingAddress(null);
-      setShowAddForm(false);
-      resetForm();
-      success('Address updated successfully', 'Your address has been updated');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setAddresses(prev => prev.map(addr => ({
+        ...addr,
+        isDefault: addr.id === addressId
+      })));
+      success('Default address updated', 'Default address has been changed');
     } catch (error) {
-      showError('Failed to update address', 'Please try again');
-    } finally {
-      setIsSubmitting(false);
+      showError('Failed to update default address', 'Please try again');
     }
   };
 
@@ -251,26 +204,11 @@ const AddressPage: React.FC = () => {
     // Store address data in session storage
     sessionStorage.setItem('checkoutAddressData', JSON.stringify(selectedAddress));
     console.log('AddressPage: Address data stored:', selectedAddress);
-    navigate('/marketplace/checkout/review');
+    navigate('/marketplace/checkout/payment');
   };
 
   const handleBack = (): void => {
-    navigate('/marketplace/checkout');
-  };
-
-  const resetForm = (): void => {
-    setFormData({
-      type: 'home',
-      name: '',
-      phone: '',
-      email: '',
-      addressLine1: '',
-      addressLine2: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      country: 'United States'
-    });
+    navigate('/marketplace/cart');
   };
 
   const getAddressIcon = (type: string): JSX.Element => {
@@ -341,7 +279,10 @@ const AddressPage: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">Select Delivery Address</h2>
                 <button
-                  onClick={() => setShowAddForm(true)}
+                  onClick={() => {
+                    setEditingAddress(null);
+                    setShowAddressModal(true);
+                  }}
                   className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center"
                 >
                   <Plus className="w-4 h-4 mr-1" />
@@ -392,12 +333,25 @@ const AddressPage: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
+                        {!address.isDefault && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSetAsDefault(address.id);
+                            }}
+                            className="text-gray-400 hover:text-yellow-600 transition-colors"
+                            title="Set as Default"
+                          >
+                            <Star className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleEditAddress(address);
                           }}
                           className="text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Edit"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
@@ -408,6 +362,7 @@ const AddressPage: React.FC = () => {
                               handleDeleteAddress(address.id);
                             }}
                             className="text-gray-400 hover:text-red-600 transition-colors"
+                            title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -420,200 +375,6 @@ const AddressPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Add/Edit Address Form */}
-          {showAddForm && (
-            <div className="lg:col-span-2">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-lg shadow-sm border p-6"
-              >
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                  {editingAddress ? 'Edit Address' : 'Add New Address'}
-                </h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Address Type *
-                    </label>
-                    <select
-                      name="type"
-                      value={formData.type}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="home">Home</option>
-                      <option value="work">Work</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Full Name *
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder={user?.displayName || user?.username || "Full Name"}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone Number *
-                    </label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="+1 (555) 123-4567"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email Address *
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder={user?.email || "email@example.com"}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Address Line 1 *
-                    </label>
-                    <input
-                      type="text"
-                      name="addressLine1"
-                      value={formData.addressLine1}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="123 Main Street"
-                    />
-                  </div>
-                  
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Address Line 2
-                    </label>
-                    <input
-                      type="text"
-                      name="addressLine2"
-                      value={formData.addressLine2}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Apt 4B, Suite 200"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      City *
-                    </label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="New York"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      State *
-                    </label>
-                    <input
-                      type="text"
-                      name="state"
-                      value={formData.state}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="NY"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      ZIP Code *
-                    </label>
-                    <input
-                      type="text"
-                      name="zipCode"
-                      value={formData.zipCode}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="10001"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Country *
-                    </label>
-                    <input
-                      type="text"
-                      name="country"
-                      value={formData.country}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="United States"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-4 mt-6">
-                  <button
-                    onClick={editingAddress ? handleUpdateAddress : handleAddAddress}
-                    disabled={isSubmitting}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        {editingAddress ? 'Updating...' : 'Adding...'}
-                      </>
-                    ) : (
-                      editingAddress ? 'Update Address' : 'Add Address'
-                    )}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowAddForm(false);
-                      setEditingAddress(null);
-                      resetForm();
-                    }}
-                    className="text-gray-600 hover:text-gray-800 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
 
           {/* Continue Button */}
           <div className="lg:col-span-1">
@@ -652,6 +413,17 @@ const AddressPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Address Modal */}
+        <AddressModal
+          isOpen={showAddressModal}
+          onClose={() => {
+            setShowAddressModal(false);
+            setEditingAddress(null);
+          }}
+          onSave={handleSaveAddress}
+          editingAddress={editingAddress}
+        />
       </div>
     </div>
   );

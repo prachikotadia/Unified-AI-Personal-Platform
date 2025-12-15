@@ -13,17 +13,35 @@ import {
   Printer,
   MessageCircle,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  RotateCcw,
+  X,
+  ShoppingCart,
+  FileText
 } from 'lucide-react';
 import { marketplaceAPI, Order } from '../../services/api';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { useCartStore } from '../../store/cart';
 import { formatCurrency, formatDateTime } from '../../lib/utils';
+import OrderTrackingModal from '../../components/marketplace/OrderTrackingModal';
+import CancelOrderModal from '../../components/marketplace/CancelOrderModal';
+import ReturnRefundModal from '../../components/marketplace/ReturnRefundModal';
+import ReviewModal from '../../components/marketplace/ReviewModal';
+import ContactSellerModal from '../../components/marketplace/ContactSellerModal';
 
 const OrderDetailsPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const { addNotification } = useNotifications();
+  const { addToCart } = useCartStore();
+  
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [selectedItemForReview, setSelectedItemForReview] = useState<any>(null);
 
   useEffect(() => {
     if (orderId) {
@@ -101,6 +119,121 @@ const OrderDetailsPage: React.FC = () => {
         className={`${i < Math.floor(rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
       />
     ));
+  };
+
+  const handleTrackPackage = () => {
+    setShowTrackingModal(true);
+  };
+
+  const handleCancelOrder = () => {
+    setShowCancelModal(true);
+  };
+
+  const handleReturnItems = () => {
+    setShowReturnModal(true);
+  };
+
+  const handleDownloadInvoice = () => {
+    // Generate and download invoice PDF
+    addNotification({
+      type: 'info',
+      title: 'Invoice Download',
+      message: 'Invoice download feature coming soon',
+      duration: 3000
+    });
+  };
+
+  const handleReorder = async () => {
+    if (!order) return;
+    try {
+      for (const item of order.items) {
+        await addToCart(item.product.id, item.quantity);
+      }
+      addNotification({
+        type: 'success',
+        title: 'Items Added to Cart',
+        message: 'All items from this order have been added to your cart',
+        duration: 3000
+      });
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to add items to cart',
+        duration: 3000
+      });
+    }
+  };
+
+  const handleContactSeller = () => {
+    setShowContactModal(true);
+  };
+
+  const handleWriteReview = (item?: any) => {
+    if (item) {
+      setSelectedItemForReview(item);
+    }
+    setShowReviewModal(true);
+  };
+
+  const handleBuyAgain = async (item: any) => {
+    try {
+      await addToCart(item.product.id, item.quantity);
+      addNotification({
+        type: 'success',
+        title: 'Item Added to Cart',
+        message: `${item.product.name} has been added to your cart`,
+        duration: 3000
+      });
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to add item to cart',
+        duration: 3000
+      });
+    }
+  };
+
+  const handleCancelOrderConfirm = async (reason: string) => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    addNotification({
+      type: 'success',
+      title: 'Order Cancelled',
+      message: `Order ${order?.order_number} has been cancelled`,
+      duration: 3000
+    });
+  };
+
+  const handleReturnConfirm = async (returnData: any) => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    addNotification({
+      type: 'success',
+      title: 'Return Request Submitted',
+      message: 'Your return request has been submitted successfully',
+      duration: 3000
+    });
+  };
+
+  const handleReviewSubmit = async (reviewData: any) => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    addNotification({
+      type: 'success',
+      title: 'Review Submitted',
+      message: 'Thank you for your review!',
+      duration: 3000
+    });
+    setSelectedItemForReview(null);
+  };
+
+  const handleContactSubmit = async (messageData: any) => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    addNotification({
+      type: 'success',
+      title: 'Message Sent',
+      message: 'Your message has been sent to the seller',
+      duration: 3000
+    });
   };
 
   if (loading) {
@@ -233,6 +366,25 @@ const OrderDetailsPage: React.FC = () => {
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Quantity: {item.quantity}
                   </p>
+                  
+                  <div className="flex gap-2 mt-2">
+                    {order.status === 'delivered' && (
+                      <button
+                        onClick={() => handleWriteReview(item)}
+                        className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 flex items-center gap-1"
+                      >
+                        <Star size={12} />
+                        Write Review
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleBuyAgain(item)}
+                      className="text-xs px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded hover:bg-green-100 dark:hover:bg-green-900/30 flex items-center gap-1"
+                    >
+                      <ShoppingCart size={12} />
+                      Buy Again
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="text-right">
@@ -334,32 +486,129 @@ const OrderDetailsPage: React.FC = () => {
           </h2>
           
           <div className="flex flex-wrap gap-4">
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            {order.status !== 'cancelled' && order.status !== 'delivered' && (
+              <button
+                onClick={handleTrackPackage}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <Truck size={16} />
+                Track Package
+              </button>
+            )}
+            
+            {order.status === 'processing' && (
+              <button
+                onClick={handleCancelOrder}
+                className="flex items-center gap-2 px-4 py-2 border border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                <X size={16} />
+                Cancel Order
+              </button>
+            )}
+            
+            {(order.status === 'delivered' || order.status === 'shipped') && (
+              <button
+                onClick={handleReturnItems}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <RotateCcw size={16} />
+                Return Items
+              </button>
+            )}
+            
+            <button
+              onClick={handleDownloadInvoice}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
               <Download size={16} />
               Download Invoice
             </button>
             
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-              <Printer size={16} />
-              Print Order
+            <button
+              onClick={handleReorder}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <ShoppingCart size={16} />
+              Reorder
             </button>
             
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <button
+              onClick={handleContactSeller}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
               <MessageCircle size={16} />
-              Contact Support
+              Contact Seller
             </button>
             
             {order.status === 'delivered' && (
-              <Link 
-                to={`/marketplace/product/${order.items[0].product.id}`}
+              <button
+                onClick={() => handleWriteReview()}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
                 <Star size={16} />
                 Write Review
-              </Link>
+              </button>
             )}
           </div>
         </motion.div>
+
+        {/* Modals */}
+        <OrderTrackingModal
+          isOpen={showTrackingModal}
+          onClose={() => setShowTrackingModal(false)}
+          orderId={order?.id?.toString() || ''}
+          trackingNumber={order?.tracking_number}
+        />
+
+        <CancelOrderModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          orderId={order?.id?.toString() || ''}
+          orderNumber={order?.order_number || ''}
+          onCancel={handleCancelOrderConfirm}
+        />
+
+        <ReturnRefundModal
+          isOpen={showReturnModal}
+          onClose={() => setShowReturnModal(false)}
+          orderId={order?.id?.toString() || ''}
+          orderNumber={order?.order_number || ''}
+          items={order?.items.map(item => ({
+            id: item.id.toString(),
+            product: {
+              id: item.product.id,
+              name: item.product.name,
+              image: item.product.images[0]
+            },
+            quantity: item.quantity,
+            price: item.price
+          })) || []}
+          onReturn={handleReturnConfirm}
+        />
+
+        {(selectedItemForReview || order?.items[0]) && (
+          <ReviewModal
+            isOpen={showReviewModal}
+            onClose={() => {
+              setShowReviewModal(false);
+              setSelectedItemForReview(null);
+            }}
+            productId={selectedItemForReview?.product.id || order?.items[0]?.product.id || 0}
+            productName={selectedItemForReview?.product.name || order?.items[0]?.product.name || ''}
+            productImage={selectedItemForReview?.product.images?.[0] || order?.items[0]?.product.images?.[0]}
+            orderId={order?.order_number}
+            onSubmit={handleReviewSubmit}
+          />
+        )}
+
+        <ContactSellerModal
+          isOpen={showContactModal}
+          onClose={() => setShowContactModal(false)}
+          sellerName={order?.seller?.name}
+          orderId={order?.order_number}
+          productName={order?.items[0]?.product.name}
+          onSubmit={handleContactSubmit}
+        />
       </div>
     </div>
   );

@@ -8,11 +8,17 @@ import structlog
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 
-from app.services.langchain_service import langchain_service
 from app.services.ai_service import ai_service
 from app.cache import redis_cache
 
 logger = structlog.get_logger()
+
+# LangChain service - optional import
+try:
+    from app.services.langchain_service import langchain_service
+except ImportError as e:
+    logger.warning(f"LangChain service not available: {e}")
+    langchain_service = None
 
 class AIInsightsService:
     def __init__(self):
@@ -208,8 +214,11 @@ class AIInsightsService:
             Make it specific, actionable, and engaging.
             """
             
-            content = await langchain_service.generate_response(prompt, context)
-            return content
+            if langchain_service:
+                content = await langchain_service.generate_response(prompt, context)
+                return content
+            else:
+                return self._generate_fallback_content(template, module, category)
             
         except Exception as e:
             logger.error(f"Error generating insight content: {e}")

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, Bell, Shield, CreditCard, TrendingUp, DollarSign, Eye, EyeOff } from 'lucide-react';
 
@@ -10,7 +10,19 @@ interface FinanceSettingsModalProps {
 
 const FinanceSettingsModal: React.FC<FinanceSettingsModalProps> = ({ isOpen, onClose, onSave }) => {
   const [activeTab, setActiveTab] = useState('general');
-  const [settings, setSettings] = useState({
+  
+  // Load settings from localStorage on mount
+  const loadSettings = () => {
+    try {
+      const saved = localStorage.getItem('financeSettings');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {
+      console.error('Failed to load finance settings:', error);
+    }
+    // Default settings
+    return {
     // General Settings
     currency: 'USD',
     dateFormat: 'MM/DD/YYYY',
@@ -39,7 +51,17 @@ const FinanceSettingsModal: React.FC<FinanceSettingsModalProps> = ({ isOpen, onC
     compactMode: false,
     showCharts: true,
     showAnalytics: true,
-  });
+    };
+  };
+
+  const [settings, setSettings] = useState(loadSettings());
+
+  // Load settings when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setSettings(loadSettings());
+    }
+  }, [isOpen]);
 
   const handleSettingChange = (key: string, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }));
@@ -74,7 +96,7 @@ const FinanceSettingsModal: React.FC<FinanceSettingsModalProps> = ({ isOpen, onC
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black bg-opacity-50"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={onClose}
           />
           

@@ -20,14 +20,22 @@ export function formatDate(date: Date | string): string {
   }).format(new Date(date))
 }
 
-export function formatDateTime(date: Date | string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(date))
+export function formatDateTime(date: Date | string | undefined | null): string {
+  if (!date) return ''
+  try {
+    const dateObj = date instanceof Date ? date : new Date(date)
+    if (isNaN(dateObj.getTime())) return ''
+    
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(dateObj)
+  } catch {
+    return ''
+  }
 }
 
 export function generateId(): string {

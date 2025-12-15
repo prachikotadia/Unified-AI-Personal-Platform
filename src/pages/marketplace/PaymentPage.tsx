@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
-  ArrowLeft, 
+  ArrowLeft,
+  ArrowRight,
   Package, 
   Truck, 
   CreditCard,
@@ -11,26 +12,48 @@ import {
   Lock,
   DollarSign,
   CreditCard as CreditCardIcon,
-  Wallet
+  Wallet,
+  Plus,
+  Edit,
+  Trash2,
+  Star
 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth';
-// import { useToastHelpers } from '../../components/ui/Toast';
+import { useToastHelpers } from '../../components/ui/Toast';
+import PaymentMethodModal from '../../components/marketplace/PaymentMethodModal';
+
+interface PaymentMethod {
+  id: string;
+  type: 'card' | 'wallet' | 'cod';
+  cardNumber?: string;
+  cardholderName?: string;
+  expiryMonth?: string;
+  expiryYear?: string;
+  last4?: string;
+  brand?: string;
+  isDefault: boolean;
+}
 
 const PaymentPage = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  // const { success, error: showError } = useToastHelpers();
+  const { success, error: showError } = useToastHelpers();
   
-  // Simple toast functions for now
-  const success = (title: string, message: string) => {
-    console.log('SUCCESS:', title, message);
-    alert(`${title}: ${message}`);
-  };
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
+    {
+      id: '1',
+      type: 'card',
+      last4: '4242',
+      brand: 'Visa',
+      cardholderName: user?.displayName || user?.username || 'User',
+      expiryMonth: '12',
+      expiryYear: '2025',
+      isDefault: true
+    }
+  ]);
   
-  const showError = (title: string, message: string) => {
-    console.log('ERROR:', title, message);
-    alert(`ERROR: ${title} - ${message}`);
-  };
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null);
   
   // Initialize with default mock data to prevent null errors
   const defaultOrderData = {
@@ -74,7 +97,7 @@ const PaymentPage = () => {
 
   const [orderData, setOrderData] = useState<any>(defaultOrderData);
   const [addressData, setAddressData] = useState<any>(defaultAddressData);
-  const [paymentMethod, setPaymentMethod] = useState('cod');
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string>('1');
   const [isProcessing, setIsProcessing] = useState(false);
   
   const [cardData, setCardData] = useState({
@@ -85,57 +108,126 @@ const PaymentPage = () => {
     cvv: ''
   });
 
+  const selectedPaymentMethod = paymentMethods.find(pm => pm.id === selectedPaymentMethodId) || paymentMethods[0];
+  const paymentMethod = selectedPaymentMethod?.type || 'card';
+
+  const handleSavePaymentMethod = async (methodData: Omit<PaymentMethod, 'id'>) => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (editingMethod) {
+        setPaymentMethods(prev => prev.map(pm => {
+          if (pm.id === editingMethod.id) {
+            const updated = { ...pm, ...methodData };
+            return updated;
+          }
+          if (methodData.isDefault) {
+            return { ...pm, isDefault: false };
+          }
+          return pm;
+        }));
+        success('Payment method updated', 'Payment method has been updated');
+      } else {
+        const newMethod: PaymentMethod = {
+          id: Date.now().toString(),
+          ...methodData,
+          isDefault: paymentMethods.length === 0 || methodData.isDefault
+        };
+        
+        if (methodData.isDefault) {
+          setPaymentMethods(prev => prev.map(pm => ({ ...pm, isDefault: false })));
+        }
+        setPaymentMethods(prev => [...prev, newMethod]);
+        setSelectedPaymentMethodId(newMethod.id);
+        success('Payment method added', 'New payment method has been added');
+      }
+      
+      setEditingMethod(null);
+      setShowPaymentModal(false);
+    } catch (error) {
+      showError('Failed to save payment method', 'Please try again');
+    }
+  };
+
+  const handleEditPaymentMethod = (method: PaymentMethod) => {
+    setEditingMethod(method);
+    setShowPaymentModal(true);
+  };
+
+  const handleDeletePaymentMethod = async (methodId: string) => {
+    if (paymentMethods.length <= 1) {
+      showError('Cannot delete', 'You must have at least one payment method');
+      return;
+    }
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setPaymentMethods(prev => prev.filter(pm => pm.id !== methodId));
+      if (selectedPaymentMethodId === methodId) {
+        setSelectedPaymentMethodId(paymentMethods[0]?.id || '');
+      }
+      success('Payment method deleted', 'Payment method has been removed');
+    } catch (error) {
+      showError('Failed to delete', 'Please try again');
+    }
+  };
+
+  const handleSetAsDefault = async (methodId: string) => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setPaymentMethods(prev => prev.map(pm => ({
+        ...pm,
+        isDefault: pm.id === methodId
+      })));
+      success('Default payment method updated', 'Default payment method has been changed');
+    } catch (error) {
+      showError('Failed to update', 'Please try again');
+    }
+  };
+
   useEffect(() => {
-    console.log('=== PAYMENT PAGE DEBUG START ===');
-    console.log('PaymentPage: Component mounted');
+    const isDev = (import.meta as any).env?.MODE === 'development';
+    
+    if (isDev) {
+      console.log('=== PAYMENT PAGE DEBUG START ===');
+      console.log('PaymentPage: Component mounted');
+    }
     
     try {
       // Get order and address data from session storage
       const orderDataStr = sessionStorage.getItem('checkoutOrderData');
       const addressDataStr = sessionStorage.getItem('checkoutAddressData');
       
-      console.log('PaymentPage: Raw order data from session storage:', orderDataStr);
-      console.log('PaymentPage: Raw address data from session storage:', addressDataStr);
-      
-      // Debug: Log all session storage keys and values
-      console.log('PaymentPage: All session storage keys:', Object.keys(sessionStorage));
-      console.log('PaymentPage: Session storage length:', sessionStorage.length);
-      
       // Try to use session storage data if available, otherwise keep default mock data
       if (orderDataStr && addressDataStr) {
         try {
-          console.log('PaymentPage: Attempting to parse session storage data...');
           const parsedOrderData = JSON.parse(orderDataStr);
           const parsedAddressData = JSON.parse(addressDataStr);
-          
-          console.log('PaymentPage: Parsed order data:', parsedOrderData);
-          console.log('PaymentPage: Parsed address data:', parsedAddressData);
-          console.log('PaymentPage: Checkout date from session storage:', parsedOrderData.checkoutDate);
-          console.log('PaymentPage: Checkout date formatted:', parsedOrderData.checkoutDate ? new Date(parsedOrderData.checkoutDate).toLocaleString() : 'Not available');
           
           setOrderData(parsedOrderData);
           setAddressData(parsedAddressData);
           
-          console.log('PaymentPage: Session storage data loaded successfully');
+          if (isDev) {
+            console.log('PaymentPage: Session storage data loaded successfully');
+          }
         } catch (parseError) {
-          console.error('PaymentPage: ERROR parsing session storage data:', parseError);
-          console.log('PaymentPage: Using default mock data due to parsing error');
+          if (isDev) {
+            console.error('PaymentPage: ERROR parsing session storage data:', parseError);
+          }
         }
-      } else {
-        console.log('PaymentPage: No session storage data found, using default mock data');
       }
     } catch (error) {
-      console.error('PaymentPage: ERROR in useEffect:', error);
-      console.log('PaymentPage: Using default mock data due to error');
+      if (isDev) {
+        console.error('PaymentPage: ERROR in useEffect:', error);
+      }
     }
     
-    console.log('PaymentPage: Current state after useEffect:');
-    console.log('PaymentPage: orderData state:', orderData);
-    console.log('PaymentPage: addressData state:', addressData);
-    console.log('=== PAYMENT PAGE DEBUG END ===');
+    if (isDev) {
+      console.log('=== PAYMENT PAGE DEBUG END ===');
+    }
   }, []);
 
-  const paymentMethods = [
+  const paymentMethodTypes = [
     {
       id: 'cod',
       name: 'Cash on Delivery (COD)',
@@ -211,7 +303,7 @@ const PaymentPage = () => {
   };
 
   const getPaymentFee = () => {
-    const method = paymentMethods.find(m => m.id === paymentMethod);
+    const method = paymentMethodTypes.find(m => m.id === paymentMethod);
     return method?.fee || 0;
   };
 
@@ -220,49 +312,6 @@ const PaymentPage = () => {
     return (orderData.total || 0) + getPaymentFee();
   };
 
-  const handlePlaceOrder = async () => {
-    if (paymentMethod === 'card' && !validateCardData()) {
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Create order object
-      const order = {
-        id: Date.now().toString(),
-        items: orderData?.items || [],
-        address: addressData || {},
-        paymentMethod,
-        paymentFee: getPaymentFee(),
-        subtotal: orderData?.subtotal || 0,
-        shipping: orderData?.shipping || 0,
-        tax: orderData?.tax || 0,
-        total: getTotal(),
-        status: 'confirmed',
-        createdAt: new Date().toISOString(),
-        estimatedDelivery: getEstimatedDelivery()
-      };
-
-      // Store order in session storage for success page
-      sessionStorage.setItem('lastOrder', JSON.stringify(order));
-      
-      // Clear checkout data
-      sessionStorage.removeItem('checkoutOrderData');
-      sessionStorage.removeItem('checkoutAddressData');
-
-      success('Order placed successfully!', 'Your order has been confirmed');
-      
-      navigate('/marketplace/checkout/success');
-    } catch (error) {
-      showError('Payment failed', 'There was an error processing your payment. Please try again.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const getEstimatedDelivery = () => {
     const shippingMethod = orderData?.shippingMethod || 'standard';
@@ -292,24 +341,52 @@ const PaymentPage = () => {
   };
 
   const handleBack = () => {
+    navigate('/marketplace/checkout/address');
+  };
+
+  const handleContinue = () => {
+    if (!selectedPaymentMethodId) {
+      showError('Please select a payment method', 'You must select a payment method');
+      return;
+    }
+
+    // Validate card data if using card payment
+    if (paymentMethod === 'card') {
+      // If using saved card, only need CVV
+      if (selectedPaymentMethod.last4) {
+        if (!cardData.cvv || cardData.cvv.length < 3) {
+          showError('CVV required', 'Please enter the CVV for your saved card');
+          return;
+        }
+      } else {
+        // New card, validate all fields
+        if (!validateCardData()) {
+          return;
+        }
+      }
+    }
+
+    // Store payment method and card data in session storage
+    const paymentData = {
+      ...selectedPaymentMethod,
+      cvv: paymentMethod === 'card' ? cardData.cvv : undefined
+    };
+    sessionStorage.setItem('checkoutPaymentMethod', JSON.stringify(paymentData));
     navigate('/marketplace/checkout/review');
   };
 
-  console.log('=== PAYMENT PAGE RENDER DEBUG ===');
-  console.log('PaymentPage: Render state - orderData:', orderData);
-  console.log('PaymentPage: Render state - addressData:', addressData);
-  console.log('PaymentPage: orderData type:', typeof orderData);
-  console.log('PaymentPage: addressData type:', typeof addressData);
-  console.log('PaymentPage: orderData is null:', orderData === null);
-  console.log('PaymentPage: addressData is null:', addressData === null);
-  if (orderData) {
-    console.log('PaymentPage: orderData.subtotal:', orderData.subtotal);
-    console.log('PaymentPage: orderData.shipping:', orderData.shipping);
-    console.log('PaymentPage: orderData.tax:', orderData.tax);
-    console.log('PaymentPage: orderData.checkoutDate:', orderData.checkoutDate);
-    console.log('PaymentPage: Checkout date formatted:', orderData.checkoutDate ? new Date(orderData.checkoutDate).toLocaleString() : 'Not available');
+  const isDev = (import.meta as any).env?.MODE === 'development';
+  if (isDev) {
+    console.log('=== PAYMENT PAGE RENDER DEBUG ===');
+    console.log('PaymentPage: Render state - orderData:', orderData);
+    console.log('PaymentPage: Render state - addressData:', addressData);
+    if (orderData) {
+      console.log('PaymentPage: orderData.subtotal:', orderData.subtotal);
+      console.log('PaymentPage: orderData.shipping:', orderData.shipping);
+      console.log('PaymentPage: orderData.tax:', orderData.tax);
+    }
+    console.log('=== PAYMENT PAGE RENDER DEBUG END ===');
   }
-  console.log('=== PAYMENT PAGE RENDER DEBUG END ===');
 
   // Safety check - if orderData is still null, show loading
   if (!orderData) {
@@ -381,44 +458,110 @@ const PaymentPage = () => {
           <div className="lg:col-span-2 space-y-6">
             {/* Payment Method Selection */}
             <div className="bg-white rounded-lg shadow-sm border p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Method</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Payment Method</h2>
+                <button
+                  onClick={() => {
+                    setEditingMethod(null);
+                    setShowPaymentModal(true);
+                  }}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Payment Method
+                </button>
+              </div>
               
               <div className="space-y-3">
-                {paymentMethods.map((method) => (
-                  <motion.div
-                    key={method.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                      paymentMethod === method.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => setPaymentMethod(method.id)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full">
-                          {method.icon}
+                {paymentMethods.map((method) => {
+                  const isSelected = selectedPaymentMethodId === method.id;
+                  return (
+                    <motion.div
+                      key={method.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => setSelectedPaymentMethodId(method.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full">
+                            {method.type === 'card' ? <CreditCardIcon className="w-5 h-5" /> :
+                             method.type === 'wallet' ? <Wallet className="w-5 h-5" /> :
+                             <DollarSign className="w-5 h-5" />}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium text-gray-900">
+                                {method.type === 'card' ? `${method.brand} •••• ${method.last4}` :
+                                 method.type === 'wallet' ? 'Digital Wallet' :
+                                 'Cash on Delivery'}
+                              </h3>
+                              {method.isDefault && (
+                                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
+                                  Default
+                                </span>
+                              )}
+                            </div>
+                            {method.cardholderName && (
+                              <p className="text-sm text-gray-600">{method.cardholderName}</p>
+                            )}
+                            {method.expiryMonth && method.expiryYear && (
+                              <p className="text-sm text-gray-600">
+                                Expires {method.expiryMonth}/{method.expiryYear}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-medium text-gray-900">{method.name}</h3>
-                          <p className="text-sm text-gray-600">{method.description}</p>
+                        <div className="flex items-center space-x-2">
+                          {!method.isDefault && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSetAsDefault(method.id);
+                              }}
+                              className="text-gray-400 hover:text-yellow-600 transition-colors"
+                              title="Set as Default"
+                            >
+                              <Star className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditPaymentMethod(method);
+                            }}
+                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          {paymentMethods.length > 1 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeletePaymentMethod(method.id);
+                              }}
+                              className="text-gray-400 hover:text-red-600 transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        {method.fee > 0 && (
-                          <p className="text-sm text-gray-600">+${method.fee.toFixed(2)}</p>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Card Payment Form */}
-            {paymentMethod === 'card' && (
+            {/* Card Payment Form - Only show if using a new card or card method requires CVV */}
+            {paymentMethod === 'card' && selectedPaymentMethod && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -426,75 +569,130 @@ const PaymentPage = () => {
               >
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Card Details</h2>
                 
+                {selectedPaymentMethod.last4 ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 mb-6 border border-blue-200 dark:border-blue-800"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
+                          <CreditCardIcon className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {selectedPaymentMethod.brand} •••• {selectedPaymentMethod.last4}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {selectedPaymentMethod.cardholderName}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Expires</p>
+                        <p className="font-semibold text-gray-900 dark:text-white">
+                          {selectedPaymentMethod.expiryMonth}/{selectedPaymentMethod.expiryYear}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm text-green-600 dark:text-green-400">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Saved card - Secure payment</span>
+                    </div>
+                  </motion.div>
+                ) : null}
+                
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Card Number *
-                    </label>
-                    <input
-                      type="text"
-                      name="cardNumber"
-                      value={cardData.cardNumber}
-                      onChange={handleCardNumberChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="1234 5678 9012 3456"
-                      maxLength={19}
-                    />
-                  </div>
+                  {!selectedPaymentMethod.last4 && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Card Number *
+                        </label>
+                        <input
+                          type="text"
+                          name="cardNumber"
+                          value={cardData.cardNumber}
+                          onChange={handleCardNumberChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="1234 5678 9012 3456"
+                          maxLength={19}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Cardholder Name *
+                        </label>
+                        <input
+                          type="text"
+                          name="cardholderName"
+                          value={cardData.cardholderName}
+                          onChange={handleCardInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder={user?.displayName || user?.username || "Full Name"}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Month *
+                          </label>
+                          <select
+                            name="expiryMonth"
+                            value={cardData.expiryMonth}
+                            onChange={handleCardInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">MM</option>
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                              <option key={month} value={month.toString().padStart(2, '0')}>
+                                {month.toString().padStart(2, '0')}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Year *
+                          </label>
+                          <select
+                            name="expiryYear"
+                            value={cardData.expiryYear}
+                            onChange={handleCardInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">YYYY</option>
+                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i).map(year => (
+                              <option key={year} value={year}>
+                                {year}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            CVV *
+                          </label>
+                          <input
+                            type="text"
+                            name="cvv"
+                            value={cardData.cvv}
+                            onChange={handleCardInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="123"
+                            maxLength={4}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Cardholder Name *
-                    </label>
-                    <input
-                      type="text"
-                      name="cardholderName"
-                      value={cardData.cardholderName}
-                      onChange={handleCardInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder={user?.displayName || user?.username || "Full Name"}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Month *
-                      </label>
-                      <select
-                        name="expiryMonth"
-                        value={cardData.expiryMonth}
-                        onChange={handleCardInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">MM</option>
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
-                          <option key={month} value={month.toString().padStart(2, '0')}>
-                            {month.toString().padStart(2, '0')}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Year *
-                      </label>
-                      <select
-                        name="expiryYear"
-                        value={cardData.expiryYear}
-                        onChange={handleCardInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">YYYY</option>
-                        {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i).map(year => (
-                          <option key={year} value={year}>
-                            {year}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
+                  {selectedPaymentMethod.last4 && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         CVV *
@@ -509,7 +707,7 @@ const PaymentPage = () => {
                         maxLength={4}
                       />
                     </div>
-                  </div>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -581,25 +779,27 @@ const PaymentPage = () => {
               </div>
 
               <button
-                onClick={handlePlaceOrder}
-                disabled={isProcessing}
+                onClick={handleContinue}
+                disabled={isProcessing || !selectedPaymentMethodId}
                 className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center space-x-2"
               >
-                {isProcessing ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Shield className="w-5 h-5" />
-                    <span>Place Order</span>
-                  </>
-                )}
+                <span>Continue to Review</span>
+                <ArrowRight className="w-5 h-5" />
               </button>
             </div>
           </div>
         </div>
+
+        {/* Payment Method Modal */}
+        <PaymentMethodModal
+          isOpen={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setEditingMethod(null);
+          }}
+          onSave={handleSavePaymentMethod}
+          editingMethod={editingMethod}
+        />
       </div>
     </div>
   );

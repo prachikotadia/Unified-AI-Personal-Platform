@@ -123,7 +123,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black bg-opacity-25 dark:bg-opacity-50 transition-opacity"
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
               onClick={onClose}
             />
 
@@ -132,7 +132,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
+              className="relative transform overflow-hidden backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 rounded-xl shadow-2xl text-left transition-all sm:my-8 sm:w-full sm:max-w-lg"
             >
               <div className={`px-4 pt-5 pb-4 sm:p-6 sm:pb-4 ${styles.bg} ${styles.border} border-l-4`}>
                 <div className="sm:flex sm:items-start">

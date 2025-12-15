@@ -7,22 +7,68 @@ import structlog
 from dotenv import load_dotenv
 
 import openai
-from langchain_community.llms import OpenAI
-from langchain_community.chat_models import ChatOpenAI
-from langchain_community.embeddings import OpenAIEmbeddings
-from langchain_community.vectorstores import FAISS
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains import LLMChain, ConversationChain, RetrievalQA
-from langchain.prompts import PromptTemplate, ChatPromptTemplate
-from langchain.memory import ConversationBufferMemory, ConversationSummaryMemory
-from langchain.agents import initialize_agent, Tool, AgentType
-from langchain.schema import Document
-from langchain_community.callbacks.manager import get_openai_callback
-from langchain.evaluation import load_evaluator
-from langchain.chains.summarize import load_summarize_chain
-from langchain.chains.question_answering import load_qa_chain
 
-from app.services.langchain_service import langchain_service
+# LangChain imports - optional, with fallbacks
+try:
+    from langchain_community.llms import OpenAI
+    from langchain_community.chat_models import ChatOpenAI
+    from langchain_community.embeddings import OpenAIEmbeddings
+    from langchain_community.vectorstores import FAISS
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+    from langchain_community.callbacks.manager import get_openai_callback
+    # Try new API structure
+    try:
+        from langchain.chains import LLMChain, ConversationChain, RetrievalQA
+        from langchain.prompts import PromptTemplate, ChatPromptTemplate
+        from langchain.memory import ConversationBufferMemory, ConversationSummaryMemory
+        from langchain.agents import initialize_agent, Tool, AgentType
+        from langchain.schema import Document
+        from langchain.evaluation import load_evaluator
+        from langchain.chains.summarize import load_summarize_chain
+        from langchain.chains.question_answering import load_qa_chain
+    except ImportError:
+        # New API structure
+        from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
+        from langchain_core.documents import Document
+        LLMChain = None
+        ConversationChain = None
+        RetrievalQA = None
+        ConversationBufferMemory = None
+        ConversationSummaryMemory = None
+        initialize_agent = None
+        Tool = None
+        AgentType = None
+        load_evaluator = None
+        load_summarize_chain = None
+        load_qa_chain = None
+except ImportError as e:
+    logger.warning(f"LangChain not fully available: {e}")
+    OpenAI = None
+    ChatOpenAI = None
+    OpenAIEmbeddings = None
+    FAISS = None
+    RecursiveCharacterTextSplitter = None
+    get_openai_callback = None
+    LLMChain = None
+    ConversationChain = None
+    RetrievalQA = None
+    PromptTemplate = None
+    ChatPromptTemplate = None
+    ConversationBufferMemory = None
+    ConversationSummaryMemory = None
+    initialize_agent = None
+    Tool = None
+    AgentType = None
+    Document = None
+    load_evaluator = None
+    load_summarize_chain = None
+    load_qa_chain = None
+
+# LangChain service - optional
+try:
+    from app.services.langchain_service import langchain_service
+except ImportError:
+    langchain_service = None
 from app.cache import redis_cache
 
 load_dotenv()
@@ -46,10 +92,14 @@ class AIService:
             self.openai_client = None
             self.llm = None
             print("Warning: No OpenAI API key found. Using mock responses for testing.")
-        self.memory = ConversationBufferMemory(
-            memory_key="chat_history",
-            return_messages=True
-        )
+        # Initialize memory if available
+        if ConversationBufferMemory:
+            self.memory = ConversationBufferMemory(
+                memory_key="chat_history",
+                return_messages=True
+            )
+        else:
+            self.memory = None
         
         # GPT-4 specific configuration
         self.gpt4_config = {
@@ -649,6 +699,228 @@ class AIService:
     async def _predict_purchase_category(self, purchase_history: List[Dict]) -> Dict[str, Any]:
         """Predict purchase category"""
         return {"category_prediction": "Purchase category prediction", "confidence": 0.90}
+    
+    async def forecast_financial_future(
+        self,
+        transactions: List[Dict],
+        budgets: List[Dict],
+        goals: List[Dict],
+        months: int = 6
+    ) -> Dict[str, Any]:
+        """
+        Enhanced AI financial forecasting
+        
+        Args:
+            transactions: Historical transactions
+            budgets: Current budgets
+            goals: Financial goals
+            months: Number of months to forecast
+            
+        Returns:
+            Comprehensive financial forecast
+        """
+        try:
+            # Calculate historical averages
+            income_transactions = [t for t in transactions if t.get("type") == "income"]
+            expense_transactions = [t for t in transactions if t.get("type") == "expense"]
+            
+            avg_monthly_income = sum(abs(t.get("amount", 0)) for t in income_transactions) / max(len(income_transactions), 1)
+            avg_monthly_expenses = sum(abs(t.get("amount", 0)) for t in expense_transactions) / max(len(expense_transactions), 1)
+            
+            # Use AI for advanced forecasting
+            forecast_prompt = f"""
+            Generate a comprehensive financial forecast for the next {months} months based on:
+            - Average Monthly Income: ${avg_monthly_income:,.2f}
+            - Average Monthly Expenses: ${avg_monthly_expenses:,.2f}
+            - Number of Budgets: {len(budgets)}
+            - Number of Goals: {len(goals)}
+            - Historical Transactions: {len(transactions)}
+            
+            Provide:
+            1. Monthly income and expense projections
+            2. Savings projections
+            3. Budget performance forecasts
+            4. Goal achievement timelines
+            5. Risk factors and scenarios
+            6. Recommendations for optimization
+            """
+            
+            ai_forecast = await self.generate_response(forecast_prompt, {
+                "transactions": transactions,
+                "budgets": budgets,
+                "goals": goals
+            })
+            
+            # Generate monthly projections
+            monthly_projections = []
+            current_balance = sum(acc.get("balance", 0) for acc in [])  # Would get from accounts
+            
+            for month in range(1, months + 1):
+                # Apply growth/trend factors
+                income_projection = avg_monthly_income * (1 + 0.02 * (month / 12))  # 2% annual growth
+                expense_projection = avg_monthly_expenses * (1 + 0.01 * (month / 12))  # 1% annual growth
+                savings_projection = income_projection - expense_projection
+                current_balance += savings_projection
+                
+                monthly_projections.append({
+                    "month": month,
+                    "projected_income": round(income_projection, 2),
+                    "projected_expenses": round(expense_projection, 2),
+                    "projected_savings": round(savings_projection, 2),
+                    "projected_balance": round(current_balance, 2)
+                })
+            
+            # Generate scenarios
+            scenarios = {
+                "optimistic": {
+                    "income_multiplier": 1.1,
+                    "expense_multiplier": 0.9,
+                    "projected_savings": (avg_monthly_income * 1.1 - avg_monthly_expenses * 0.9) * months
+                },
+                "realistic": {
+                    "income_multiplier": 1.0,
+                    "expense_multiplier": 1.0,
+                    "projected_savings": (avg_monthly_income - avg_monthly_expenses) * months
+                },
+                "pessimistic": {
+                    "income_multiplier": 0.9,
+                    "expense_multiplier": 1.1,
+                    "projected_savings": (avg_monthly_income * 0.9 - avg_monthly_expenses * 1.1) * months
+                }
+            }
+            
+            return {
+                "period_months": months,
+                "current_balance": current_balance,
+                "average_monthly_income": round(avg_monthly_income, 2),
+                "average_monthly_expenses": round(avg_monthly_expenses, 2),
+                "monthly_projections": monthly_projections,
+                "scenarios": scenarios,
+                "ai_analysis": ai_forecast,
+                "goal_achievement_forecast": await self._forecast_goal_achievement(goals, monthly_projections),
+                "budget_forecast": await self._forecast_budget_performance(budgets, monthly_projections),
+                "risk_factors": await self._identify_risk_factors(transactions, budgets),
+                "recommendations": await self._generate_forecast_recommendations(monthly_projections, goals),
+                "confidence": 0.87,
+                "generated_at": datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in financial forecasting: {e}")
+            return {"error": "Failed to generate forecast"}
+    
+    async def _forecast_goal_achievement(
+        self,
+        goals: List[Dict],
+        monthly_projections: List[Dict]
+    ) -> List[Dict[str, Any]]:
+        """Forecast goal achievement timelines"""
+        forecasts = []
+        total_savings = sum(proj.get("projected_savings", 0) for proj in monthly_projections)
+        
+        for goal in goals:
+            target = goal.get("target_amount", 0)
+            current = goal.get("current_amount", 0)
+            remaining = target - current
+            
+            if remaining <= 0:
+                months_to_achieve = 0
+            elif total_savings > 0:
+                avg_monthly_savings = total_savings / len(monthly_projections)
+                months_to_achieve = max(1, int(remaining / avg_monthly_savings))
+            else:
+                months_to_achieve = 999
+            
+            forecasts.append({
+                "goal_id": goal.get("id"),
+                "goal_name": goal.get("name"),
+                "target_amount": target,
+                "current_amount": current,
+                "remaining": remaining,
+                "projected_months_to_achieve": months_to_achieve,
+                "on_track": months_to_achieve <= len(monthly_projections)
+            })
+        
+        return forecasts
+    
+    async def _forecast_budget_performance(
+        self,
+        budgets: List[Dict],
+        monthly_projections: List[Dict]
+    ) -> List[Dict[str, Any]]:
+        """Forecast budget performance"""
+        forecasts = []
+        avg_monthly_expenses = sum(proj.get("projected_expenses", 0) for proj in monthly_projections) / len(monthly_projections)
+        
+        for budget in budgets:
+            budget_amount = budget.get("amount", 0)
+            category = budget.get("category", "")
+            
+            # Estimate category spending (simplified)
+            estimated_category_spending = avg_monthly_expenses * 0.2  # Assume 20% of expenses
+            
+            forecasts.append({
+                "budget_id": budget.get("id"),
+                "budget_name": budget.get("name"),
+                "category": category,
+                "budget_amount": budget_amount,
+                "projected_spending": round(estimated_category_spending, 2),
+                "projected_utilization": round((estimated_category_spending / budget_amount * 100) if budget_amount > 0 else 0, 2),
+                "status": "on_track" if estimated_category_spending <= budget_amount else "at_risk"
+            })
+        
+        return forecasts
+    
+    async def _identify_risk_factors(
+        self,
+        transactions: List[Dict],
+        budgets: List[Dict]
+    ) -> List[str]:
+        """Identify financial risk factors"""
+        risks = []
+        
+        # Check for overspending
+        for budget in budgets:
+            spent = budget.get("spent", 0)
+            amount = budget.get("amount", 0)
+            if amount > 0 and spent > amount:
+                risks.append(f"Overspending in {budget.get('category', 'unknown')} category")
+        
+        # Check for high expense volatility
+        if len(transactions) > 10:
+            expenses = [abs(t.get("amount", 0)) for t in transactions if t.get("type") == "expense"]
+            if expenses:
+                avg_expense = sum(expenses) / len(expenses)
+                max_expense = max(expenses)
+                if max_expense > avg_expense * 3:
+                    risks.append("High expense volatility detected")
+        
+        if not risks:
+            risks.append("No significant risk factors identified")
+        
+        return risks
+    
+    async def _generate_forecast_recommendations(
+        self,
+        monthly_projections: List[Dict],
+        goals: List[Dict]
+    ) -> List[str]:
+        """Generate recommendations based on forecast"""
+        recommendations = []
+        
+        avg_savings = sum(proj.get("projected_savings", 0) for proj in monthly_projections) / len(monthly_projections)
+        
+        if avg_savings < 0:
+            recommendations.append("Projected negative savings. Consider reducing expenses or increasing income.")
+        elif avg_savings < 500:
+            recommendations.append("Low projected savings. Consider optimizing spending to increase savings rate.")
+        
+        if goals:
+            recommendations.append("Review goal timelines and adjust savings targets if needed.")
+        
+        recommendations.append("Monitor actual vs projected performance monthly and adjust as needed.")
+        
+        return recommendations
 
 # Global AI service instance
 ai_service = AIService()

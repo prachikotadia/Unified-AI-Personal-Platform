@@ -21,6 +21,9 @@ import {
   X
 } from 'lucide-react';
 import RecentlyViewed from '../../components/marketplace/RecentlyViewed';
+import { useCartStore } from '../../store/cart';
+import { useWishlistStore } from '../../store/wishlist';
+import { useToastHelpers } from '../../components/ui/Toast';
 
 interface RecentlyViewedProduct {
   id: string;
@@ -42,6 +45,9 @@ interface RecentlyViewedProduct {
 }
 
 const RecentlyViewedPage: React.FC = () => {
+  const { success, error: showError } = useToastHelpers();
+  const { addToCart } = useCartStore();
+  const { addToWishlist } = useWishlistStore();
   const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,6 +96,7 @@ const RecentlyViewedPage: React.FC = () => {
           inStock: true,
           fastDelivery: true,
           isPrime: true,
+          isDeal: false,
           viewedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
         },
         {
@@ -106,6 +113,8 @@ const RecentlyViewedPage: React.FC = () => {
           inStock: true,
           fastDelivery: true,
           isPrime: true,
+          isDeal: true,
+          dealEndsIn: '3 days',
           viewedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
         },
         {
@@ -122,6 +131,8 @@ const RecentlyViewedPage: React.FC = () => {
           inStock: true,
           fastDelivery: true,
           isPrime: true,
+          isDeal: true,
+          dealEndsIn: '1 day',
           viewedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString()
         },
         {
@@ -138,6 +149,8 @@ const RecentlyViewedPage: React.FC = () => {
           inStock: true,
           fastDelivery: true,
           isPrime: true,
+          isDeal: true,
+          dealEndsIn: '5 days',
           viewedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
         },
         {
@@ -154,6 +167,8 @@ const RecentlyViewedPage: React.FC = () => {
           inStock: true,
           fastDelivery: true,
           isPrime: true,
+          isDeal: true,
+          dealEndsIn: '2 days',
           viewedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
         },
         {
@@ -170,6 +185,8 @@ const RecentlyViewedPage: React.FC = () => {
           inStock: true,
           fastDelivery: true,
           isPrime: true,
+          isDeal: true,
+          dealEndsIn: '4 days',
           viewedAt: new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString()
         },
         {
@@ -186,6 +203,8 @@ const RecentlyViewedPage: React.FC = () => {
           inStock: true,
           fastDelivery: true,
           isPrime: true,
+          isDeal: true,
+          dealEndsIn: '6 days',
           viewedAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
         }
       ];
@@ -207,14 +226,33 @@ const RecentlyViewedPage: React.FC = () => {
     setRecentlyViewed([]);
   };
 
-  const handleAddToCart = (productId: string) => {
-    // Mock add to cart functionality
-    console.log('Added to cart:', productId);
+  const handleAddToCart = async (productId: string) => {
+    try {
+      await addToCart(Number(productId), 1);
+      success('Added to Cart', 'Product has been added to your cart');
+    } catch (err) {
+      showError('Add Failed', 'Failed to add product to cart');
+    }
   };
 
-  const handleAddToWishlist = (productId: string) => {
-    // Mock add to wishlist functionality
-    console.log('Added to wishlist:', productId);
+  const handleAddToWishlist = async (productId: string) => {
+    try {
+      await addToWishlist(Number(productId));
+      success('Added to Wishlist', 'Product has been added to your wishlist');
+    } catch (err) {
+      showError('Add Failed', 'Failed to add product to wishlist');
+    }
+  };
+
+  const handleAddAllToCart = async () => {
+    try {
+      for (const product of recentlyViewed) {
+        await addToCart(Number(product.id), 1);
+      }
+      success('Added to Cart', 'All products have been added to your cart');
+    } catch (err) {
+      showError('Add Failed', 'Failed to add some products to cart');
+    }
   };
 
   const getFilteredAndSortedProducts = () => {
@@ -313,14 +351,25 @@ const RecentlyViewedPage: React.FC = () => {
                 <span>{recentlyViewed.length} Items</span>
               </div>
             </div>
-            <button
-              onClick={handleClearAll}
-              disabled={recentlyViewed.length === 0}
-              className="flex items-center space-x-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>Clear All</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {recentlyViewed.length > 0 && (
+                <button
+                  onClick={handleAddAllToCart}
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  <span>Add All to Cart</span>
+                </button>
+              )}
+              <button
+                onClick={handleClearAll}
+                disabled={recentlyViewed.length === 0}
+                className="flex items-center space-x-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Clear History</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -517,26 +566,30 @@ const RecentlyViewedPage: React.FC = () => {
                       {/* Actions */}
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => handleAddToWishlist(product.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                        >
-                          <Heart className="w-4 h-4" />
-                        </button>
-                        <button
                           onClick={() => handleAddToCart(product.id)}
                           className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Add to Cart"
                         >
                           <ShoppingCart className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleAddToWishlist(product.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                          title="Add to Wishlist"
+                        >
+                          <Heart className="w-4 h-4" />
                         </button>
                         <Link
                           to={`/marketplace/product/${product.id}`}
                           className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                          title="View Product"
                         >
                           <Eye className="w-4 h-4" />
                         </Link>
                         <button
                           onClick={() => handleRemoveProduct(product.id)}
                           className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                          title="Remove"
                         >
                           <X className="w-4 h-4" />
                         </button>

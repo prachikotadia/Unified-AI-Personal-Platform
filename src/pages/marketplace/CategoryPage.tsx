@@ -12,10 +12,13 @@ import {
   Loader2,
   ArrowLeft,
   Filter,
-  X
+  X,
+  Folder,
+  SlidersHorizontal
 } from 'lucide-react';
 import { marketplaceAPI, Product, Category } from '../../services/api';
 import { useNotifications } from '../../contexts/NotificationContext';
+import SubcategoriesModal from '../../components/marketplace/SubcategoriesModal';
 
 const CategoryPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -26,6 +29,7 @@ const CategoryPage: React.FC = () => {
   const [addingToCart, setAddingToCart] = useState<Set<number>>(new Set());
   const [addingToWishlist, setAddingToWishlist] = useState<Set<number>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
+  const [showSubcategoriesModal, setShowSubcategoriesModal] = useState(false);
   const { addNotification } = useNotifications();
 
   // Filter states
@@ -104,15 +108,15 @@ const CategoryPage: React.FC = () => {
     }
 
     if (filters.in_stock) {
-      filteredProducts = filteredProducts.filter(p => p.stock_quantity > 0);
+      filteredProducts = filteredProducts.filter(p => p.inStock);
     }
 
     if (filters.prime_eligible) {
-      filteredProducts = filteredProducts.filter(p => p.prime_eligible);
+      filteredProducts = filteredProducts.filter(p => p.isPrime);
     }
 
     if (filters.free_shipping) {
-      filteredProducts = filteredProducts.filter(p => p.free_shipping);
+      filteredProducts = filteredProducts.filter(p => p.fastDelivery);
     }
 
     return filteredProducts;
@@ -140,13 +144,15 @@ const CategoryPage: React.FC = () => {
         title: 'Added to Cart',
         message: 'Item added to your cart'
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding to cart:', error);
+      const errorMsg = error?.message || 'Failed to add item to cart';
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to add item to cart'
+        message: errorMsg
       });
+      // Note: Cart store will still save locally via Zustand persistence
     } finally {
       setAddingToCart(prev => {
         const newSet = new Set(prev);
@@ -165,13 +171,15 @@ const CategoryPage: React.FC = () => {
         title: 'Added to Wishlist',
         message: 'Item added to your wishlist'
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding to wishlist:', error);
+      const errorMsg = error?.message || 'Failed to add item to wishlist';
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to add item to wishlist'
+        message: errorMsg
       });
+      // Note: Wishlist store will still save locally via Zustand persistence
     } finally {
       setAddingToWishlist(prev => {
         const newSet = new Set(prev);
@@ -204,18 +212,18 @@ const CategoryPage: React.FC = () => {
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
-          {product.discount_percentage && (
+          {product.originalPrice && product.originalPrice > product.price && (
             <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-              -{product.discount_percentage}%
+              -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
             </div>
           )}
-          {product.prime_eligible && (
+          {product.isPrime && (
             <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1">
               <Crown size={12} />
               Prime
             </div>
           )}
-          {product.free_shipping && (
+          {product.fastDelivery && (
             <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
               Free Shipping
             </div>
@@ -233,7 +241,7 @@ const CategoryPage: React.FC = () => {
         <div className="flex items-center gap-1 mb-2">
           {renderStars(product.rating)}
           <span className="text-xs text-gray-500 dark:text-gray-400">
-            ({product.review_count})
+            ({product.reviewCount})
           </span>
         </div>
         
@@ -241,9 +249,9 @@ const CategoryPage: React.FC = () => {
           <span className="text-lg font-bold text-gray-900 dark:text-white">
             ${product.price.toFixed(2)}
           </span>
-          {product.original_price && (
+          {product.originalPrice && (
             <span className="text-sm text-gray-500 line-through">
-              ${product.original_price.toFixed(2)}
+              ${product.originalPrice.toFixed(2)}
             </span>
           )}
         </div>
@@ -335,13 +343,31 @@ const CategoryPage: React.FC = () => {
             >
               <ArrowLeft size={24} />
             </Link>
-            <div>
+            <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                 {category.name}
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
                 {category.description}
               </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {category.subcategories && category.subcategories.length > 0 && (
+                <button
+                  onClick={() => setShowSubcategoriesModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <Folder size={16} />
+                  View Subcategories
+                </button>
+              )}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <SlidersHorizontal size={16} />
+                Category Filters
+              </button>
             </div>
           </div>
         </div>
@@ -537,6 +563,20 @@ const CategoryPage: React.FC = () => {
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
+        )}
+
+        {/* Subcategories Modal */}
+        {category && category.subcategories && category.subcategories.length > 0 && (
+          <SubcategoriesModal
+            isOpen={showSubcategoriesModal}
+            onClose={() => setShowSubcategoriesModal(false)}
+            categoryName={category.name}
+            subcategories={category.subcategories.map(sub => ({
+              name: sub,
+              slug: sub.toLowerCase().replace(/\s+/g, '-'),
+              productCount: products.filter(p => p.subcategory === sub).length
+            }))}
+          />
         )}
       </div>
     </div>

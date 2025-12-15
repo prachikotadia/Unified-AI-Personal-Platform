@@ -50,7 +50,7 @@ const NotificationToast = ({ notification, onClose }: NotificationToastProps) =>
           initial={{ opacity: 0, x: 300, scale: 0.8 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: 300, scale: 0.8 }}
-          className="glass-card p-4 max-w-sm w-full"
+          className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 rounded-xl shadow-2xl p-4 max-w-sm w-full"
         >
           <div className="flex items-start space-x-3">
             <div className={`p-2 rounded-full ${colors[notification.type]}`}>

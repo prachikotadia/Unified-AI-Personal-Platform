@@ -229,8 +229,46 @@ class NotificationService {
     limit?: number;
     offset?: number;
   }): Promise<Notification[]> {
-    // Return mock notifications instead of making API calls
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Try to fetch from backend first
+    try {
+      const { API_BASE_URL, isBackendAvailable } = await import('../config/api');
+      const backendAvailable = await isBackendAvailable();
+      
+      if (backendAvailable) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        
+        try {
+          const queryParams = new URLSearchParams();
+          if (params?.type) queryParams.append('type', params.type);
+          if (params?.read !== undefined) queryParams.append('read', params.read.toString());
+          if (params?.limit) queryParams.append('limit', params.limit.toString());
+          if (params?.offset) queryParams.append('offset', params.offset.toString());
+          
+          const response = await fetch(`${API_BASE_URL}/api/notifications?${queryParams.toString()}`, {
+            method: 'GET',
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (response.ok) {
+            const data = await response.json();
+            return data.notifications || [];
+          }
+        } catch (error) {
+          // Fall through to mock notifications
+        }
+      }
+    } catch (error) {
+      // Fall through to mock notifications
+    }
+    
+    // Return mock notifications as fallback
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     const mockNotifications: Notification[] = [
       {
@@ -287,19 +325,66 @@ class NotificationService {
   }
 
   public async markAsRead(notificationId: string): Promise<void> {
+    // Try to update on backend first
     try {
-      await bankIntegrationAPIService.markNotificationAsRead(notificationId);
+      const { API_BASE_URL, isBackendAvailable } = await import('../config/api');
+      const backendAvailable = await isBackendAvailable();
+      
+      if (backendAvailable) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        
+        try {
+          await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          clearTimeout(timeoutId);
+          return; // Success, exit early
+        } catch (error) {
+          // Fall through to local update
+        }
+      }
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      // Fall through to local update
     }
+    
+    // Local update as fallback (handled by Zustand store or component state)
+    // This method doesn't need to do anything locally since the UI updates immediately
   }
 
   public async markAllAsRead(): Promise<void> {
+    // Try to update on backend first
     try {
-      await bankIntegrationAPIService.markAllNotificationsAsRead();
+      const { API_BASE_URL, isBackendAvailable } = await import('../config/api');
+      const backendAvailable = await isBackendAvailable();
+      
+      if (backendAvailable) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        
+        try {
+          await fetch(`${API_BASE_URL}/api/notifications/read-all`, {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          clearTimeout(timeoutId);
+          return; // Success, exit early
+        } catch (error) {
+          // Fall through to local update
+        }
+      }
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      // Fall through to local update
     }
+    
+    // Local update as fallback (handled by Zustand store or component state)
   }
 
   public async subscribeToNotificationTypes(types: string[]): Promise<void> {

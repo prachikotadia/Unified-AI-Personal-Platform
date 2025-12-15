@@ -15,10 +15,30 @@ import {
   Loader2,
   AlertCircle,
   ArrowLeft,
-  X
+  X,
+  Bookmark,
+  Share2,
+  Brain,
+  Sparkles
 } from 'lucide-react';
-import { marketplaceAPI, Product, SearchRequest, SearchFilters } from '../../services/api';
+import { marketplaceAPI, Product, SearchRequest } from '../../services/api';
+
+interface SearchFilters {
+  category?: string;
+  subcategory?: string;
+  min_price?: number;
+  max_price?: number;
+  brand?: string;
+  rating?: number;
+  in_stock?: boolean;
+  prime_eligible?: boolean;
+  free_shipping?: boolean;
+}
 import { useNotifications } from '../../contexts/NotificationContext';
+import SaveSearchModal from '../../components/marketplace/SaveSearchModal';
+import ShareWishlistModal from '../../components/marketplace/ShareWishlistModal';
+import AISearchAssistantModal from '../../components/marketplace/AISearchAssistantModal';
+import { useToastHelpers } from '../../components/ui/Toast';
 
 const SearchResultsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -31,6 +51,10 @@ const SearchResultsPage: React.FC = () => {
   const [addingToCart, setAddingToCart] = useState<Set<number>>(new Set());
   const [addingToWishlist, setAddingToWishlist] = useState<Set<number>>(new Set());
   const { addNotification } = useNotifications();
+  const { success } = useToastHelpers();
+  const [showSaveSearchModal, setShowSaveSearchModal] = useState(false);
+  const [showShareSearchModal, setShowShareSearchModal] = useState(false);
+  const [showAISearchModal, setShowAISearchModal] = useState(false);
 
   // Filter states
   const [filters, setFilters] = useState<SearchFilters>({
@@ -109,6 +133,24 @@ const SearchResultsPage: React.FC = () => {
     setSearchParams({ q: query });
   };
 
+  const handleSaveSearch = (name: string, description?: string) => {
+    // In a real app, this would save the search
+    success('Search Saved', `"${name}" has been saved`);
+  };
+
+  const handleShareSearch = () => {
+    setShowShareSearchModal(true);
+  };
+
+  const handleAIRefineSearch = () => {
+    setShowAISearchModal(true);
+  };
+
+  const handleAIRefine = (refinedQuery: string, suggestions: string[]) => {
+    setSearchParams({ q: refinedQuery });
+    success('Search Refined', 'Your search has been refined using AI');
+  };
+
   const addToCart = async (productId: number) => {
     try {
       setAddingToCart(prev => new Set(prev).add(productId));
@@ -118,13 +160,15 @@ const SearchResultsPage: React.FC = () => {
         title: 'Added to Cart',
         message: 'Item added to your cart'
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding to cart:', error);
+      const errorMsg = error?.message || 'Failed to add item to cart';
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to add item to cart'
+        message: errorMsg
       });
+      // Note: Cart store will still save locally via Zustand persistence
     } finally {
       setAddingToCart(prev => {
         const newSet = new Set(prev);
@@ -143,13 +187,15 @@ const SearchResultsPage: React.FC = () => {
         title: 'Added to Wishlist',
         message: 'Item added to your wishlist'
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding to wishlist:', error);
+      const errorMsg = error?.message || 'Failed to add item to wishlist';
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to add item to wishlist'
+        message: errorMsg
       });
+      // Note: Wishlist store will still save locally via Zustand persistence
     } finally {
       setAddingToWishlist(prev => {
         const newSet = new Set(prev);
@@ -182,18 +228,18 @@ const SearchResultsPage: React.FC = () => {
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
-          {product.discount_percentage && (
+          {product.originalPrice && product.originalPrice > product.price && (
             <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-              -{product.discount_percentage}%
+              -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
             </div>
           )}
-          {product.prime_eligible && (
+          {product.isPrime && (
             <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1">
               <Crown size={12} />
               Prime
             </div>
           )}
-          {product.free_shipping && (
+          {product.fastDelivery && (
             <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
               Free Shipping
             </div>
@@ -211,7 +257,7 @@ const SearchResultsPage: React.FC = () => {
         <div className="flex items-center gap-1 mb-2">
           {renderStars(product.rating)}
           <span className="text-xs text-gray-500 dark:text-gray-400">
-            ({product.review_count})
+            ({product.reviewCount})
           </span>
         </div>
         
@@ -219,9 +265,9 @@ const SearchResultsPage: React.FC = () => {
           <span className="text-lg font-bold text-gray-900 dark:text-white">
             ${product.price.toFixed(2)}
           </span>
-          {product.original_price && (
+          {product.originalPrice && (
             <span className="text-sm text-gray-500 line-through">
-              ${product.original_price.toFixed(2)}
+              ${product.originalPrice.toFixed(2)}
             </span>
           )}
         </div>
@@ -296,6 +342,29 @@ const SearchResultsPage: React.FC = () => {
               <p className="text-gray-600 dark:text-gray-400">
                 {totalResults} results for "{query}"
               </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAISearchModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                <Brain size={16} />
+                AI Refine Search
+              </button>
+              <button
+                onClick={() => setShowSaveSearchModal(true)}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <Bookmark size={16} />
+                Save Search
+              </button>
+              <button
+                onClick={handleShareSearch}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <Share2 size={16} />
+                Share Search
+              </button>
             </div>
           </div>
         </div>
@@ -498,6 +567,28 @@ const SearchResultsPage: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Modals */}
+        <SaveSearchModal
+          isOpen={showSaveSearchModal}
+          onClose={() => setShowSaveSearchModal(false)}
+          searchQuery={query}
+          filters={filters}
+          onSave={handleSaveSearch}
+        />
+
+        <ShareWishlistModal
+          isOpen={showShareSearchModal}
+          onClose={() => setShowShareSearchModal(false)}
+          wishlistName={`Search: ${query}`}
+        />
+
+        <AISearchAssistantModal
+          isOpen={showAISearchModal}
+          onClose={() => setShowAISearchModal(false)}
+          currentQuery={query}
+          onRefine={handleAIRefine}
+        />
       </div>
     </div>
   );

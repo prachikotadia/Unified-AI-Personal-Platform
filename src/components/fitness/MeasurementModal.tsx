@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Ruler, Scale, TrendingUp } from 'lucide-react';
 import { useFitnessStore } from '../../store/fitness';
+import { useToastHelpers } from '../ui/Toast';
 
 interface MeasurementModalProps {
   isOpen: boolean;
@@ -10,7 +11,8 @@ interface MeasurementModalProps {
 }
 
 const MeasurementModal: React.FC<MeasurementModalProps> = ({ isOpen, onClose, measurement }) => {
-  const { createHealthMetric, updateHealthMetric, isLoading } = useFitnessStore();
+  const { createHealthMetric, isLoading } = useFitnessStore();
+  const { success, error: showError } = useToastHelpers();
   const [formData, setFormData] = useState({
     weight: '',
     body_fat: '',
@@ -92,13 +94,20 @@ const MeasurementModal: React.FC<MeasurementModalProps> = ({ isOpen, onClose, me
       }
 
       // Create all measurements
+      if (measurements.length === 0) {
+        showError('No Measurements', 'Please enter at least one measurement');
+        return;
+      }
+      
       for (const metric of measurements) {
         await createHealthMetric(metric);
       }
       
+      success('Measurements Saved', `Successfully saved ${measurements.length} measurement(s)`);
       onClose();
     } catch (error) {
       console.error('Error saving measurements:', error);
+      showError('Failed to save measurements', 'Please try again');
     }
   };
 
@@ -129,7 +138,7 @@ const MeasurementModal: React.FC<MeasurementModalProps> = ({ isOpen, onClose, me
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="glass-card w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto"
+            className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 rounded-xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
@@ -200,7 +209,7 @@ const MeasurementModal: React.FC<MeasurementModalProps> = ({ isOpen, onClose, me
                 </button>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading.healthMetrics}
                   className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-gradient-from to-purple-gradient-to text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                   {isLoading ? 'Saving...' : (measurement ? 'Update Measurements' : 'Log Measurements')}

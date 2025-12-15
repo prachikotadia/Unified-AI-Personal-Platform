@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useMarketplaceStore } from '../../store/marketplace';
 import { motion } from 'framer-motion';
 import { 
   Clock, 
@@ -55,18 +56,38 @@ const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
   onRemoveProduct,
   onClearAll
 }) => {
-  const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { recentlyViewed: storeRecentlyViewed, removeFromRecentlyViewed, clearRecentlyViewed } = useMarketplaceStore();
+  const [loading, setLoading] = useState(false);
+
+  // Convert store data to Product format
+  const recentlyViewed: Product[] = storeRecentlyViewed.map(item => ({
+    id: String(item.id),
+    name: item.name,
+    price: item.price,
+    originalPrice: item.originalPrice,
+    rating: item.rating || 0,
+    reviewCount: item.reviewCount || 0,
+    image: item.image,
+    brand: item.brand,
+    category: item.category,
+    subcategory: item.subcategory || '',
+    inStock: item.inStock !== false,
+    fastDelivery: true,
+    isPrime: true,
+    isDeal: false,
+    viewedAt: item.viewedAt
+  }));
 
   useEffect(() => {
-    fetchRecentlyViewed();
-  }, []);
+    // Data is loaded from store (which uses localStorage)
+    setLoading(false);
+  }, [storeRecentlyViewed]);
 
   const fetchRecentlyViewed = async () => {
     try {
       setLoading(true);
       
-      // Mock data - in real app, this would come from localStorage or API
+      // Mock data as fallback (not used if store has data)
       const mockRecentlyViewed: Product[] = [
         {
           id: '1',
@@ -169,7 +190,7 @@ const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
       ];
 
       await new Promise(resolve => setTimeout(resolve, 500));
-      setRecentlyViewed(mockRecentlyViewed);
+      // Don't set state - use store data instead
     } catch (error) {
       console.error('Error fetching recently viewed:', error);
     } finally {
@@ -193,7 +214,7 @@ const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
     if (onRemoveProduct) {
       onRemoveProduct(productId);
     } else {
-      setRecentlyViewed(prev => prev.filter(p => p.id !== productId));
+      removeFromRecentlyViewed(productId);
     }
   };
 
@@ -201,7 +222,7 @@ const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
     if (onClearAll) {
       onClearAll();
     } else {
-      setRecentlyViewed([]);
+      clearRecentlyViewed();
     }
   };
 

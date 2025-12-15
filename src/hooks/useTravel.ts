@@ -148,18 +148,32 @@ export const useTravel = (userId: string = 'user_123') => {
 
   const getUpcomingTrips = useCallback(() => {
     const now = new Date()
+    now.setHours(0, 0, 0, 0)
     return trips.filter(trip => {
+      if (!trip.start_date) return false
+      if (trip.status === 'cancelled') return false
+      // Include trips that are planning, booked, or have future start dates
+      if (trip.status === 'planning' || trip.status === 'booked') return true
       const startDate = new Date(trip.start_date)
-      return startDate > now && trip.status !== 'cancelled'
-    }).sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+      startDate.setHours(0, 0, 0, 0)
+      return startDate >= now
+    }).sort((a, b) => {
+      const aDate = new Date(a.start_date).getTime()
+      const bDate = new Date(b.start_date).getTime()
+      return aDate - bDate
+    })
   }, [trips])
 
   const getActiveTrips = useCallback(() => {
     const now = new Date()
+    now.setHours(0, 0, 0, 0)
     return trips.filter(trip => {
+      if (!trip.start_date || !trip.end_date) return false
       const startDate = new Date(trip.start_date)
+      startDate.setHours(0, 0, 0, 0)
       const endDate = new Date(trip.end_date)
-      return startDate <= now && endDate >= now && trip.status === 'active'
+      endDate.setHours(23, 59, 59, 999)
+      return startDate <= now && endDate >= now && (trip.status === 'active' || trip.status === 'booked')
     })
   }, [trips])
 
@@ -188,7 +202,9 @@ export const useTravel = (userId: string = 'user_123') => {
   }, [priceAlerts])
 
   const getRecommendationsByCategory = useCallback((category: string) => {
-    return recommendations.filter(rec => rec.category.toLowerCase() === category.toLowerCase())
+    return recommendations.filter(rec => 
+      rec?.category && rec.category.toLowerCase() === category.toLowerCase()
+    )
   }, [recommendations])
 
   const getInsightsByType = useCallback((type: string) => {

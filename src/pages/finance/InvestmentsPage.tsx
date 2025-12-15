@@ -31,14 +31,26 @@ import {
   Briefcase,
   Monitor,
   Package,
-  Receipt
+  Receipt,
+  Info,
+  Brain,
+  X,
+  LineChart,
+  LayoutGrid,
+  ArrowUpDown
 } from 'lucide-react';
 import { useFinance } from '../../hooks/useFinance';
 import { Investment } from '../../services/financeAPI';
+import { Link } from 'react-router-dom';
 
 const InvestmentsPage: React.FC = () => {
   const { investments, isLoading, fetchInvestments, createInvestment, updateInvestment, deleteInvestment } = useFinance();
   const [showInvestmentModal, setShowInvestmentModal] = useState(false);
+  const [showPortfolioModal, setShowPortfolioModal] = useState(false);
+  const [showPerformanceModal, setShowPerformanceModal] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit' | 'delete'>('add');
   const [selectedInvestment, setSelectedInvestment] = useState<Investment | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,6 +87,18 @@ const InvestmentsPage: React.FC = () => {
       updateInvestment(investment.id, investment);
     }
     setShowInvestmentModal(false);
+  };
+
+  const handleViewDetails = (investment: Investment) => {
+    setSelectedInvestment(investment);
+    setShowDetailModal(true);
+  };
+
+  const handleAddTransaction = (investment?: Investment) => {
+    if (investment) {
+      setSelectedInvestment(investment);
+    }
+    setShowTransactionModal(true);
   };
 
   const getInvestmentTypeIcon = (type: string) => {
@@ -116,8 +140,10 @@ const InvestmentsPage: React.FC = () => {
   };
 
   const getReturnPercentage = (investment: Investment) => {
-    if (investment.purchase_price === 0) return 0;
-    return ((investment.current_value - investment.purchase_price) / investment.purchase_price) * 100;
+    const purchasePrice = investment.purchase_price || 0;
+    const currentValue = investment.current_value || 0;
+    if (purchasePrice === 0) return 0;
+    return ((currentValue - purchasePrice) / purchasePrice) * 100;
   };
 
   const getReturnColor = (returnPercentage: number) => {
@@ -153,11 +179,11 @@ const InvestmentsPage: React.FC = () => {
   };
 
   const calculateTotalValue = () => {
-    return investments.reduce((sum, investment) => sum + investment.current_value, 0);
+    return investments.reduce((sum, investment) => sum + (investment.current_value || 0), 0);
   };
 
   const calculateTotalCost = () => {
-    return investments.reduce((sum, investment) => sum + investment.purchase_price, 0);
+    return investments.reduce((sum, investment) => sum + (investment.purchase_price || 0), 0);
   };
 
   const calculateTotalReturn = () => {
@@ -195,7 +221,35 @@ const InvestmentsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Investments</h1>
           <p className="text-gray-600">Track and manage your investment portfolio</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setShowAIModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <Brain size={16} />
+            AI Recommendations
+          </button>
+          <button
+            onClick={() => setShowPortfolioModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <LayoutGrid size={16} />
+            Portfolio View
+          </button>
+          <button
+            onClick={() => setShowPerformanceModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <LineChart size={16} />
+            Performance Chart
+          </button>
+          <button
+            onClick={() => handleAddTransaction()}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+          >
+            <ArrowUpDown size={16} />
+            Add Transaction
+          </button>
           <button
             onClick={() => setShowAmounts(!showAmounts)}
             className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -414,7 +468,7 @@ const InvestmentsPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredInvestments.map((investment, index) => {
             const returnPercentage = getReturnPercentage(investment);
-            const returnAmount = investment.current_value - investment.purchase_price;
+            const returnAmount = (investment.current_value || 0) - (investment.purchase_price || 0);
 
             return (
               <motion.div
@@ -459,13 +513,13 @@ const InvestmentsPage: React.FC = () => {
                       <div>
                         <p className="text-xs text-gray-600">Purchase Price</p>
                         <p className="font-semibold text-gray-900">
-                          {showAmounts ? `$${investment.purchase_price.toLocaleString()}` : '••••••'}
+                          {showAmounts ? `$${(investment.purchase_price || 0).toLocaleString()}` : '••••••'}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-600">Current Value</p>
                         <p className="font-semibold text-blue-600">
-                          {showAmounts ? `$${investment.current_value.toLocaleString()}` : '••••••'}
+                          {showAmounts ? `$${(investment.current_value || 0).toLocaleString()}` : '••••••'}
                         </p>
                       </div>
                     </div>
@@ -474,7 +528,7 @@ const InvestmentsPage: React.FC = () => {
                       <div>
                         <p className="text-xs text-gray-600">Return Amount</p>
                         <p className={`font-semibold ${getReturnColor(returnPercentage)}`}>
-                          {showAmounts ? `$${returnAmount.toLocaleString()}` : '••••••'}
+                          {showAmounts ? `$${(returnAmount || 0).toLocaleString()}` : '••••••'}
                         </p>
                       </div>
                       <div>
@@ -508,17 +562,35 @@ const InvestmentsPage: React.FC = () => {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200 flex-wrap">
+                    <button
+                      onClick={() => handleViewDetails(investment)}
+                      className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="View Details"
+                    >
+                      <Info size={14} />
+                      Details
+                    </button>
                     <button
                       onClick={() => handleEditInvestment(investment)}
                       className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Edit"
                     >
                       <Edit size={14} />
                       Edit
                     </button>
                     <button
+                      onClick={() => handleAddTransaction(investment)}
+                      className="flex items-center gap-1 px-3 py-1 text-sm text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                      title="Add Transaction"
+                    >
+                      <ArrowUpDown size={14} />
+                      Transaction
+                    </button>
+                    <button
                       onClick={() => handleDeleteInvestment(investment.id)}
                       className="flex items-center gap-1 px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete"
                     >
                       <Trash2 size={14} />
                       Delete
@@ -533,6 +605,278 @@ const InvestmentsPage: React.FC = () => {
               </motion.div>
             );
           })}
+        </div>
+      )}
+
+      {/* Investment Detail Modal */}
+      {showDetailModal && selectedInvestment && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Investment Details</h2>
+              <button onClick={() => {
+                setShowDetailModal(false);
+                setSelectedInvestment(undefined);
+              }}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold mb-2">{selectedInvestment.name}</h3>
+                <p className="text-sm text-gray-600">{getInvestmentTypeLabel(selectedInvestment.investment_type)}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Symbol</p>
+                  <p className="font-semibold">{selectedInvestment.symbol}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Quantity</p>
+                  <p className="font-semibold">{selectedInvestment.quantity}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Purchase Price</p>
+                  <p className="font-semibold">${(selectedInvestment.purchase_price || 0).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Current Value</p>
+                  <p className="font-semibold text-blue-600">${(selectedInvestment.current_value || 0).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Return</p>
+                  <p className={`font-semibold ${getReturnColor(getReturnPercentage(selectedInvestment))}`}>
+                    ${((selectedInvestment.current_value || 0) - (selectedInvestment.purchase_price || 0)).toLocaleString()} ({getReturnPercentage(selectedInvestment).toFixed(2)}%)
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Risk Level</p>
+                  <p className="font-semibold capitalize">{selectedInvestment.risk_level}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Status</p>
+                  <p className="font-semibold capitalize">{selectedInvestment.status}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Purchase Date</p>
+                  <p className="font-semibold">{new Date(selectedInvestment.purchase_date).toLocaleDateString()}</p>
+                </div>
+              </div>
+              {selectedInvestment.notes && (
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Notes</p>
+                  <p className="text-sm">{selectedInvestment.notes}</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Portfolio View Modal */}
+      {showPortfolioModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-4xl mx-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Portfolio View</h2>
+              <button onClick={() => setShowPortfolioModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {['stocks', 'bonds', 'etfs', 'crypto'].map(type => {
+                  const typeInvestments = investments.filter(inv => inv.investment_type === type);
+                  const typeValue = typeInvestments.reduce((sum, inv) => sum + inv.current_value, 0);
+                  const percentage = totalValue > 0 ? (typeValue / totalValue) * 100 : 0;
+                  return (
+                    <div key={type} className="p-4 border rounded-lg">
+                      <p className="text-sm text-gray-600">{getInvestmentTypeLabel(type)}</p>
+                      <p className="text-lg font-semibold">${typeValue.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">{percentage.toFixed(1)}%</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4">
+                <h3 className="font-semibold mb-2">Allocation Chart</h3>
+                <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <PieChart size={48} className="text-gray-400" />
+                  <span className="ml-2 text-gray-500">Chart visualization</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Performance Chart Modal */}
+      {showPerformanceModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-4xl mx-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Performance Chart</h2>
+              <button onClick={() => setShowPerformanceModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-4 border rounded-lg">
+                  <p className="text-sm text-gray-600">Total Return</p>
+                  <p className={`text-2xl font-semibold ${getReturnColor(totalReturnPercentage)}`}>
+                    ${totalReturn.toLocaleString()}
+                  </p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <p className="text-sm text-gray-600">Return %</p>
+                  <p className={`text-2xl font-semibold ${getReturnColor(totalReturnPercentage)}`}>
+                    {totalReturnPercentage.toFixed(2)}%
+                  </p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <p className="text-sm text-gray-600">Total Value</p>
+                  <p className="text-2xl font-semibold">${totalValue.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="mt-4">
+                <h3 className="font-semibold mb-2">Performance Over Time</h3>
+                <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <LineChart size={48} className="text-gray-400" />
+                  <span className="ml-2 text-gray-500">Chart visualization</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Add Transaction Modal */}
+      {showTransactionModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-md mx-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Add Transaction</h2>
+              <button onClick={() => {
+                setShowTransactionModal(false);
+                setSelectedInvestment(undefined);
+              }}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Investment</label>
+                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" id="transaction-investment">
+                  <option value="">Select Investment</option>
+                  {investments.map(inv => (
+                    <option key={inv.id} value={inv.id} selected={selectedInvestment?.id === inv.id}>
+                      {inv.name} ({inv.symbol})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Transaction Type</label>
+                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" id="transaction-type">
+                  <option value="buy">Buy</option>
+                  <option value="sell">Sell</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                <input type="number" step="0.01" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" id="transaction-quantity" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Price per Share</label>
+                <input type="number" step="0.01" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" id="transaction-price" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" id="transaction-date" defaultValue={new Date().toISOString().split('T')[0]} />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowTransactionModal(false);
+                    setSelectedInvestment(undefined);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    // Handle transaction save
+                    setShowTransactionModal(false);
+                    setSelectedInvestment(undefined);
+                  }}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Save Transaction
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* AI Recommendations Modal */}
+      {showAIModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">AI Investment Recommendations</h2>
+              <button onClick={() => setShowAIModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                AI-powered investment recommendations based on your portfolio and risk profile.
+              </p>
+              <div className="space-y-3">
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Diversification Suggestion</h3>
+                  <p className="text-sm text-gray-600 mb-2">Consider adding bonds to balance your portfolio</p>
+                  <p className="text-xs text-gray-500">Your portfolio is currently 80% stocks, 20% crypto</p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Rebalancing Opportunity</h3>
+                  <p className="text-sm text-gray-600 mb-2">Your tech stocks have grown significantly</p>
+                  <p className="text-xs text-gray-500">Consider taking some profits and diversifying</p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Risk Assessment</h3>
+                  <p className="text-sm text-gray-600 mb-2">Your portfolio risk level is: High</p>
+                  <p className="text-xs text-gray-500">Consider adding lower-risk investments</p>
+                </div>
+              </div>
+              <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                Apply Recommendations
+              </button>
+            </div>
+          </motion.div>
         </div>
       )}
     </div>

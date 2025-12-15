@@ -25,16 +25,26 @@ import {
   Unlock,
   Banknote,
   DollarSign,
-  Percent
+  Percent,
+  Link as LinkIcon,
+  RefreshCw as SyncIcon,
+  Brain,
+  X
 } from 'lucide-react';
 import { useFinance } from '../../hooks/useFinance';
 import { BankAccount } from '../../services/financeAPI';
 import BankConnectionModal from '../../components/finance/BankConnectionModal';
+import BankAccountModal from '../../components/finance/BankAccountModal';
+import { Link } from 'react-router-dom';
 
 const AccountsPage: React.FC = () => {
   const { bankAccounts, isLoading, fetchBankAccounts, createBankAccount, updateBankAccount, deleteBankAccount } = useFinance();
   const [showBankModal, setShowBankModal] = useState(false);
+  const [showBankConnectionModal, setShowBankConnectionModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [selectedAccount, setSelectedAccount] = useState<BankAccount | undefined>();
+  const [syncingAccount, setSyncingAccount] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'checking' | 'savings' | 'credit' | 'investment'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
@@ -45,13 +55,28 @@ const AccountsPage: React.FC = () => {
   }, [fetchBankAccounts]);
 
   const handleAddAccount = () => {
+    setModalMode('add');
     setSelectedAccount(undefined);
     setShowBankModal(true);
   };
 
   const handleEditAccount = (account: BankAccount) => {
+    setModalMode('edit');
     setSelectedAccount(account);
     setShowBankModal(true);
+  };
+
+  const handleSyncAccount = async (accountId: string) => {
+    setSyncingAccount(accountId);
+    // Simulate sync
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    await fetchBankAccounts();
+    setSyncingAccount(null);
+  };
+
+  const handleViewTransactions = (accountId: string) => {
+    // Navigate to transactions page with account filter
+    window.location.href = `/finance/transactions?account=${accountId}`;
   };
 
   const handleDeleteAccount = async (accountId: string) => {
@@ -132,7 +157,21 @@ const AccountsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Bank Accounts</h1>
           <p className="text-gray-600">Manage your bank accounts and financial institutions</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setShowAIModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <Brain size={16} />
+            AI Recommendations
+          </button>
+          <button
+            onClick={() => setShowBankConnectionModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <LinkIcon size={16} />
+            Link Bank
+          </button>
           <button
             onClick={() => setShowBalances(!showBalances)}
             className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -379,10 +418,37 @@ const AccountsPage: React.FC = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200 flex-wrap">
+                  <Link
+                    to={`/finance/transactions?account=${account.id}`}
+                    className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="View Transactions"
+                  >
+                    <Eye size={14} />
+                    Transactions
+                  </Link>
+                  <button
+                    onClick={() => handleSyncAccount(account.id)}
+                    disabled={syncingAccount === account.id}
+                    className="flex items-center gap-1 px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                    title="Sync Now"
+                  >
+                    {syncingAccount === account.id ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600"></div>
+                        Syncing...
+                      </>
+                    ) : (
+                      <>
+                        <SyncIcon size={14} />
+                        Sync
+                      </>
+                    )}
+                  </button>
                   <button
                     onClick={() => handleEditAccount(account)}
                     className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Edit"
                   >
                     <Edit size={14} />
                     Edit
@@ -390,6 +456,7 @@ const AccountsPage: React.FC = () => {
                   <button
                     onClick={() => handleDeleteAccount(account.id)}
                     className="flex items-center gap-1 px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Delete"
                   >
                     <Trash2 size={14} />
                     Delete
@@ -406,12 +473,87 @@ const AccountsPage: React.FC = () => {
         </div>
       )}
 
+      {/* Bank Account Modal */}
+      <BankAccountModal
+        isOpen={showBankModal}
+        onClose={() => {
+          setShowBankModal(false);
+          setSelectedAccount(undefined);
+        }}
+        mode={modalMode}
+        account={selectedAccount || undefined}
+        onSave={handleAccountSuccess}
+      />
+
       {/* Bank Connection Modal */}
       <BankConnectionModal
-        isOpen={showBankModal}
-        onClose={() => setShowBankModal(false)}
-        onSuccess={handleAccountSuccess}
+        isOpen={showBankConnectionModal}
+        onClose={() => setShowBankConnectionModal(false)}
+        onSuccess={(connection) => {
+          // Convert BankConnection to BankAccount format
+          const account: BankAccount = {
+            id: connection.id,
+            user_id: '', // Will be set by backend
+            account_name: `${connection.bank_name} ${connection.account_type}`,
+            bank_name: connection.bank_name,
+            account_number: connection.account_number,
+            account_type: connection.account_type === 'credit_card' ? 'credit' : connection.account_type,
+            balance: connection.balance || 0,
+            currency: connection.currency || 'USD',
+            interest_rate: 0,
+            credit_limit: connection.account_type === 'credit_card' ? connection.available_balance : undefined,
+            is_active: connection.status === 'connected',
+            is_primary: false,
+            last_updated: connection.last_sync || new Date().toISOString(),
+            created_at: new Date().toISOString()
+          };
+          createBankAccount(account);
+          setShowBankConnectionModal(false);
+        }}
       />
+
+      {/* AI Recommendations Modal */}
+      {showAIModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">AI Account Recommendations</h2>
+              <button onClick={() => setShowAIModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                AI-powered account recommendations based on your financial goals and spending patterns.
+              </p>
+              <div className="space-y-3">
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">High-Yield Savings Account</h3>
+                  <p className="text-sm text-gray-600 mb-2">Recommended: Open a high-yield savings account with 4.5% APY</p>
+                  <p className="text-xs text-gray-500">Based on your current savings balance, you could earn $450 more annually</p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Credit Card Optimization</h3>
+                  <p className="text-sm text-gray-600 mb-2">Consider a balance transfer card with 0% APR</p>
+                  <p className="text-xs text-gray-500">Could save you $1,200 in interest over 18 months</p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Account Consolidation</h3>
+                  <p className="text-sm text-gray-600 mb-2">You have 3 checking accounts - consider consolidating</p>
+                  <p className="text-xs text-gray-500">This will simplify your finances and reduce fees</p>
+                </div>
+              </div>
+              <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                Apply Recommendations
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

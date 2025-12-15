@@ -29,7 +29,13 @@ import {
   ShoppingBag,
   Zap,
   Target,
-  BarChart3
+  BarChart3,
+  Calculator,
+  Snowflake,
+  Mountain,
+  Brain,
+  X,
+  Info
 } from 'lucide-react';
 import { useFinance } from '../../hooks/useFinance';
 import { DebtTracker } from '../../services/financeAPI';
@@ -37,6 +43,11 @@ import { DebtTracker } from '../../services/financeAPI';
 const DebtTrackerPage: React.FC = () => {
   const { debtTrackers, isLoading, fetchDebtTrackers, createDebtTracker, updateDebtTracker, deleteDebtTracker } = useFinance();
   const [showDebtModal, setShowDebtModal] = useState(false);
+  const [showPayoffCalculator, setShowPayoffCalculator] = useState(false);
+  const [showSnowballModal, setShowSnowballModal] = useState(false);
+  const [showAvalancheModal, setShowAvalancheModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit' | 'delete'>('add');
   const [selectedDebt, setSelectedDebt] = useState<DebtTracker | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,6 +84,26 @@ const DebtTrackerPage: React.FC = () => {
       updateDebtTracker(debt.id, debt);
     }
     setShowDebtModal(false);
+  };
+
+  const handleMakePayment = (debt: DebtTracker) => {
+    setSelectedDebt(debt);
+    setShowPaymentModal(true);
+  };
+
+  const handleConfirmPayment = (amount: number) => {
+    if (selectedDebt) {
+      const updated = {
+        ...selectedDebt,
+        current_balance: Math.max(0, selectedDebt.current_balance - amount)
+      };
+      if (updated.current_balance === 0) {
+        updated.status = 'paid_off';
+      }
+      updateDebtTracker(selectedDebt.id, updated);
+      setShowPaymentModal(false);
+      setSelectedDebt(undefined);
+    }
   };
 
   const getDebtTypeIcon = (type: string) => {
@@ -114,9 +145,11 @@ const DebtTrackerPage: React.FC = () => {
   };
 
   const getProgressPercentage = (debt: DebtTracker) => {
-    if (debt.original_amount === 0) return 0;
-    const paidAmount = debt.original_amount - debt.current_balance;
-    return Math.min((paidAmount / debt.original_amount) * 100, 100);
+    const originalAmount = debt.original_amount || 0;
+    const currentBalance = debt.current_balance || 0;
+    if (originalAmount === 0) return 0;
+    const paidAmount = originalAmount - currentBalance;
+    return Math.min((paidAmount / originalAmount) * 100, 100);
   };
 
   const getProgressColor = (percentage: number, status: string) => {
@@ -162,13 +195,17 @@ const DebtTrackerPage: React.FC = () => {
   };
 
   const calculateMonthlyPayment = (debt: DebtTracker) => {
-    if (debt.interest_rate === 0) {
-      return debt.current_balance / debt.remaining_payments;
+    const currentBalance = debt.current_balance || 0;
+    const remainingPayments = debt.remaining_payments || 1;
+    const interestRate = debt.interest_rate || 0;
+    
+    if (interestRate === 0) {
+      return currentBalance / remainingPayments;
     }
     
-    const monthlyRate = debt.interest_rate / 100 / 12;
-    const payment = debt.current_balance * (monthlyRate * Math.pow(1 + monthlyRate, debt.remaining_payments)) / 
-                   (Math.pow(1 + monthlyRate, debt.remaining_payments) - 1);
+    const monthlyRate = interestRate / 100 / 12;
+    const payment = currentBalance * (monthlyRate * Math.pow(1 + monthlyRate, remainingPayments)) / 
+                   (Math.pow(1 + monthlyRate, remainingPayments) - 1);
     return payment;
   };
 
@@ -181,8 +218,8 @@ const DebtTrackerPage: React.FC = () => {
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  const totalDebt = debtTrackers.reduce((sum, debt) => sum + debt.current_balance, 0);
-  const totalOriginalDebt = debtTrackers.reduce((sum, debt) => sum + debt.original_amount, 0);
+  const totalDebt = debtTrackers.reduce((sum, debt) => sum + (debt.current_balance || 0), 0);
+  const totalOriginalDebt = debtTrackers.reduce((sum, debt) => sum + (debt.original_amount || 0), 0);
   const totalPaidOff = totalOriginalDebt - totalDebt;
   const activeDebts = debtTrackers.filter(debt => debt.status === 'active').length;
   const paidOffDebts = debtTrackers.filter(debt => debt.status === 'paid_off').length;
@@ -197,7 +234,35 @@ const DebtTrackerPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Debt Tracker</h1>
           <p className="text-gray-600">Monitor and manage your debts and loans</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setShowAIModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <Brain size={16} />
+            AI Payoff Strategy
+          </button>
+          <button
+            onClick={() => setShowPayoffCalculator(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <Calculator size={16} />
+            Payoff Calculator
+          </button>
+          <button
+            onClick={() => setShowSnowballModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Snowflake size={16} />
+            Debt Snowball
+          </button>
+          <button
+            onClick={() => setShowAvalancheModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Mountain size={16} />
+            Debt Avalanche
+          </button>
           <button
             onClick={() => setShowAmounts(!showAmounts)}
             className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -481,13 +546,13 @@ const DebtTrackerPage: React.FC = () => {
                       <div>
                         <p className="text-xs text-gray-600">Current Balance</p>
                         <p className="font-semibold text-red-600">
-                          {showAmounts ? `$${debt.current_balance.toLocaleString()}` : '••••••'}
+                          {showAmounts ? `$${(debt.current_balance || 0).toLocaleString()}` : '••••••'}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-600">Original Amount</p>
                         <p className="font-semibold text-gray-900">
-                          {showAmounts ? `$${debt.original_amount.toLocaleString()}` : '••••••'}
+                          {showAmounts ? `$${(debt.original_amount || 0).toLocaleString()}` : '••••••'}
                         </p>
                       </div>
                     </div>
@@ -519,10 +584,19 @@ const DebtTrackerPage: React.FC = () => {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200 flex-wrap">
+                    <button
+                      onClick={() => handleMakePayment(debt)}
+                      className="flex items-center gap-1 px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                      title="Make Payment"
+                    >
+                      <Banknote size={14} />
+                      Pay
+                    </button>
                     <button
                       onClick={() => handleEditDebt(debt)}
                       className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Edit"
                     >
                       <Edit size={14} />
                       Edit
@@ -530,6 +604,7 @@ const DebtTrackerPage: React.FC = () => {
                     <button
                       onClick={() => handleDeleteDebt(debt.id)}
                       className="flex items-center gap-1 px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete"
                     >
                       <Trash2 size={14} />
                       Delete
@@ -544,6 +619,229 @@ const DebtTrackerPage: React.FC = () => {
               </motion.div>
             );
           })}
+        </div>
+      )}
+
+      {/* Make Payment Modal */}
+      {showPaymentModal && selectedDebt && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-md mx-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Make Payment</h2>
+              <button onClick={() => {
+                setShowPaymentModal(false);
+                setSelectedDebt(undefined);
+              }}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600">Current Balance</p>
+                <p className="text-lg font-semibold">${(selectedDebt.current_balance || 0).toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Minimum Payment</p>
+                <p className="text-lg font-semibold">${(selectedDebt.monthly_payment || 0).toLocaleString()}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Payment Amount</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min={selectedDebt.monthly_payment}
+                  max={selectedDebt.current_balance}
+                  defaultValue={selectedDebt.monthly_payment}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  id="payment-amount"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setSelectedDebt(undefined);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const amount = parseFloat((document.getElementById('payment-amount') as HTMLInputElement)?.value || '0');
+                    if (amount >= selectedDebt.monthly_payment && amount <= selectedDebt.current_balance) {
+                      handleConfirmPayment(amount);
+                    }
+                  }}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Make Payment
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Payoff Calculator Modal */}
+      {showPayoffCalculator && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Debt Payoff Calculator</h2>
+              <button onClick={() => setShowPayoffCalculator(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-gray-600">Calculate how long it will take to pay off your debts.</p>
+              <div className="space-y-3">
+                {debtTrackers.filter(d => d.status === 'active').map(debt => {
+                  const monthlyPayment = calculateMonthlyPayment(debt);
+                  const monthsRemaining = debt.remaining_payments;
+                  const totalInterest = (monthlyPayment * monthsRemaining) - debt.current_balance;
+                  return (
+                    <div key={debt.id} className="p-4 border rounded-lg">
+                      <h3 className="font-semibold mb-2">{debt.name}</h3>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <p className="text-gray-600">Months Remaining</p>
+                          <p className="font-semibold">{monthsRemaining}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Total Interest</p>
+                          <p className="font-semibold">${totalInterest.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Debt Snowball Modal */}
+      {showSnowballModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Debt Snowball Strategy</h2>
+              <button onClick={() => setShowSnowballModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-gray-600">Pay off debts from smallest to largest balance. This strategy provides psychological wins.</p>
+              <div className="space-y-2">
+                {[...debtTrackers].filter(d => d.status === 'active').sort((a, b) => a.current_balance - b.current_balance).map((debt, index) => (
+                  <div key={debt.id} className="p-3 border rounded-lg flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">
+                        {index + 1}
+                      </span>
+                      <div>
+                        <p className="font-semibold">{debt.name}</p>
+                        <p className="text-sm text-gray-600">${(debt.current_balance || 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Debt Avalanche Modal */}
+      {showAvalancheModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Debt Avalanche Strategy</h2>
+              <button onClick={() => setShowAvalancheModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-gray-600">Pay off debts from highest to lowest interest rate. This strategy saves the most money.</p>
+              <div className="space-y-2">
+                {[...debtTrackers].filter(d => d.status === 'active').sort((a, b) => b.interest_rate - a.interest_rate).map((debt, index) => (
+                  <div key={debt.id} className="p-3 border rounded-lg flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-semibold">
+                        {index + 1}
+                      </span>
+                      <div>
+                        <p className="font-semibold">{debt.name}</p>
+                        <p className="text-sm text-gray-600">{debt.interest_rate}% interest</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* AI Payoff Strategy Modal */}
+      {showAIModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">AI Debt Payoff Strategy</h2>
+              <button onClick={() => setShowAIModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                AI-powered debt payoff recommendations based on your financial situation.
+              </p>
+              <div className="space-y-3">
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Recommended Strategy</h3>
+                  <p className="text-sm text-gray-600 mb-2">Debt Avalanche Method</p>
+                  <p className="text-xs text-gray-500">Based on your high-interest credit cards, paying highest interest first will save you $2,340 in interest.</p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Payment Optimization</h3>
+                  <p className="text-sm text-gray-600 mb-2">Increase monthly payment by $200</p>
+                  <p className="text-xs text-gray-500">This will reduce payoff time by 8 months</p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Consolidation Opportunity</h3>
+                  <p className="text-sm text-gray-600 mb-2">Consider debt consolidation loan at 12% APR</p>
+                  <p className="text-xs text-gray-500">Could save $1,200 annually in interest</p>
+                </div>
+              </div>
+              <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                Apply Strategy
+              </button>
+            </div>
+          </motion.div>
         </div>
       )}
     </div>

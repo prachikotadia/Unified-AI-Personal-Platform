@@ -51,21 +51,21 @@ const ToastItem: React.FC<ToastProps> = ({ toast, onRemove }) => {
   }, [toast, onRemove]);
 
   const getToastStyles = () => {
-    const baseStyles = 'flex items-start space-x-3 p-4 rounded-lg shadow-lg border max-w-sm w-full';
+    const baseStyles = 'flex items-start space-x-3 p-4 rounded-lg shadow-lg border max-w-sm w-full backdrop-blur-xl';
     
     switch (toast.type) {
       case 'success':
-        return `${baseStyles} bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200`;
+        return `${baseStyles} bg-green-50/80 dark:bg-green-900/30 border-green-200/50 dark:border-green-800/50 text-green-800 dark:text-green-200`;
       case 'error':
-        return `${baseStyles} bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200`;
+        return `${baseStyles} bg-red-50/80 dark:bg-red-900/30 border-red-200/50 dark:border-red-800/50 text-red-800 dark:text-red-200`;
       case 'warning':
-        return `${baseStyles} bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200`;
+        return `${baseStyles} bg-yellow-50/80 dark:bg-yellow-900/30 border-yellow-200/50 dark:border-yellow-800/50 text-yellow-800 dark:text-yellow-200`;
       case 'info':
-        return `${baseStyles} bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200`;
+        return `${baseStyles} bg-blue-50/80 dark:bg-blue-900/30 border-blue-200/50 dark:border-blue-800/50 text-blue-800 dark:text-blue-200`;
       case 'loading':
-        return `${baseStyles} bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800 text-gray-800 dark:text-gray-200`;
+        return `${baseStyles} bg-gray-50/80 dark:bg-gray-900/30 border-gray-200/50 dark:border-gray-800/50 text-gray-800 dark:text-gray-200`;
       default:
-        return `${baseStyles} bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200`;
+        return `${baseStyles} bg-white/80 dark:bg-gray-800/80 border-white/20 dark:border-gray-700/50 text-gray-800 dark:text-gray-200`;
     }
   };
 

@@ -24,6 +24,9 @@ import {
 import AIRecommendations from '../../components/marketplace/AIRecommendations';
 import ProductQA from '../../components/marketplace/ProductQA';
 import ProductActionButtons from '../../components/marketplace/ProductActionButtons';
+import AIProductQABot from '../../components/marketplace/AIProductQABot';
+import AIPricePrediction from '../../components/marketplace/AIPricePrediction';
+import AIReviewAnalysis from '../../components/marketplace/AIReviewAnalysis';
 
 interface Product {
   id: number;
@@ -163,7 +166,7 @@ const ProductPage = () => {
             helpful: 8
           }
         ],
-        relatedProducts: [2, 5, 8]
+        relatedProducts: ['2', '5', '8']
       };
       setProduct(mockProduct);
       setLoading(false);
@@ -468,6 +471,22 @@ const ProductPage = () => {
                   </button>
                 </div>
 
+                {/* AI Review Analysis */}
+                {product && (
+                  <AIReviewAnalysis
+                    productId={product.id}
+                    reviews={product.reviews.map(r => ({
+                      id: r.id,
+                      rating: r.rating,
+                      title: r.title,
+                      comment: r.content,
+                      author: r.user.name,
+                      date: r.date,
+                      helpful: r.helpful
+                    }))}
+                  />
+                )}
+
                 {/* Review Summary */}
                 <div className="bg-gray-50 rounded-lg p-6">
                   <div className="flex items-center space-x-8">
@@ -578,12 +597,23 @@ const ProductPage = () => {
             />
           </div>
 
+          {/* AI Price Prediction */}
+          {product && (
+            <div className="mt-8">
+              <AIPricePrediction
+                productId={product.id}
+                productName={product.name}
+                currentPrice={product.price}
+              />
+            </div>
+          )}
+
           {/* AI Recommendations */}
           <div className="mt-8 space-y-8">
             {/* Customers Also Bought */}
             <AIRecommendations 
               type="customers-also-bought"
-              productId={id}
+              productId={id || ''}
               limit={6}
               title="Customers Also Bought"
               showReason={true}
@@ -592,7 +622,7 @@ const ProductPage = () => {
             {/* Similar Products */}
             <AIRecommendations 
               type="similar-products"
-              productId={id}
+              productId={id || ''}
               category={product?.category}
               limit={6}
               title="Similar Products You Might Like"
@@ -637,6 +667,15 @@ const ProductPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* AI Product Q&A Bot */}
+      {product && (
+        <AIProductQABot
+          productId={product.id}
+          productName={product.name}
+          existingQuestions={[]}
+        />
       )}
     </div>
   );

@@ -138,23 +138,47 @@ export const useTravelStore = create<TravelState>()(
         
         // Trip actions
         fetchTrips: async (userId = 'user_123') => {
+          // Trips are automatically loaded from localStorage by Zustand persist
+          // Only fetch from API if we're in logged-in mode and want to sync
+          const currentTrips = get().trips;
+          
+          // If we have trips from localStorage, we're good - Zustand persist handles loading
+          // Only try API sync if backend is available (optional enhancement)
+          if (currentTrips.length > 0) {
+            // Trips already loaded from localStorage, no need to fetch
+            return;
+          }
+          
           set(state => ({ 
             loading: { ...state.loading, trips: true },
             errors: { ...state.errors, trips: null }
           }))
           
           try {
-            const trips = await travelAPI.getTrips(userId)
-            set(state => ({ 
-              trips,
-              loading: { ...state.loading, trips: false }
-            }))
+            const apiTrips = await travelAPI.getTrips(userId)
+            // Merge API trips with existing local trips (local trips take precedence if same ID)
+            set(state => {
+              const existingTrips = state.trips || []
+              const apiTripsMap = new Map(apiTrips.map(t => [t.id, t]))
+              const localTripsMap = new Map(existingTrips.map(t => [t.id, t]))
+              
+              // Merge: Local trips take precedence, then API trips that don't exist locally
+              const mergedTrips = [
+                ...Array.from(localTripsMap.values()),
+                ...Array.from(apiTripsMap.values()).filter(t => !localTripsMap.has(t.id))
+              ]
+              
+              return {
+                trips: mergedTrips,
+                loading: { ...state.loading, trips: false }
+              }
+            })
           } catch (error: any) {
+            // Don't overwrite existing trips if API fails - keep what's in localStorage
             set(state => ({ 
               loading: { ...state.loading, trips: false },
-              errors: { ...state.errors, trips: error.message }
+              errors: { ...state.errors, trips: null } // Don't show error, just use local data
             }))
-            console.error('Failed to fetch trips:', error)
           }
         },
         
@@ -164,21 +188,56 @@ export const useTravelStore = create<TravelState>()(
             errors: { ...state.errors, trips: null }
           }))
           
-          try {
-            const newTrip = await travelAPI.createTrip(trip, userId)
-            set(state => ({ 
-              trips: [...state.trips, newTrip],
-              loading: { ...state.loading, trips: false }
-            }))
-            return newTrip
-          } catch (error: any) {
-            set(state => ({ 
-              loading: { ...state.loading, trips: false },
-              errors: { ...state.errors, trips: error.message }
-            }))
-            console.error('Failed to create trip:', error)
-            return null
+          // Generate a unique ID for the trip
+          const tripId = `trip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          const now = new Date().toISOString()
+          
+          // Create trip object with all required fields
+          const newTrip: Trip = {
+            id: tripId,
+            user_id: userId,
+            title: trip.title,
+            description: trip.description || '',
+            trip_type: trip.trip_type || 'leisure',
+            destination: trip.destination,
+            start_date: trip.start_date,
+            end_date: trip.end_date,
+            status: 'planning',
+            budget: trip.budget,
+            currency: trip.currency || 'USD',
+            travelers: trip.travelers || [],
+            flights: [],
+            hotels: [],
+            activities: [],
+            itinerary: [],
+            documents: [],
+            created_at: now,
+            updated_at: now,
           }
+          
+          // Always add trip to local state first (for immediate UI update)
+          set(state => ({ 
+            trips: [...state.trips, newTrip],
+            loading: { ...state.loading, trips: false }
+          }))
+          
+          // Try to sync with backend (but don't fail if it doesn't work)
+          try {
+            const apiTrip = await travelAPI.createTrip(trip, userId)
+            // If API returns a trip with an ID, update our local trip with the API ID
+            if (apiTrip && apiTrip.id && apiTrip.id !== tripId) {
+              set(state => ({
+                trips: state.trips.map(t => 
+                  t.id === tripId ? { ...t, id: apiTrip.id } : t
+                )
+              }))
+            }
+          } catch (error: any) {
+            // Silently fail - trip is already in local state and will persist
+            // Don't set error state as the trip was successfully created locally
+          }
+          
+          return newTrip
         },
         
         updateTrip: async (tripId: string, trip: TripCreate) => {
@@ -187,21 +246,51 @@ export const useTravelStore = create<TravelState>()(
             errors: { ...state.errors, trips: null }
           }))
           
-          try {
-            const updatedTrip = await travelAPI.updateTrip(tripId, trip)
-            set(state => ({ 
-              trips: state.trips.map(t => t.id === tripId ? updatedTrip : t),
-              loading: { ...state.loading, trips: false }
-            }))
-            return updatedTrip
-          } catch (error: any) {
+          // Find existing trip to preserve its ID and other fields
+          const existingTrip = get().trips.find(t => t.id === tripId)
+          if (!existingTrip) {
             set(state => ({ 
               loading: { ...state.loading, trips: false },
-              errors: { ...state.errors, trips: error.message }
+              errors: { ...state.errors, trips: 'Trip not found' }
             }))
-            console.error('Failed to update trip:', error)
             return null
           }
+          
+          // Create updated trip object
+          const updatedTrip: Trip = {
+            ...existingTrip,
+            title: trip.title,
+            description: trip.description || existingTrip.description,
+            trip_type: trip.trip_type || existingTrip.trip_type,
+            destination: trip.destination,
+            start_date: trip.start_date,
+            end_date: trip.end_date,
+            budget: trip.budget,
+            currency: trip.currency || existingTrip.currency,
+            travelers: trip.travelers || existingTrip.travelers,
+            updated_at: new Date().toISOString(),
+          }
+          
+          // Update local state immediately
+          set(state => ({ 
+            trips: state.trips.map(t => t.id === tripId ? updatedTrip : t),
+            loading: { ...state.loading, trips: false }
+          }))
+          
+          // Try to sync with backend (but don't fail if it doesn't work)
+          try {
+            const apiTrip = await travelAPI.updateTrip(tripId, trip)
+            if (apiTrip) {
+              // Update with API response if available
+              set(state => ({
+                trips: state.trips.map(t => t.id === tripId ? { ...updatedTrip, ...apiTrip } : t)
+              }))
+            }
+          } catch (error: any) {
+            // Silently fail - trip is already updated locally and will persist
+          }
+          
+          return updatedTrip
         },
         
         deleteTrip: async (tripId: string) => {
@@ -210,21 +299,20 @@ export const useTravelStore = create<TravelState>()(
             errors: { ...state.errors, trips: null }
           }))
           
+          // Remove from local state immediately
+          set(state => ({ 
+            trips: state.trips.filter(t => t.id !== tripId),
+            loading: { ...state.loading, trips: false }
+          }))
+          
+          // Try to sync with backend (but don't fail if it doesn't work)
           try {
             await travelAPI.deleteTrip(tripId)
-            set(state => ({ 
-              trips: state.trips.filter(t => t.id !== tripId),
-              loading: { ...state.loading, trips: false }
-            }))
-            return true
           } catch (error: any) {
-            set(state => ({ 
-              loading: { ...state.loading, trips: false },
-              errors: { ...state.errors, trips: error.message }
-            }))
-            console.error('Failed to delete trip:', error)
-            return false
+            // Silently fail - trip is already deleted locally and will persist
           }
+          
+          return true
         },
         
         // Flight actions
@@ -574,16 +662,59 @@ export const useTravelStore = create<TravelState>()(
         },
       }),
       {
-        name: 'travel-storage',
+        name: 'travel-store',
+        version: 1,
         partialize: (state) => ({
           trips: state.trips,
           priceAlerts: state.priceAlerts,
           recommendations: state.recommendations,
         }),
+        migrate: (persistedState: any, version: number) => {
+          if (version === 0) {
+            return {
+              ...persistedState,
+              trips: persistedState.trips || [],
+              priceAlerts: persistedState.priceAlerts || [],
+              recommendations: persistedState.recommendations || [],
+            };
+          }
+          return persistedState;
+        },
+        storage: {
+          getItem: (name) => {
+            try {
+              const str = localStorage.getItem(name);
+              if (!str) return null;
+              const parsed = JSON.parse(str);
+              if (!parsed.state) {
+                console.warn(`[Travel Store] Invalid localStorage structure for ${name}, resetting...`);
+                return null;
+              }
+              return parsed;
+            } catch (error) {
+              console.error(`[Travel Store] Failed to parse localStorage for ${name}:`, error);
+              return null;
+            }
+          },
+          setItem: (name, value) => {
+            try {
+              localStorage.setItem(name, JSON.stringify(value));
+            } catch (error) {
+              console.error(`[Travel Store] Failed to save to localStorage for ${name}:`, error);
+            }
+          },
+          removeItem: (name) => {
+            try {
+              localStorage.removeItem(name);
+            } catch (error) {
+              console.error(`[Travel Store] Failed to remove from localStorage for ${name}:`, error);
+            }
+          },
+        },
       }
     ),
     {
-      name: 'travel-store',
+      name: 'travel-store-devtools',
     }
   )
 )

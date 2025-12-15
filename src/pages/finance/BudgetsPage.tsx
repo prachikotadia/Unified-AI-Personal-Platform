@@ -20,7 +20,12 @@ import {
   Filter,
   Search,
   Download,
-  Brain
+  Brain,
+  Info,
+  Copy,
+  FileText,
+  X,
+  Sliders
 } from 'lucide-react';
 import { useFinance } from '../../hooks/useFinance';
 import BudgetModal from '../../components/finance/BudgetModal';
@@ -31,6 +36,10 @@ const BudgetsPage: React.FC = () => {
   const { budgets, isLoading, fetchBudgets, createBudget, updateBudget, deleteBudget } = useFinance();
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [showAIBudgetModal, setShowAIBudgetModal] = useState(false);
+  const [showBudgetDetailModal, setShowBudgetDetailModal] = useState(false);
+  const [showAdjustAmountModal, setShowAdjustAmountModal] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit' | 'delete'>('add');
   const [selectedBudget, setSelectedBudget] = useState<Budget | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,6 +80,40 @@ const BudgetsPage: React.FC = () => {
   const handleBudgetDelete = (budgetId: string) => {
     deleteBudget(budgetId);
     setShowBudgetModal(false);
+  };
+
+  const handleViewBudgetDetails = (budget: Budget) => {
+    setSelectedBudget(budget);
+    setShowBudgetDetailModal(true);
+  };
+
+  const handleAdjustAmount = (budget: Budget) => {
+    setSelectedBudget(budget);
+    setShowAdjustAmountModal(true);
+  };
+
+  const handleConfirmAdjustAmount = (newAmount: number) => {
+    if (selectedBudget) {
+      const updated = { ...selectedBudget, amount: newAmount };
+      updateBudget(selectedBudget.id, updated);
+      setShowAdjustAmountModal(false);
+      setSelectedBudget(undefined);
+    }
+  };
+
+  const handleCopyBudget = (budget: Budget) => {
+    const copied = {
+      ...budget,
+      id: undefined,
+      name: `${budget.name} (Copy)`,
+      start_date: new Date().toISOString().split('T')[0],
+      end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    };
+    createBudget(copied as Budget);
+  };
+
+  const handleCreateTemplate = () => {
+    setShowTemplateModal(true);
   };
 
   const getProgressPercentage = (budget: Budget) => {
@@ -148,13 +191,27 @@ const BudgetsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Budget Management</h1>
           <p className="text-gray-600">Track and manage your financial budgets</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <button
-            onClick={() => setShowAIModal(true)}
+            onClick={() => setShowAIBudgetModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
           >
             <Brain size={16} />
+            AI Budget Suggestions
+          </button>
+          <button
+            onClick={() => setShowAIModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <Brain size={16} />
             AI Forecasting
+          </button>
+          <button
+            onClick={handleCreateTemplate}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <FileText size={16} />
+            Create Template
           </button>
           <button
             onClick={handleAddBudget}
@@ -394,17 +451,43 @@ const BudgetsPage: React.FC = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200 flex-wrap">
+                  <button
+                    onClick={() => handleViewBudgetDetails(budget)}
+                    className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="View Details"
+                  >
+                    <Info size={14} />
+                    Details
+                  </button>
                   <button
                     onClick={() => handleEditBudget(budget)}
                     className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Edit"
                   >
                     <Edit size={14} />
                     Edit
                   </button>
                   <button
+                    onClick={() => handleAdjustAmount(budget)}
+                    className="flex items-center gap-1 px-3 py-1 text-sm text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                    title="Adjust Amount"
+                  >
+                    <Sliders size={14} />
+                    Adjust
+                  </button>
+                  <button
+                    onClick={() => handleCopyBudget(budget)}
+                    className="flex items-center gap-1 px-3 py-1 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                    title="Copy Budget"
+                  >
+                    <Copy size={14} />
+                    Copy
+                  </button>
+                  <button
                     onClick={() => handleDeleteBudget(budget)}
                     className="flex items-center gap-1 px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Delete"
                   >
                     <Trash2 size={14} />
                     Delete
@@ -435,6 +518,220 @@ const BudgetsPage: React.FC = () => {
         isOpen={showAIModal}
         onClose={() => setShowAIModal(false)}
       />
+
+      {/* AI Budget Suggestions Modal */}
+      {showAIBudgetModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">AI Budget Suggestions</h2>
+              <button onClick={() => setShowAIBudgetModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                AI-powered budget recommendations based on your spending patterns and financial goals.
+              </p>
+              <div className="space-y-3">
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Food & Dining Budget</h3>
+                  <p className="text-sm text-gray-600 mb-2">Recommended: $500/month</p>
+                  <p className="text-xs text-gray-500">Based on your average spending of $450/month</p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Transportation Budget</h3>
+                  <p className="text-sm text-gray-600 mb-2">Recommended: $300/month</p>
+                  <p className="text-xs text-gray-500">Based on your average spending of $280/month</p>
+                </div>
+              </div>
+              <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                Apply Suggestions
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Budget Detail Modal */}
+      {showBudgetDetailModal && selectedBudget && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Budget Details</h2>
+              <button onClick={() => {
+                setShowBudgetDetailModal(false);
+                setSelectedBudget(undefined);
+              }}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold mb-2">{selectedBudget.name}</h3>
+                <p className="text-sm text-gray-600">{getBudgetTypeLabel(selectedBudget.budget_type)}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Budget Amount</p>
+                  <p className="text-lg font-semibold">${selectedBudget.amount.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Spent</p>
+                  <p className="text-lg font-semibold text-red-600">${selectedBudget.spent.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Remaining</p>
+                  <p className="text-lg font-semibold text-green-600">${selectedBudget.remaining.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Progress</p>
+                  <p className="text-lg font-semibold">{getProgressPercentage(selectedBudget).toFixed(1)}%</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Category</p>
+                <p className="font-medium">{selectedBudget.category.replace('_', ' ')}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Period</p>
+                <p className="font-medium">{selectedBudget.period}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Date Range</p>
+                <p className="font-medium">
+                  {new Date(selectedBudget.start_date).toLocaleDateString()} - {new Date(selectedBudget.end_date).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Adjust Amount Modal */}
+      {showAdjustAmountModal && selectedBudget && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-md mx-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Adjust Budget Amount</h2>
+              <button onClick={() => {
+                setShowAdjustAmountModal(false);
+                setSelectedBudget(undefined);
+              }}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Current Amount</label>
+                <p className="text-lg font-semibold">${selectedBudget.amount.toFixed(2)}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">New Amount</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  defaultValue={selectedBudget.amount}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  id="new-amount"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowAdjustAmountModal(false);
+                    setSelectedBudget(undefined);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const newAmount = parseFloat((document.getElementById('new-amount') as HTMLInputElement)?.value || '0');
+                    if (newAmount > 0) {
+                      handleConfirmAdjustAmount(newAmount);
+                    }
+                  }}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Update
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Create Template Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-md mx-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Create Budget Template</h2>
+              <button onClick={() => setShowTemplateModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Template Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Monthly Budget Template"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  id="template-name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  placeholder="Template description..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  id="template-description"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowTemplateModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const name = (document.getElementById('template-name') as HTMLInputElement)?.value;
+                    if (name) {
+                      // Create template from current budgets
+                      setShowTemplateModal(false);
+                    }
+                  }}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Create Template
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

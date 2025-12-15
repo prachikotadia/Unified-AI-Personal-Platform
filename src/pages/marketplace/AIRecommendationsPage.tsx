@@ -24,10 +24,16 @@ import {
   Settings,
   BookOpen,
   Lightbulb,
-  Package
+  Package,
+  X,
+  Save,
+  HelpCircle
 } from 'lucide-react';
 import AIRecommendations from '../../components/marketplace/AIRecommendations';
 import PersonalizedDashboard from '../../components/marketplace/PersonalizedDashboard';
+import PreferencesModal from '../../components/marketplace/PreferencesModal';
+import AIReasoningModal from '../../components/marketplace/AIReasoningModal';
+import { useToastHelpers } from '../../components/ui/Toast';
 
 interface RecommendationCategory {
   id: string;
@@ -39,9 +45,14 @@ interface RecommendationCategory {
 }
 
 const AIRecommendationsPage: React.FC = () => {
+  const { success, error: showError } = useToastHelpers();
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [insights, setInsights] = useState<any[]>([]);
+  const [showPreferencesModal, setShowPreferencesModal] = useState(false);
+  const [showReasoningModal, setShowReasoningModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [preferences, setPreferences] = useState<any>(null);
 
   const recommendationCategories: RecommendationCategory[] = [
     {
@@ -128,6 +139,35 @@ const AIRecommendationsPage: React.FC = () => {
     return recommendationCategories.find(cat => cat.id === activeCategory);
   };
 
+  const handleRefreshRecommendations = async () => {
+    setLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLoading(false);
+    success('Recommendations Refreshed', 'New recommendations have been loaded');
+  };
+
+  const handleSavePreferences = (newPreferences: any) => {
+    setPreferences(newPreferences);
+    success('Preferences Saved', 'Your preferences have been updated');
+    // Refresh recommendations with new preferences
+    handleRefreshRecommendations();
+  };
+
+  const handleWhyRecommended = (product: any) => {
+    setSelectedProduct(product);
+    setShowReasoningModal(true);
+  };
+
+  const handleNotInterested = (productId: string) => {
+    // In a real app, this would send feedback to the AI system
+    success('Feedback Recorded', 'We\'ll show you fewer similar products');
+  };
+
+  const handleSaveRecommendationList = () => {
+    // In a real app, this would save the current recommendations
+    success('List Saved', 'Your recommendation list has been saved');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
@@ -170,10 +210,22 @@ const AIRecommendationsPage: React.FC = () => {
                 <span>Powered by AI</span>
               </div>
             </div>
-            <button className="flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium">
-              <RefreshCw className="w-4 h-4 mr-1" />
-              Refresh
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowPreferencesModal(true)}
+                className="flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                <Settings className="w-4 h-4 mr-1" />
+                Customize Preferences
+              </button>
+              <button
+                onClick={handleRefreshRecommendations}
+                className="flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                <RefreshCw className="w-4 h-4 mr-1" />
+                Refresh
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -257,12 +309,16 @@ const AIRecommendationsPage: React.FC = () => {
                 title="Personalized for You"
                 showReason={true}
                 showConfidence={true}
+                onWhyRecommended={handleWhyRecommended}
+                onNotInterested={handleNotInterested}
               />
               
               <AIRecommendations 
                 type="trending"
                 limit={6}
                 title="Trending Now"
+                onWhyRecommended={handleWhyRecommended}
+                onNotInterested={handleNotInterested}
               />
               
               <AIRecommendations 
@@ -270,6 +326,8 @@ const AIRecommendationsPage: React.FC = () => {
                 limit={6}
                 title="Frequently Bought Together"
                 showReason={true}
+                onWhyRecommended={handleWhyRecommended}
+                onNotInterested={handleNotInterested}
               />
               
               <AIRecommendations 
@@ -277,6 +335,8 @@ const AIRecommendationsPage: React.FC = () => {
                 limit={6}
                 title="Similar to Your Favorites"
                 showConfidence={true}
+                onWhyRecommended={handleWhyRecommended}
+                onNotInterested={handleNotInterested}
               />
             </>
           ) : (
@@ -287,13 +347,24 @@ const AIRecommendationsPage: React.FC = () => {
               title={getActiveCategory()?.name || 'Recommendations'}
               showReason={true}
               showConfidence={true}
+              onWhyRecommended={handleWhyRecommended}
+              onNotInterested={handleNotInterested}
             />
           )}
         </div>
 
-        {/* Quick Actions */}
+        {/* Save Recommendation List */}
         <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
+            <button
+              onClick={handleSaveRecommendationList}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Save size={16} />
+              Save Recommendation List
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Link
               to="/marketplace"
@@ -340,6 +411,33 @@ const AIRecommendationsPage: React.FC = () => {
             </Link>
           </div>
         </div>
+
+        {/* Modals */}
+        <PreferencesModal
+          isOpen={showPreferencesModal}
+          onClose={() => setShowPreferencesModal(false)}
+          onSave={handleSavePreferences}
+          initialPreferences={preferences}
+        />
+
+        {selectedProduct && (
+          <AIReasoningModal
+            isOpen={showReasoningModal}
+            onClose={() => {
+              setShowReasoningModal(false);
+              setSelectedProduct(null);
+            }}
+            productName={selectedProduct.name}
+            reason={selectedProduct.reason || 'Based on your browsing history and preferences'}
+            confidence={selectedProduct.confidence}
+            factors={[
+              'Matches your browsing history',
+              'Similar to products you\'ve viewed',
+              'High customer ratings',
+              'Popular with similar users'
+            ]}
+          />
+        )}
       </div>
     </div>
   );

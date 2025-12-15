@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Clock, Zap, Target } from 'lucide-react';
 import { useFitnessStore } from '../../store/fitness';
+import { useToastHelpers } from '../ui/Toast';
+import { WorkoutSessionCreate, ActivityType } from '../../services/fitnessAPI';
 
 interface WorkoutModalProps {
   isOpen: boolean;
@@ -11,9 +13,10 @@ interface WorkoutModalProps {
 
 const WorkoutModal: React.FC<WorkoutModalProps> = ({ isOpen, onClose, workout }) => {
   const { createWorkoutSession, updateWorkoutSession, isLoading } = useFitnessStore();
-  const [formData, setFormData] = useState({
+  const { success, error: showError } = useToastHelpers();
+  const [formData, setFormData] = useState<WorkoutSessionCreate>({
     name: '',
-    type: 'strength',
+    type: ActivityType.WEIGHT_TRAINING,
     duration: 30,
     intensity: 'moderate',
     calories_burned: 0,
@@ -24,7 +27,7 @@ const WorkoutModal: React.FC<WorkoutModalProps> = ({ isOpen, onClose, workout })
     if (workout) {
       setFormData({
         name: workout.name || '',
-        type: workout.type || 'strength',
+        type: workout.type || ActivityType.WEIGHT_TRAINING,
         duration: workout.duration || 30,
         intensity: workout.intensity || 'moderate',
         calories_burned: workout.calories_burned || 0,
@@ -33,7 +36,7 @@ const WorkoutModal: React.FC<WorkoutModalProps> = ({ isOpen, onClose, workout })
     } else {
       setFormData({
         name: '',
-        type: 'strength',
+        type: ActivityType.WEIGHT_TRAINING,
         duration: 30,
         intensity: 'moderate',
         calories_burned: 0,
@@ -48,12 +51,15 @@ const WorkoutModal: React.FC<WorkoutModalProps> = ({ isOpen, onClose, workout })
     try {
       if (workout) {
         await updateWorkoutSession(workout.id, formData);
+        success('Workout Updated', 'Your workout has been updated successfully');
       } else {
         await createWorkoutSession(formData);
+        success('Workout Logged', 'Your workout has been saved successfully');
       }
       onClose();
     } catch (error) {
       console.error('Error saving workout:', error);
+      showError('Failed to save workout', 'Please try again');
     }
   };
 
@@ -83,14 +89,14 @@ const WorkoutModal: React.FC<WorkoutModalProps> = ({ isOpen, onClose, workout })
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="glass-card w-full max-w-md p-6"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
@@ -124,7 +130,7 @@ const WorkoutModal: React.FC<WorkoutModalProps> = ({ isOpen, onClose, workout })
                 <label className="block text-sm font-medium mb-2">Type</label>
                 <select
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value as ActivityType })}
                   className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {workoutTypes.map((type) => (
@@ -201,7 +207,7 @@ const WorkoutModal: React.FC<WorkoutModalProps> = ({ isOpen, onClose, workout })
                 </button>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading.workoutSessions}
                   className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-gradient-from to-blue-gradient-to text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                   {isLoading ? 'Saving...' : (workout ? 'Update' : 'Log Workout')}

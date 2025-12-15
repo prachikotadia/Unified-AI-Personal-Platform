@@ -10,7 +10,7 @@ from langchain_community.llms import OpenAI
 from langchain_community.chat_models import ChatOpenAI
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma, FAISS
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader, CSVLoader
 from langchain.chains import LLMChain, ConversationChain, RetrievalQA
 from langchain.prompts import PromptTemplate, ChatPromptTemplate

@@ -10,15 +10,25 @@ import {
   Play,
   Pause,
   CheckCircle,
-  TrendingUp
+  TrendingUp,
+  Share2,
+  Download,
+  Brain,
+  Sparkles
 } from 'lucide-react';
 import { useFitness } from '../../hooks/useFitness';
+import { useToastHelpers } from '../../components/ui/Toast';
 import ExerciseModal from '../../components/fitness/ExerciseModal';
+import WorkoutPlanModal from '../../components/fitness/WorkoutPlanModal';
 
 const WorkoutPlansPage = () => {
+  const { success, error: showError } = useToastHelpers();
   const { workoutPlans, isLoading, error } = useFitness();
   const [showExerciseModal, setShowExerciseModal] = useState(false);
+  const [showWorkoutPlanModal, setShowWorkoutPlanModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [showAIPlanner, setShowAIPlanner] = useState(false);
+  const [activePlans, setActivePlans] = useState<Set<string>>(new Set(['1', '2']));
 
   // Mock workout plans data
   const mockPlans = [
@@ -95,17 +105,45 @@ const WorkoutPlansPage = () => {
 
   const handleCreatePlan = () => {
     setSelectedPlan(null);
-    setShowExerciseModal(true);
+    setShowWorkoutPlanModal(true);
   };
 
   const handleEditPlan = (plan: any) => {
     setSelectedPlan(plan);
-    setShowExerciseModal(true);
+    setShowWorkoutPlanModal(true);
   };
 
   const handleExerciseSelect = (exercise: any) => {
     // Handle exercise selection for workout plan
     console.log('Selected exercise:', exercise);
+  };
+
+  const handleDeletePlan = (planId: string) => {
+    if (window.confirm('Are you sure you want to delete this workout plan?')) {
+      success('Plan Deleted', 'Workout plan has been removed');
+    }
+  };
+
+  const handleStartPlan = (planId: string) => {
+    setActivePlans(prev => new Set([...prev, planId]));
+    success('Plan Started', 'Workout plan is now active');
+  };
+
+  const handlePausePlan = (planId: string) => {
+    setActivePlans(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(planId);
+      return newSet;
+    });
+    success('Plan Paused', 'Workout plan has been paused');
+  };
+
+  const handleSharePlan = (plan: any) => {
+    success('Plan Shared', 'Workout plan link copied to clipboard');
+  };
+
+  const handleImportPlan = () => {
+    success('Import Started', 'Select a file to import workout plan');
   };
 
   if (isLoading) {
@@ -158,20 +196,36 @@ const WorkoutPlansPage = () => {
         animate={{ opacity: 1, y: 0 }}
         className="glass-card p-6"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold mb-2">Workout Plans</h1>
             <p className="text-gray-600 dark:text-gray-400">
               Create and manage your personalized workout routines
             </p>
           </div>
-          <button 
-            onClick={handleCreatePlan}
-            className="btn-primary flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create Plan</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAIPlanner(true)}
+              className="btn-secondary flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              <Brain className="w-4 h-4" />
+              <span>AI Generate Plan</span>
+            </button>
+            <button
+              onClick={handleImportPlan}
+              className="btn-secondary flex items-center space-x-2"
+            >
+              <Download className="w-4 h-4 rotate-180" />
+              <span>Import Plan</span>
+            </button>
+            <button 
+              onClick={handleCreatePlan}
+              className="btn-primary flex items-center space-x-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Plan</span>
+            </button>
+          </div>
         </div>
       </motion.div>
 
@@ -201,10 +255,22 @@ const WorkoutPlansPage = () => {
                 <button
                   onClick={() => handleEditPlan(plan)}
                   className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  title="Edit"
                 >
                   <Edit className="w-4 h-4" />
                 </button>
-                <button className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                <button
+                  onClick={() => handleSharePlan(plan)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  title="Share"
+                >
+                  <Share2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDeletePlan(plan.id)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors text-red-400 hover:text-red-500"
+                  title="Delete"
+                >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -252,13 +318,23 @@ const WorkoutPlansPage = () => {
 
             {/* Action Buttons */}
             <div className="flex space-x-2 mt-4">
-              <button className="flex-1 px-3 py-2 bg-gradient-to-r from-green-gradient-from to-green-gradient-to text-white rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center space-x-1">
-                <Play className="w-4 h-4" />
-                <span>Start</span>
-              </button>
-              <button className="px-3 py-2 border border-white/20 rounded-lg hover:bg-white/10 transition-colors">
-                {plan.is_active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              </button>
+              {activePlans.has(plan.id) ? (
+                <button
+                  onClick={() => handlePausePlan(plan.id)}
+                  className="flex-1 px-3 py-2 bg-gradient-to-r from-yellow-gradient-from to-yellow-gradient-to text-white rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center space-x-1"
+                >
+                  <Pause className="w-4 h-4" />
+                  <span>Pause Plan</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleStartPlan(plan.id)}
+                  className="flex-1 px-3 py-2 bg-gradient-to-r from-green-gradient-from to-green-gradient-to text-white rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center space-x-1"
+                >
+                  <Play className="w-4 h-4" />
+                  <span>Start Plan</span>
+                </button>
+              )}
             </div>
           </motion.div>
         ))}
@@ -285,13 +361,60 @@ const WorkoutPlansPage = () => {
         </motion.div>
       )}
 
+      {/* Workout Plan Modal */}
+      <WorkoutPlanModal
+        isOpen={showWorkoutPlanModal}
+        onClose={() => {
+          setShowWorkoutPlanModal(false);
+          setSelectedPlan(null);
+        }}
+        onSubmit={(planData) => {
+          console.log('Plan created/updated:', planData);
+          setShowWorkoutPlanModal(false);
+          setSelectedPlan(null);
+        }}
+        plan={selectedPlan}
+      />
+
       {/* Exercise Modal */}
       <ExerciseModal 
         isOpen={showExerciseModal} 
-        onClose={() => setShowExerciseModal(false)}
+        onClose={() => {
+          setShowExerciseModal(false);
+        }}
         onSelect={handleExerciseSelect}
         selectedExercises={selectedPlan?.exercises || []}
       />
+
+      {/* AI Planner Modal Placeholder */}
+      {showAIPlanner && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Brain className="text-blue-600" size={24} />
+                <h2 className="text-xl font-semibold">AI Workout Plan Generator</h2>
+              </div>
+              <button
+                onClick={() => setShowAIPlanner(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <span className="text-xl">×</span>
+              </button>
+            </div>
+            <div className="text-center py-8">
+              <Sparkles className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">
+                AI is generating a personalized workout plan based on your goals and preferences...
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

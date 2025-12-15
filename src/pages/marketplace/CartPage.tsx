@@ -17,9 +17,17 @@ import {
   Check,
   X,
   ChevronRight,
-  Loader2
+  Loader2,
+  Tag,
+  Calculator,
+  Gift,
+  Brain,
+  ShoppingBag
 } from 'lucide-react';
 import AIRecommendations from '../../components/marketplace/AIRecommendations';
+import CouponModal from '../../components/marketplace/CouponModal';
+import ShippingCalculatorModal from '../../components/marketplace/ShippingCalculatorModal';
+import GiftOptionsModal from '../../components/marketplace/GiftOptionsModal';
 import { useCartStore } from '../../store/cart';
 import { useWishlistStore } from '../../store/wishlist';
 import { useToastHelpers } from '../../components/ui/Toast';
@@ -42,15 +50,33 @@ const CartPage = () => {
   } = useCartStore();
   
   const { 
-    addToWishlist, 
+    items: wishlistItems,
+    addToWishlist,
+    moveToCart: moveWishlistToCart,
+    removeFromWishlist,
+    fetchWishlist,
     isLoading: wishlistLoading 
   } = useWishlistStore();
 
   const [showCheckout, setShowCheckout] = useState(false);
+  const [showCouponModal, setShowCouponModal] = useState(false);
+  const [showShippingModal, setShowShippingModal] = useState(false);
+  const [showGiftModal, setShowGiftModal] = useState(false);
+  const [showAIRecommendations, setShowAIRecommendations] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [selectedShipping, setSelectedShipping] = useState<any>(null);
+  const [giftOptions, setGiftOptions] = useState<any>(null);
+  const [savedItems, setSavedItems] = useState<any[]>([]);
 
   useEffect(() => {
     fetchCart();
-  }, [fetchCart]);
+    fetchWishlist();
+    // Load saved items (items saved for later)
+    const saved = localStorage.getItem('cart_saved_items');
+    if (saved) {
+      setSavedItems(JSON.parse(saved));
+    }
+  }, [fetchCart, fetchWishlist]);
 
   // Handlers
   const handleUpdateQuantity = async (itemId: number, change: number) => {
@@ -149,15 +175,74 @@ const CartPage = () => {
     navigate('/marketplace/checkout');
   };
 
+  // Handlers for new features
+  const handleApplyCoupon = (coupon: any) => {
+    setAppliedCoupon(coupon);
+    success('Coupon Applied', `Coupon ${coupon.code} applied successfully!`);
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    success('Coupon Removed', 'Coupon removed successfully');
+  };
+
+  const handleSelectShipping = (option: any) => {
+    setSelectedShipping(option);
+    success('Shipping Updated', 'Shipping option updated');
+  };
+
+  const handleApplyGiftOptions = (options: any) => {
+    setGiftOptions(options);
+    success('Gift Options Applied', 'Gift options saved');
+  };
+
+  const handleSaveForLater = async (itemId: number) => {
+    const item = cart.items.find(item => item.id === itemId);
+    if (item) {
+      try {
+        await addToWishlist(item.productId);
+        await removeFromCart(itemId);
+        success('Saved for Later', 'Item moved to saved items');
+      } catch (err) {
+        showError('Save Failed', 'Failed to save item');
+      }
+    }
+  };
+
+  const handleMoveToCart = async (productId: number) => {
+    try {
+      await moveWishlistToCart(productId, 1);
+      await removeFromWishlist(productId);
+      await fetchCart();
+      success('Moved to Cart', 'Item moved to cart successfully');
+    } catch (err) {
+      showError('Move Failed', 'Failed to move item to cart');
+    }
+  };
+
   // Calculations
   const subtotal = cart.items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
   const totalSavings = cart.items.reduce((sum, item) => {
     const originalPrice = item.product.originalPrice || item.product.price;
     return sum + ((originalPrice - item.product.price) * item.quantity);
   }, 0);
-  const tax = subtotal * 0.08; // 8% tax
-  const shipping = subtotal > 35 ? 0 : 5.99; // Free shipping over $35
-  const total = subtotal + tax + shipping;
+  
+  // Apply coupon discount
+  let couponDiscount = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.type === 'percentage') {
+      couponDiscount = (subtotal * appliedCoupon.discount) / 100;
+    } else {
+      couponDiscount = appliedCoupon.discount;
+    }
+  }
+  
+  const tax = (subtotal - couponDiscount) * 0.08; // 8% tax
+  const shipping = selectedShipping 
+    ? selectedShipping.price 
+    : (subtotal > 35 ? 0 : 5.99); // Free shipping over $35
+  const giftWrapCost = giftOptions?.giftWrap ? 4.99 : 0;
+  const total = subtotal - couponDiscount + tax + shipping + giftWrapCost;
 
   if (cartLoading) {
     return (
@@ -300,9 +385,10 @@ const CartPage = () => {
 
                         <div className="flex items-center space-x-2">
                           <button
-                            onClick={() => handleMoveToWishlist(item.id)}
+                            onClick={() => handleSaveForLater(item.id)}
                             disabled={cartLoading || wishlistLoading}
-                            className="p-2 text-gray-400 hover:text-red-500 disabled:opacity-50"
+                            className="p-2 text-gray-400 hover:text-blue-500 disabled:opacity-50"
+                            title="Save for Later"
                           >
                             <Heart size={16} />
                           </button>
@@ -310,6 +396,7 @@ const CartPage = () => {
                             onClick={() => handleRemoveFromCart(item.id)}
                             disabled={cartLoading || wishlistLoading}
                             className="p-2 text-gray-400 hover:text-red-500 disabled:opacity-50"
+                            title="Remove Item"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -320,8 +407,76 @@ const CartPage = () => {
                 </div>
               </div>
 
+              {/* Saved for Later / Wishlist Items */}
+              {(wishlistItems.length > 0 || savedItems.length > 0) && (
+                <div className="bg-white rounded-lg shadow-sm border">
+                  <div className="p-4 border-b border-gray-200">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      Saved for Later ({wishlistItems.length + savedItems.length})
+                    </h2>
+                  </div>
+                  <div className="divide-y divide-gray-200">
+                    {wishlistItems.map((item) => (
+                      <div key={item.id} className="p-4">
+                        <div className="flex items-center space-x-4">
+                          <img
+                            src={item.product.image}
+                            alt={item.product.name}
+                            className="w-20 h-20 object-cover rounded-lg"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-medium text-gray-900 truncate">
+                              {item.product.name}
+                            </h3>
+                            <p className="text-sm text-gray-500">{item.product.brand}</p>
+                            <div className="flex items-center mt-1">
+                              <span className="text-lg font-semibold text-gray-900">
+                                ${item.product.price.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleMoveToCart(item.productId)}
+                            disabled={cartLoading || wishlistLoading}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
+                          >
+                            Move to Cart
+                          </button>
+                          <button
+                            onClick={() => removeFromWishlist(item.productId)}
+                            disabled={cartLoading || wishlistLoading}
+                            className="p-2 text-gray-400 hover:text-red-500 disabled:opacity-50"
+                            title="Remove"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* AI Recommendations */}
-              <AIRecommendations type="personalized" />
+              <div className="bg-white rounded-lg shadow-sm border">
+                <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <Brain className="text-purple-600" size={20} />
+                    AI Cart Recommendations
+                  </h2>
+                  <button
+                    onClick={() => setShowAIRecommendations(!showAIRecommendations)}
+                    className="text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    {showAIRecommendations ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                {showAIRecommendations && (
+                  <div className="p-4">
+                    <AIRecommendations type="personalized" />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Order Summary */}
@@ -341,6 +496,31 @@ const CartPage = () => {
                       <span>-${totalSavings.toFixed(2)}</span>
                     </div>
                   )}
+
+                  {/* Coupon Discount */}
+                  {appliedCoupon && (
+                    <div className="flex justify-between text-sm text-blue-600">
+                      <div className="flex items-center gap-2">
+                        <span>Coupon ({appliedCoupon.code})</span>
+                        <button
+                          onClick={handleRemoveCoupon}
+                          className="text-red-600 hover:text-red-700"
+                          title="Remove coupon"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <span>-${couponDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {/* Gift Wrap */}
+                  {giftOptions?.giftWrap && (
+                    <div className="flex justify-between text-sm">
+                      <span>Gift Wrap</span>
+                      <span>$4.99</span>
+                    </div>
+                  )}
                   
                   <div className="flex justify-between text-sm">
                     <span>Tax</span>
@@ -348,7 +528,16 @@ const CartPage = () => {
                   </div>
                   
                   <div className="flex justify-between text-sm">
-                    <span>Shipping</span>
+                    <div className="flex items-center gap-2">
+                      <span>Shipping</span>
+                      <button
+                        onClick={() => setShowShippingModal(true)}
+                        className="text-blue-600 hover:text-blue-700 text-xs"
+                        title="Estimate Shipping"
+                      >
+                        <Calculator size={14} />
+                      </button>
+                    </div>
                     <span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
                   </div>
                   
@@ -358,6 +547,25 @@ const CartPage = () => {
                       <span>${total.toFixed(2)}</span>
                     </div>
                   </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-2 mt-4">
+                  <button
+                    onClick={() => setShowCouponModal(true)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium"
+                  >
+                    <Tag size={16} />
+                    {appliedCoupon ? 'Change Coupon' : 'Apply Coupon'}
+                  </button>
+
+                  <button
+                    onClick={() => setShowGiftModal(true)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium"
+                  >
+                    <Gift size={16} />
+                    {giftOptions ? 'Edit Gift Options' : 'Add Gift Options'}
+                  </button>
                 </div>
 
                 <button
@@ -396,6 +604,29 @@ const CartPage = () => {
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      <CouponModal
+        isOpen={showCouponModal}
+        onClose={() => setShowCouponModal(false)}
+        onApply={handleApplyCoupon}
+        appliedCoupon={appliedCoupon}
+        onRemove={handleRemoveCoupon}
+      />
+
+      <ShippingCalculatorModal
+        isOpen={showShippingModal}
+        onClose={() => setShowShippingModal(false)}
+        subtotal={subtotal}
+        onSelectShipping={handleSelectShipping}
+      />
+
+      <GiftOptionsModal
+        isOpen={showGiftModal}
+        onClose={() => setShowGiftModal(false)}
+        onApply={handleApplyGiftOptions}
+        initialOptions={giftOptions}
+      />
     </div>
   );
 };

@@ -18,9 +18,17 @@ import {
   Zap,
   BarChart3,
   RefreshCw,
-  X
+  X,
+  Share2,
+  Download,
+  FileText,
+  FileSpreadsheet,
+  Trash2
 } from 'lucide-react';
 import ProductComparison from '../../components/marketplace/ProductComparison';
+import ShareComparisonModal from '../../components/marketplace/ShareComparisonModal';
+import AIProductComparison from '../../components/marketplace/AIProductComparison';
+import { useToastHelpers } from '../../components/ui/Toast';
 
 interface Product {
   id: string;
@@ -44,12 +52,14 @@ interface Product {
 }
 
 const ProductComparisonPage: React.FC = () => {
+  const { success, error: showError } = useToastHelpers();
   const [comparisonProducts, setComparisonProducts] = useState<Product[]>([]);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [showProductSelector, setShowProductSelector] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -221,6 +231,58 @@ const ProductComparisonPage: React.FC = () => {
 
   const removeFromComparison = (productId: string) => {
     setComparisonProducts(prev => prev.filter(p => p.id !== productId));
+    success('Product Removed', 'Product has been removed from comparison');
+  };
+
+  const handleClearAll = () => {
+    if (window.confirm('Are you sure you want to clear all products from comparison?')) {
+      setComparisonProducts([]);
+      success('Comparison Cleared', 'All products have been removed');
+    }
+  };
+
+  const handleShareComparison = () => {
+    if (comparisonProducts.length === 0) {
+      showError('No Products', 'Please add products to compare before sharing');
+      return;
+    }
+    setShowShareModal(true);
+  };
+
+  const handleExportComparison = (format: 'csv' | 'pdf') => {
+    if (comparisonProducts.length === 0) {
+      showError('No Products', 'Please add products to compare before exporting');
+      return;
+    }
+
+    if (format === 'csv') {
+      // Create CSV data
+      const headers = ['Product', 'Brand', 'Price', 'Rating', 'Reviews', 'In Stock'];
+      const rows = comparisonProducts.map(p => [
+        p.name,
+        p.brand,
+        p.price.toString(),
+        p.rating.toString(),
+        p.reviewCount.toString(),
+        p.inStock ? 'Yes' : 'No'
+      ]);
+
+      const csv = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `product_comparison_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      success('Export Successful', 'Comparison exported to CSV');
+    } else {
+      // PDF export placeholder
+      success('Export', 'PDF export feature coming soon');
+    }
   };
 
   const addToCart = (productId: string) => {
@@ -291,35 +353,102 @@ const ProductComparisonPage: React.FC = () => {
                 <span>{comparisonProducts.length}/4 Products</span>
               </div>
             </div>
-            <button
-              onClick={() => setShowProductSelector(true)}
-              disabled={comparisonProducts.length >= 4}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Product</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {comparisonProducts.length > 0 && (
+                <>
+                  <button
+                    onClick={handleClearAll}
+                    className="flex items-center space-x-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Clear All</span>
+                  </button>
+                  <button
+                    onClick={handleShareComparison}
+                    className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    <span>Share</span>
+                  </button>
+                  <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => handleExportComparison('csv')}
+                      className="px-3 py-2 hover:bg-gray-50 transition-colors"
+                      title="Export to CSV"
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleExportComparison('pdf')}
+                      className="px-3 py-2 hover:bg-gray-50 transition-colors border-l border-gray-300"
+                      title="Export to PDF"
+                    >
+                      <FileText className="w-4 h-4" />
+                    </button>
+                  </div>
+                </>
+              )}
+              <button
+                onClick={() => setShowProductSelector(true)}
+                disabled={comparisonProducts.length >= 4}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Product</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Product Comparison Component */}
-        <ProductComparison
-          products={comparisonProducts}
-          onRemoveProduct={removeFromComparison}
-          onAddToCart={addToCart}
-          onAddToWishlist={addToWishlist}
-        />
+        {comparisonProducts.length > 0 ? (
+          <div className="space-y-6">
+            {/* AI Comparison Analysis */}
+            <AIProductComparison
+              products={comparisonProducts.map(p => ({
+                id: p.id,
+                name: p.name,
+                price: p.price,
+                rating: p.rating,
+                reviewCount: p.reviewCount,
+                brand: p.brand,
+                specifications: p.specifications || {}
+              }))}
+            />
+            
+            {/* Standard Comparison Table */}
+            <ProductComparison
+              products={comparisonProducts}
+              onRemoveProduct={removeFromComparison}
+              onAddToCart={addToCart}
+              onAddToWishlist={addToWishlist}
+            />
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+            <Target className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No products to compare</h3>
+            <p className="text-gray-600 mb-6">Add products to your comparison to see detailed specifications side by side.</p>
+            <button
+              onClick={() => setShowProductSelector(true)}
+              className="inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Product to Compare</span>
+            </button>
+          </div>
+        )}
 
         {/* Product Selector Modal */}
         {showProductSelector && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+              className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -433,6 +562,13 @@ const ProductComparisonPage: React.FC = () => {
             </motion.div>
           </div>
         )}
+
+        {/* Share Comparison Modal */}
+        <ShareComparisonModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          products={comparisonProducts}
+        />
       </div>
     </div>
   );

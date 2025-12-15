@@ -44,6 +44,8 @@ interface AIRecommendationsProps {
   title?: string;
   showReason?: boolean;
   showConfidence?: boolean;
+  onWhyRecommended?: (product: any) => void;
+  onNotInterested?: (productId: string) => void;
 }
 
 const AIRecommendations: React.FC<AIRecommendationsProps> = ({
@@ -53,7 +55,9 @@ const AIRecommendations: React.FC<AIRecommendationsProps> = ({
   limit = 6,
   title,
   showReason = false,
-  showConfidence = false
+  showConfidence = false,
+  onWhyRecommended,
+  onNotInterested
 }) => {
   const [recommendations, setRecommendations] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -391,6 +395,36 @@ const AIRecommendations: React.FC<AIRecommendationsProps> = ({
                 {showReason && product.reason && (
                   <p className="text-xs text-gray-500 mt-1 line-clamp-1">{product.reason}</p>
                 )}
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 mt-2">
+                  {onWhyRecommended && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onWhyRecommended(product);
+                      }}
+                      className="flex-1 text-xs px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded flex items-center justify-center gap-1"
+                    >
+                      <HelpCircle size={12} />
+                      Why Recommended
+                    </button>
+                  )}
+                  {onNotInterested && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onNotInterested(product.id);
+                      }}
+                      className="text-xs px-2 py-1 text-gray-400 hover:text-red-600 rounded flex items-center justify-center"
+                      title="Not Interested"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
 
                 {/* Deal Timer */}
                 {product.isDeal && product.dealEndsIn && (

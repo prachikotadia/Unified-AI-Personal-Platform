@@ -9,8 +9,8 @@ interface APIConfig {
 
 // Development configuration
 const devConfig: APIConfig = {
-  baseURL: 'http://localhost:5000',
-  wsURL: 'ws://localhost:5000/ws',
+  baseURL: 'http://localhost:8000',  // FastAPI backend runs on port 8000
+  wsURL: 'ws://localhost:8000/ws',
   chatURL: 'http://localhost:8003',
   travelURL: 'http://localhost:8004',
   timeout: 10000,
@@ -40,18 +40,29 @@ export const getWebSocketURL = (service: 'fitness' | 'finance' | 'chat' = 'fitne
 export const isBackendAvailable = async (): Promise<boolean> => {
   // In production, if we're using placeholder URLs, assume backend is not available
   if (isProduction && (apiConfig.baseURL.includes('your-backend-domain.com') || apiConfig.baseURL.includes('omnilife-backend.onrender.com'))) {
-    console.log('Backend not configured - using demo mode');
     return false;
   }
   
   try {
+    // Use AbortController for timeout (fetch doesn't support timeout option directly)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+    
     const response = await fetch(`${apiConfig.baseURL}/health`, {
       method: 'GET',
-      timeout: 5000,
+      signal: controller.signal,
+      mode: 'cors',
+      credentials: 'omit',
+      headers: {
+        'Accept': 'application/json',
+      },
     });
+    
+    clearTimeout(timeoutId);
     return response.ok;
-  } catch (error) {
-    console.warn('Backend not available:', error);
+  } catch (error: any) {
+    // Silently handle all errors - these are expected when backend is not running
+    // Don't log errors to console to reduce noise
     return false;
   }
 };

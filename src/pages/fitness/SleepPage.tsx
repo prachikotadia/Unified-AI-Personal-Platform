@@ -12,13 +12,28 @@ import {
   Target,
   Bed,
   Zap,
-  Activity
+  Activity,
+  Edit,
+  Trash2,
+  Brain,
+  Sparkles,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import { useFitness } from '../../hooks/useFitness';
+import { useToastHelpers } from '../../components/ui/Toast';
+import SleepLogModal from '../../components/fitness/SleepLogModal';
 
 const SleepPage = () => {
-  const { healthMetrics, isLoading, error } = useFitness();
+  const { success } = useToastHelpers();
+  const { healthMetrics, isLoading, errors } = useFitness();
+  const error = errors.healthMetrics || null;
   const [selectedTimeframe, setSelectedTimeframe] = useState('week');
+  const [showSleepModal, setShowSleepModal] = useState(false);
+  const [showSleepGoalModal, setShowSleepGoalModal] = useState(false);
+  const [showTrends, setShowTrends] = useState(false);
+  const [showAIRecommendations, setShowAIRecommendations] = useState(false);
+  const [editingSleep, setEditingSleep] = useState<any>(null);
 
   // Mock sleep data
   const sleepData = {
@@ -68,19 +83,19 @@ const SleepPage = () => {
       type: 'positive',
       title: 'Great Sleep Quality',
       description: 'Your sleep quality is above average this week',
-      icon: '😴'
+      icon: Bed
     },
     {
       type: 'warning',
       title: 'Late Bedtime',
       description: 'Try to go to bed earlier for better sleep',
-      icon: '🌙'
+      icon: Moon
     },
     {
       type: 'positive',
       title: 'Consistent Schedule',
       description: 'You\'re maintaining a good sleep schedule',
-      icon: '⏰'
+      icon: Clock
     }
   ];
 
@@ -155,7 +170,7 @@ const SleepPage = () => {
               Monitor your sleep patterns and improve your rest quality
             </p>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-2 flex-wrap">
             <select
               value={selectedTimeframe}
               onChange={(e) => setSelectedTimeframe(e.target.value)}
@@ -165,9 +180,36 @@ const SleepPage = () => {
               <option value="month">This Month</option>
               <option value="quarter">This Quarter</option>
             </select>
-            <button className="btn-primary flex items-center space-x-2">
+            <button
+              onClick={() => {
+                setEditingSleep(null)
+                setShowSleepModal(true)
+              }}
+              className="btn-primary flex items-center space-x-2"
+            >
               <Plus className="w-4 h-4" />
               <span>Log Sleep</span>
+            </button>
+            <button
+              onClick={() => setShowSleepGoalModal(true)}
+              className="btn-secondary flex items-center space-x-2"
+            >
+              <Target className="w-4 h-4" />
+              <span>Set Sleep Goal</span>
+            </button>
+            <button
+              onClick={() => setShowTrends(!showTrends)}
+              className="btn-secondary flex items-center space-x-2"
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span>View Trends</span>
+            </button>
+            <button
+              onClick={() => setShowAIRecommendations(true)}
+              className="btn-secondary flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              <Brain className="w-4 h-4" />
+              <span>AI Recommendations</span>
             </button>
           </div>
         </div>
@@ -362,10 +404,12 @@ const SleepPage = () => {
               }`}
             >
               <div className="flex items-center space-x-3 mb-3">
-                <div className="text-2xl">{insight.icon}</div>
+                <div className="flex-shrink-0">
+                  {React.createElement(insight.icon, { className: `w-6 h-6 ${insight.type === 'positive' ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}` })}
+                </div>
                 <div>
-                  <h3 className="font-semibold">{insight.title}</h3>
-                  <p className="text-sm text-gray-500">{insight.description}</p>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">{insight.title}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{insight.description}</p>
                 </div>
               </div>
             </motion.div>
@@ -427,6 +471,131 @@ const SleepPage = () => {
           </div>
         </div>
       </motion.div>
+
+      {/* Sleep Entries with Edit/Delete */}
+      <div className="space-y-4">
+        {weeklySleep.map((sleep, index) => (
+        <div key={index} className="glass-card p-4 group">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-medium">{sleep.day}</div>
+              <div className="text-sm text-gray-500">{sleep.hours}h • Quality: {sleep.quality}%</div>
+            </div>
+            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => {
+                  setEditingSleep(sleep)
+                  setShowSleepModal(true)
+                }}
+                className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                title="Edit"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to delete this sleep entry?')) {
+                    success('Sleep Entry Deleted', 'Sleep entry has been removed')
+                  }
+                }}
+                className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+        ))}
+      </div>
+
+      {/* Modals */}
+      <SleepLogModal
+        isOpen={showSleepModal}
+        onClose={() => {
+          setShowSleepModal(false)
+          setEditingSleep(null)
+        }}
+        onSubmit={(sleepData) => {
+          console.log('Sleep logged:', sleepData)
+          success('Sleep Logged', 'Sleep entry has been saved')
+        }}
+        sleep={editingSleep}
+      />
+
+      {showSleepGoalModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Set Sleep Goal</h2>
+              <button
+                onClick={() => setShowSleepGoalModal(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <span className="text-xl">×</span>
+              </button>
+            </div>
+            <div className="text-center py-8">
+              <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">
+                Set sleep goal functionality would be implemented here
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {showTrends && (
+        <div className="glass-card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Sleep Trends</h2>
+            <button
+              onClick={() => setShowTrends(false)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            >
+              <span className="text-xl">×</span>
+            </button>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-8 text-center">
+            <p className="text-gray-600 dark:text-gray-400">
+              Sleep trend visualizations would be displayed here
+            </p>
+          </div>
+        </div>
+      )}
+
+      {showAIRecommendations && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Brain className="text-blue-600" size={24} />
+                <h2 className="text-xl font-semibold">AI Sleep Recommendations</h2>
+              </div>
+              <button
+                onClick={() => setShowAIRecommendations(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <span className="text-xl">×</span>
+              </button>
+            </div>
+            <div className="text-center py-8">
+              <Sparkles className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">
+                AI is analyzing your sleep patterns to provide personalized recommendations...
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

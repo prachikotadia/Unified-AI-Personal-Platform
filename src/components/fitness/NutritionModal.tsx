@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { useFitnessStore } from '../../store/fitness';
+import { useToastHelpers } from '../ui/Toast';
+import { NutritionEntryCreate, NutritionType } from '../../services/fitnessAPI';
 
 interface NutritionModalProps {
   isOpen: boolean;
@@ -21,8 +23,9 @@ interface FoodItem {
 
 const NutritionModal: React.FC<NutritionModalProps> = ({ isOpen, onClose, nutrition }) => {
   const { createNutritionEntry, updateNutritionEntry, isLoading } = useFitnessStore();
-  const [formData, setFormData] = useState({
-    meal_type: 'breakfast',
+  const { success, error: showError } = useToastHelpers();
+  const [formData, setFormData] = useState<NutritionEntryCreate>({
+    meal_type: NutritionType.BREAKFAST,
     foods: [] as FoodItem[],
     total_calories: 0,
     total_protein: 0,
@@ -33,7 +36,7 @@ const NutritionModal: React.FC<NutritionModalProps> = ({ isOpen, onClose, nutrit
   useEffect(() => {
     if (nutrition) {
       setFormData({
-        meal_type: nutrition.meal_type || 'breakfast',
+        meal_type: nutrition.meal_type || NutritionType.BREAKFAST,
         foods: nutrition.foods || [],
         total_calories: nutrition.total_calories || 0,
         total_protein: nutrition.total_protein || 0,
@@ -42,7 +45,7 @@ const NutritionModal: React.FC<NutritionModalProps> = ({ isOpen, onClose, nutrit
       });
     } else {
       setFormData({
-        meal_type: 'breakfast',
+        meal_type: NutritionType.BREAKFAST,
         foods: [],
         total_calories: 0,
         total_protein: 0,
@@ -100,23 +103,31 @@ const NutritionModal: React.FC<NutritionModalProps> = ({ isOpen, onClose, nutrit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (formData.foods.length === 0) {
+      showError('No Food Items', 'Please add at least one food item');
+      return;
+    }
+    
     try {
       if (nutrition) {
         await updateNutritionEntry(nutrition.id, formData);
+        success('Meal Updated', 'Your meal has been updated successfully');
       } else {
         await createNutritionEntry(formData);
+        success('Meal Logged', 'Your meal has been saved successfully');
       }
       onClose();
     } catch (error) {
       console.error('Error saving nutrition entry:', error);
+      showError('Failed to save meal', 'Please try again');
     }
   };
 
   const mealTypes = [
-    { value: 'breakfast', label: 'Breakfast' },
-    { value: 'lunch', label: 'Lunch' },
-    { value: 'dinner', label: 'Dinner' },
-    { value: 'snack', label: 'Snack' }
+    { value: NutritionType.BREAKFAST, label: 'Breakfast' },
+    { value: NutritionType.LUNCH, label: 'Lunch' },
+    { value: NutritionType.DINNER, label: 'Dinner' },
+    { value: NutritionType.SNACK, label: 'Snack' }
   ];
 
   const units = [
@@ -134,14 +145,14 @@ const NutritionModal: React.FC<NutritionModalProps> = ({ isOpen, onClose, nutrit
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="glass-card w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
@@ -162,7 +173,7 @@ const NutritionModal: React.FC<NutritionModalProps> = ({ isOpen, onClose, nutrit
                 <label className="block text-sm font-medium mb-2">Meal Type</label>
                 <select
                   value={formData.meal_type}
-                  onChange={(e) => setFormData({ ...formData, meal_type: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, meal_type: e.target.value as NutritionType })}
                   className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {mealTypes.map((type) => (
@@ -339,7 +350,7 @@ const NutritionModal: React.FC<NutritionModalProps> = ({ isOpen, onClose, nutrit
                 </button>
                 <button
                   type="submit"
-                  disabled={isLoading || formData.foods.length === 0}
+                  disabled={isLoading.nutritionEntries || formData.foods.length === 0}
                   className="flex-1 px-4 py-2 bg-gradient-to-r from-green-gradient-from to-green-gradient-to text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                   {isLoading ? 'Saving...' : (nutrition ? 'Update Meal' : 'Log Meal')}

@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import { X, Search, UserPlus, Users } from 'lucide-react'
 import { useChatStore } from '../../store/chat'
+import { useAuthStore } from '../../store/auth'
 import { useNotifications } from '../../contexts/NotificationContext'
 
 interface NewChatModalProps {
@@ -10,10 +11,14 @@ interface NewChatModalProps {
 }
 
 const NewChatModal = ({ isOpen, onClose }: NewChatModalProps) => {
-  const { createRoom } = useChatStore()
+  const { createRoom, currentUser } = useChatStore()
+  const { user } = useAuthStore()
   const { addNotification } = useNotifications()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState<'direct' | 'group'>('direct')
+  
+  // Get current user ID
+  const currentUserId = currentUser?.id || user?.id || `guest_${Date.now()}`
 
   // Mock users for demo
   const availableUsers = [
@@ -27,26 +32,26 @@ const NewChatModal = ({ isOpen, onClose }: NewChatModalProps) => {
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleCreateChat = (user?: typeof availableUsers[0]) => {
-    if (selectedType === 'direct' && user) {
+  const handleCreateChat = (selectedUser?: typeof availableUsers[0]) => {
+    if (selectedType === 'direct' && selectedUser) {
       createRoom({
-        name: user.name,
-        avatar: user.avatar,
+        name: selectedUser.name,
+        avatar: selectedUser.avatar,
         type: 'direct',
-        participants: ['user1', user.id],
+        participants: [currentUserId, selectedUser.id],
         isOnline: false
       })
       addNotification({
         type: 'success',
         title: 'Chat Created',
-        message: `Started a conversation with ${user.name}`
+        message: `Started a conversation with ${selectedUser.name}`
       })
     } else if (selectedType === 'group') {
       createRoom({
         name: 'New Group',
         avatar: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=150&h=150&fit=crop',
         type: 'group',
-        participants: ['user1'],
+        participants: [currentUserId],
         isOnline: false
       })
       addNotification({
@@ -65,49 +70,49 @@ const NewChatModal = ({ isOpen, onClose }: NewChatModalProps) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="glass-card p-6 w-full max-w-md"
+            className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 rounded-xl shadow-2xl p-6 w-full max-w-md"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">New Chat</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">New Chat</h2>
               <button
                 onClick={onClose}
-                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Chat Type Selection */}
-            <div className="flex space-x-2 mb-6">
+            <div className="flex space-x-3 mb-6">
               <button
                 onClick={() => setSelectedType('direct')}
-                className={`flex-1 flex items-center justify-center space-x-2 p-3 rounded-lg transition-colors ${
+                className={`flex-1 flex flex-col items-center justify-center space-y-2 p-4 rounded-xl transition-all duration-200 ${
                   selectedType === 'direct'
-                    ? 'bg-blue-gradient-from text-white'
-                    : 'glass-card hover:bg-white/10'
+                    ? 'bg-gradient-to-br from-sky-500 to-cyan-600 text-white shadow-lg'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
-                <UserPlus className="w-4 h-4" />
-                <span>Direct Message</span>
+                <UserPlus className="w-5 h-5" />
+                <span className="text-sm font-medium">Direct Message</span>
               </button>
               <button
                 onClick={() => setSelectedType('group')}
-                className={`flex-1 flex items-center justify-center space-x-2 p-3 rounded-lg transition-colors ${
+                className={`flex-1 flex flex-col items-center justify-center space-y-2 p-4 rounded-xl transition-all duration-200 ${
                   selectedType === 'group'
-                    ? 'bg-blue-gradient-from text-white'
-                    : 'glass-card hover:bg-white/10'
+                    ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
-                <Users className="w-4 h-4" />
-                <span>Group Chat</span>
+                <Users className="w-5 h-5" />
+                <span className="text-sm font-medium">Group Chat</span>
               </button>
             </div>
 
@@ -115,13 +120,13 @@ const NewChatModal = ({ isOpen, onClose }: NewChatModalProps) => {
               <>
                 {/* Search */}
                 <div className="relative mb-4">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search users..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-white/50 dark:bg-black/50 rounded-lg border border-white/20 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-blue-gradient-from"
+                    className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900 dark:text-white"
                   />
                 </div>
 
@@ -131,28 +136,30 @@ const NewChatModal = ({ isOpen, onClose }: NewChatModalProps) => {
                     <button
                       key={user.id}
                       onClick={() => handleCreateChat(user)}
-                      className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 transition-colors"
+                      className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
                     >
                       <img
                         src={user.avatar}
                         alt={user.name}
-                        className="w-10 h-10 rounded-full object-cover"
+                        className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
                       />
-                      <span className="font-medium">{user.name}</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">{user.name}</span>
                     </button>
                   ))}
                 </div>
               </>
             ) : (
               <div className="text-center py-8">
-                <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="font-medium mb-2">Create Group Chat</h3>
-                <p className="text-sm text-gray-500 mb-4">
+                <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Create Group Chat</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                   Start a group conversation with multiple people
                 </p>
                 <button
                   onClick={() => handleCreateChat()}
-                  className="btn-primary"
+                  className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
                 >
                   Create Group
                 </button>

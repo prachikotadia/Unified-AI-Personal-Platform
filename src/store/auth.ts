@@ -49,6 +49,13 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 
       // Actions
       login: async (email: string, password: string, rememberMe = false) => {
+        // Check if we already have a user in localStorage
+        const currentUser = get().user;
+        if (currentUser && currentUser.email === email) {
+          // User already logged in with this email, don't overwrite
+          return;
+        }
+        
         set({ isLoading: true, error: null })
         try {
           // Check if we should use mock API
@@ -62,25 +69,28 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             const username = email.split('@')[0]
             const displayName = username.charAt(0).toUpperCase() + username.slice(1)
             
+            // Preserve existing user data if available
+            const existingUser = get().user;
             const realUser: User = {
-              id: 'user_' + Date.now(),
-              username: username,
+              id: existingUser?.id || 'user_' + Date.now(),
+              username: existingUser?.username || username,
               email,
-              displayName: displayName,
-              avatar: `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&v=${Date.now()}`,
-              bio: 'Welcome to OmniLife! Your personal AI-powered lifestyle platform.',
-              location: 'Your Location',
+              displayName: existingUser?.displayName || displayName,
+              avatar: existingUser?.avatar || `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&v=${Date.now()}`,
+              bio: existingUser?.bio || 'Welcome to OmniLife! Your personal AI-powered lifestyle platform.',
+              location: existingUser?.location || 'Your Location',
               preferences: { 
-                theme: 'light', 
-                notifications: true,
+                ...existingUser?.preferences,
+                theme: existingUser?.preferences?.theme || 'light', 
+                notifications: existingUser?.preferences?.notifications !== undefined ? existingUser.preferences.notifications : true,
                 isGuest: false,
-                language: 'en'
+                language: existingUser?.preferences?.language || 'en'
               },
-              createdAt: new Date().toISOString(),
+              createdAt: existingUser?.createdAt || new Date().toISOString(),
               lastSeen: new Date().toISOString(),
             }
             
-            const mockToken = 'real-user-token-' + Date.now()
+            const mockToken = existingUser ? get().token : 'real-user-token-' + Date.now()
             
             set({
               user: realUser,
@@ -292,7 +302,38 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       updateUser: (updates: Partial<User>) => {
         const currentUser = get().user
         if (currentUser) {
-          set({ user: { ...currentUser, ...updates } })
+          // Properly merge preferences if they exist
+          const mergedPreferences = updates.preferences 
+            ? { ...currentUser.preferences, ...updates.preferences }
+            : currentUser.preferences
+          
+          // Merge all updates, ensuring preferences are properly merged
+          // CRITICAL: Explicitly handle avatar - if provided and not empty, use it; otherwise keep current
+          const avatarToSave = updates.avatar && updates.avatar.trim() !== '' 
+            ? updates.avatar 
+            : currentUser.avatar;
+          
+          const updatedUser: User = {
+            ...currentUser,
+            ...updates,
+            // CRITICAL: Explicitly set avatar - never let it be undefined or empty if we have one
+            avatar: avatarToSave,
+            preferences: mergedPreferences,
+            // Ensure email is updated if provided
+            email: updates.email || currentUser.email,
+            // Update lastSeen timestamp
+            lastSeen: new Date().toISOString(),
+          }
+          
+          set({ user: updatedUser })
+          
+          // Debug: Log avatar save
+          if (updates.avatar && updates.avatar.startsWith('data:image')) {
+            console.log('[Auth Store] Avatar updated and saved, length:', updates.avatar.length);
+            console.log('[Auth Store] Avatar preview:', updates.avatar.substring(0, 50) + '...');
+          } else if (currentUser.avatar && currentUser.avatar.startsWith('data:image')) {
+            console.log('[Auth Store] Avatar preserved from existing user, length:', currentUser.avatar.length);
+          }
         }
       },
 
@@ -302,23 +343,32 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           const useMockAPI = (import.meta as any).env?.VITE_USE_MOCK_API === 'true' || (import.meta as any).env?.DEV
           
           if (useMockAPI) {
-            // Mock guest login
+            // Mock guest login - but preserve existing user data if available
             await new Promise(resolve => setTimeout(resolve, 500))
             
+            // Preserve existing user data if available (especially avatar)
+            const existingUser = get().user;
             const mockGuestUser: User = {
-              id: 'guest_' + Date.now(),
-              username: 'guest_user',
-              email: 'guest@omnilife.com',
-              displayName: 'Guest User',
-              avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-              bio: 'Demo user - explore OmniLife features',
-              location: 'Demo Mode',
-              preferences: { theme: 'light', notifications: false, isGuest: true },
-              createdAt: new Date().toISOString(),
+              id: existingUser?.id || 'guest_' + Date.now(),
+              username: existingUser?.username || 'guest_user',
+              email: existingUser?.email || 'guest@omnilife.com',
+              displayName: existingUser?.displayName || 'Guest User',
+              // CRITICAL: Preserve existing avatar if it exists (user-uploaded), otherwise use default
+              avatar: existingUser?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+              bio: existingUser?.bio || 'Demo user - explore OmniLife features',
+              location: existingUser?.location || 'Demo Mode',
+              preferences: { 
+                ...existingUser?.preferences,
+                theme: existingUser?.preferences?.theme || 'light', 
+                notifications: existingUser?.preferences?.notifications !== undefined ? existingUser.preferences.notifications : false,
+                isGuest: true,
+                language: existingUser?.preferences?.language || 'en'
+              },
+              createdAt: existingUser?.createdAt || new Date().toISOString(),
               lastSeen: new Date().toISOString(),
             }
             
-            const mockToken = 'guest-token-' + Date.now()
+            const mockToken = existingUser ? get().token : 'guest-token-' + Date.now()
             
             set({
               user: mockGuestUser,
@@ -432,12 +482,101 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       },
     }),
     {
-      name: 'omnilife-auth',
+      name: 'auth-storage',
+      version: 1,
       partialize: (state) => ({
         user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
+      migrate: (persistedState: any, version: number) => {
+        if (version === 0) {
+          return {
+            ...persistedState,
+            user: persistedState.user || null,
+            token: persistedState.token || null,
+            isAuthenticated: persistedState.isAuthenticated || false,
+          };
+        }
+        return persistedState;
+      },
+      storage: {
+        getItem: (name) => {
+          try {
+            const str = localStorage.getItem(name);
+            if (!str) {
+              console.log('[Auth Store] ℹ️ No data found in localStorage');
+              return null;
+            }
+            const parsed = JSON.parse(str);
+            if (!parsed.state) {
+              console.warn(`[Auth Store] ⚠️ Invalid localStorage structure for ${name}, resetting...`);
+              return null;
+            }
+            
+            // Debug: Check if avatar exists in loaded data
+            if (parsed.state?.user?.avatar) {
+              if (parsed.state.user.avatar.startsWith('data:image')) {
+                console.log('[Auth Store] ✅ Loaded from localStorage - Avatar found (Base64), length:', parsed.state.user.avatar.length);
+              } else {
+                console.log('[Auth Store] ✅ Loaded from localStorage - Avatar found (URL):', parsed.state.user.avatar);
+              }
+            } else {
+              console.log('[Auth Store] ⚠️ Loaded from localStorage - No avatar found');
+            }
+            
+            return parsed;
+          } catch (error) {
+            console.error(`[Auth Store] ❌ Failed to parse localStorage for ${name}:`, error);
+            return null;
+          }
+        },
+        setItem: (name, value) => {
+          try {
+            // Check if avatar exists and log it
+            if (value?.state?.user?.avatar && value.state.user.avatar.startsWith('data:image')) {
+              console.log('[Auth Store] 💾 Saving to localStorage - Avatar present, length:', value.state.user.avatar.length);
+            }
+            
+            localStorage.setItem(name, JSON.stringify(value));
+            console.log('[Auth Store] ✅ Successfully saved to localStorage');
+          } catch (error: any) {
+            // Check if it's a quota exceeded error
+            if (error.name === 'QuotaExceededError' || error.code === 22) {
+              console.error(`[Auth Store] ❌ localStorage quota exceeded! Avatar might be too large.`);
+              // Try to save without avatar if it's too large
+              if (value?.state?.user?.avatar) {
+                console.warn('[Auth Store] ⚠️ Attempting to save without avatar due to size limit');
+                const valueWithoutAvatar = {
+                  ...value,
+                  state: {
+                    ...value.state,
+                    user: {
+                      ...value.state.user,
+                      avatar: undefined
+                    }
+                  }
+                };
+                try {
+                  localStorage.setItem(name, JSON.stringify(valueWithoutAvatar));
+                  console.log('[Auth Store] ✅ Saved without avatar due to size limit');
+                } catch (retryError) {
+                  console.error(`[Auth Store] ❌ Failed to save even without avatar:`, retryError);
+                }
+              }
+            } else {
+              console.error(`[Auth Store] ❌ Failed to save to localStorage for ${name}:`, error);
+            }
+          }
+        },
+        removeItem: (name) => {
+          try {
+            localStorage.removeItem(name);
+          } catch (error) {
+            console.error(`[Auth Store] Failed to remove from localStorage for ${name}:`, error);
+          }
+        },
+      },
     }
   )
 )

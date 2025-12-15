@@ -8,12 +8,17 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc, func
 import random
 
-from app.models.marketplace import Product, Category, Order, OrderItem, Review, Cart, CartItem
+from app.models.marketplace_db import Product, Category, Order, OrderItem, Review, Cart, CartItem, OrderStatus
 from app.models.user import User
-from app.services.langchain_service import langchain_service
 from app.cache import redis_cache
 
 logger = structlog.get_logger()
+
+# LangChain service - optional
+try:
+    from app.services.langchain_service import langchain_service
+except ImportError:
+    langchain_service = None
 
 class MarketplaceService:
     def __init__(self):
@@ -158,9 +163,9 @@ class MarketplaceService:
         """Get products with filtering and pagination"""
         try:
             query = db.query(Product).join(Category)
-        
-        # Apply filters
-        if category:
+            
+            # Apply filters
+            if category:
                 query = query.filter(Category.name == category)
             
             if search:
@@ -171,37 +176,36 @@ class MarketplaceService:
                 )
                 query = query.filter(search_filter)
             
-        if min_price is not None:
-            query = query.filter(Product.price >= min_price)
+            if min_price is not None:
+                query = query.filter(Product.price >= min_price)
             
-        if max_price is not None:
-            query = query.filter(Product.price <= max_price)
-        
-        # Apply sorting
+            if max_price is not None:
+                query = query.filter(Product.price <= max_price)
+            
+            # Apply sorting
             if sort_by == "price_low":
                 query = query.order_by(Product.price.asc())
             elif sort_by == "price_high":
                 query = query.order_by(Product.price.desc())
-        elif sort_by == "rating":
+            elif sort_by == "rating":
                 query = query.order_by(Product.rating.desc())
-        elif sort_by == "newest":
+            elif sort_by == "newest":
                 query = query.order_by(Product.created_at.desc())
             else:
                 query = query.order_by(Product.name.asc())
             
             # Apply pagination
-        total = query.count()
+            total = query.count()
             offset = (page - 1) * limit
             products = query.offset(offset).limit(limit).all()
-        
-        return {
+            
+            return {
                 "products": [self._product_to_dict(p) for p in products],
-            "total": total,
-            "page": page,
-            "limit": limit,
-            "pages": (total + limit - 1) // limit
-        }
-    
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "pages": (total + limit - 1) // limit
+            }
         except Exception as e:
             logger.error(f"Error getting products: {e}")
             return {"products": [], "total": 0, "page": 1, "limit": 20, "pages": 0}
@@ -247,8 +251,8 @@ class MarketplaceService:
             
             # Get recommended products from database
             recommended_products = await self._get_recommended_products(db, user_data, limit)
-        
-        return {
+            
+            return {
                 "recommendations": recommended_products,
                 "ai_analysis": recommendations,
                 "confidence": 0.89,
@@ -372,9 +376,9 @@ class MarketplaceService:
                     CartItem.cart_id == cart.id,
                     CartItem.product_id == product_id
                 )
-        ).first()
-        
-        if cart_item:
+            ).first()
+            
+            if cart_item:
                 cart_item.quantity += quantity
             else:
                 cart_item = CartItem(
@@ -416,7 +420,7 @@ class MarketplaceService:
             total = 0
             item_count = 0
             
-        for item in cart_items:
+            for item in cart_items:
                 product = db.query(Product).filter(Product.id == item.product_id).first()
                 if product:
                     item_total = item.price * item.quantity
@@ -458,10 +462,10 @@ class MarketplaceService:
             
             # Calculate total
             total = sum(item.price * item.quantity for item in cart_items)
-        
-        # Create order
-        order = Order(
-            user_id=user_id,
+            
+            # Create order
+            order = Order(
+                user_id=user_id,
                 total_amount=total,
                 status="pending",
                 shipping_address=shipping_address
@@ -471,24 +475,25 @@ class MarketplaceService:
             db.refresh(order)
             
             # Create order items and update stock
-        for cart_item in cart_items:
+            for cart_item in cart_items:
                 product = db.query(Product).filter(Product.id == cart_item.product_id).first()
-                if product and product.stock >= cart_item.quantity:
-            order_item = OrderItem(
-                order_id=order.id,
-                product_id=cart_item.product_id,
-                quantity=cart_item.quantity,
-                        price=cart_item.price
+                if product and product.stock_quantity >= cart_item.quantity:
+                    order_item = OrderItem(
+                        order_id=order.id,
+                        product_id=cart_item.product_id,
+                        quantity=cart_item.quantity,
+                        unit_price=cart_item.price,
+                        total_price=cart_item.price * cart_item.quantity
                     )
                     db.add(order_item)
                     
                     # Update product stock
-                    product.stock -= cart_item.quantity
+                    product.stock_quantity -= cart_item.quantity
                 else:
                     db.rollback()
                     return {"success": False, "message": f"Insufficient stock for {product.name if product else 'product'}"}
-        
-        # Clear cart
+            
+            # Clear cart
             db.query(CartItem).filter(CartItem.cart_id == cart.id).delete()
             db.delete(cart)
             
@@ -496,8 +501,8 @@ class MarketplaceService:
             
             # Clear cache
             await redis_cache.invalidate_cache(f"cart_{user_id}")
-        
-        return {
+            
+            return {
                 "success": True,
                 "message": "Order created successfully",
                 "order_id": order.id,
@@ -521,7 +526,7 @@ class MarketplaceService:
                 items = []
                 for item in order_items:
                     product = db.query(Product).filter(Product.id == item.product_id).first()
-        if product:
+                    if product:
                         items.append({
                             "product": self._product_to_dict(product),
                             "quantity": item.quantity,
@@ -541,7 +546,7 @@ class MarketplaceService:
             
         except Exception as e:
             logger.error(f"Error getting user orders: {e}")
-        return []
+            return []
     
     def _product_to_dict(self, product: Product, include_reviews: bool = False) -> Dict[str, Any]:
         """Convert product to dictionary"""

@@ -37,10 +37,12 @@ const app = express();
 const server = createServer(app);
 
 // Initialize Socket.IO with Redis adapter
+const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3004",
-    methods: ["GET", "POST"]
+    origin: [frontendUrl, "http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    credentials: true
   }
 });
 
@@ -56,10 +58,42 @@ const limiter = rateLimit({
 
 // Middleware
 app.use(helmet());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3004",
-  credentials: true
-}));
+// CORS configuration - allow common localhost ports in development
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // In development, allow all localhost origins
+    if (process.env.NODE_ENV !== 'production') {
+      const allowedOrigins = [
+        frontendUrl,
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:5000",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+        "http://127.0.0.1:5000"
+      ];
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+    }
+    
+    // In production, use configured origin
+    const allowedOrigin = process.env.FRONTEND_URL || "http://localhost:3000";
+    if (origin === allowedOrigin) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  exposedHeaders: ["Content-Range", "X-Content-Range"]
+};
+app.use(cors(corsOptions));
 app.use(compression());
 app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
 app.use(express.json({ limit: '10mb' }));

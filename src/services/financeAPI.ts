@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 // Base API configuration
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
+import { API_BASE_URL as CONFIG_API_URL } from '../config/api';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || CONFIG_API_URL || 'http://localhost:8000';
 
 // Types
 export interface BankAccount {
@@ -339,6 +340,43 @@ export interface FinancialReport {
   active_budgets?: number;
   generated_at: string;
   report_type: 'summary' | 'detailed' | 'budget';
+}
+
+export interface Forecast {
+  id: string;
+  user_id: string;
+  title: string;
+  predicted_value: number;
+  forecast_type: 'income' | 'expense' | 'savings' | 'investment' | 'debt' | 'net_worth';
+  period: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  start_date: string;
+  end_date?: string;
+  confidence_level?: 'low' | 'medium' | 'high';
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ForecastCreate {
+  title: string;
+  predicted_value: number;
+  forecast_type: 'income' | 'expense' | 'savings' | 'investment' | 'debt' | 'net_worth';
+  period: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  start_date: string;
+  end_date?: string;
+  confidence_level?: 'low' | 'medium' | 'high';
+  notes?: string;
+}
+
+export interface ForecastUpdate {
+  title?: string;
+  predicted_value?: number;
+  forecast_type?: 'income' | 'expense' | 'savings' | 'investment' | 'debt' | 'net_worth';
+  period?: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  start_date?: string;
+  end_date?: string;
+  confidence_level?: 'low' | 'medium' | 'high';
+  notes?: string;
 }
 
 // API Service Class

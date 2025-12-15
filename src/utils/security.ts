@@ -49,35 +49,35 @@ class SecurityManager {
       // Initialize CSRF protection
       if (this.config.enableCSRF) {
         initializeCSRF();
-        console.log('CSRF protection initialized');
+        // Silently initialize - don't log
       }
 
       // Initialize encryption
       if (this.config.enableEncryption) {
         initializeEncryption();
-        console.log('Encryption initialized');
+        // Silently initialize - don't log
       }
 
       // Set up secure headers
       if (this.config.enableSecureHeaders) {
         this.setupSecureHeaders();
-        console.log('Secure headers configured');
+        // Silently initialize - don't log
       }
 
       // Set up Content Security Policy
       if (this.config.enableContentSecurityPolicy) {
         this.setupContentSecurityPolicy();
-        console.log('Content Security Policy configured');
+        // Silently initialize - don't log
       }
 
       // Set up XSS protection
       if (this.config.enableXSSProtection) {
         this.setupXSSProtection();
-        console.log('XSS protection configured');
+        // Silently initialize - don't log
       }
 
       this.isInitialized = true;
-      console.log('Security manager initialized successfully');
+      // Silently initialize - don't log
     } catch (error) {
       console.error('Failed to initialize security manager:', error);
       throw error;
@@ -102,6 +102,12 @@ class SecurityManager {
 
   // Set up Content Security Policy
   private setupContentSecurityPolicy(): void {
+    // Remove any existing CSP meta tags first
+    const existingCSP = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+    if (existingCSP) {
+      existingCSP.remove();
+    }
+
     // Note: frame-ancestors should be set via HTTP headers on the server
     const csp = [
       "default-src 'self'",
@@ -109,7 +115,7 @@ class SecurityManager {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: https: blob:",
-      "connect-src 'self' http://localhost:5000 http://localhost:8001 http://localhost:8003 https://api.localhost:5000 wss://localhost:5000 ws://localhost:8003 https://*.netlify.app https://*.railway.app https://*.render.com https://*.herokuapp.com",
+      "connect-src 'self' http://localhost:5000 http://localhost:8000 http://localhost:8001 http://localhost:8003 https://api.localhost:5000 wss://localhost:5000 wss://localhost:8000 ws://localhost:5000 ws://localhost:8000 ws://localhost:8003 https://*.netlify.app https://*.railway.app https://*.render.com https://*.herokuapp.com",
       "frame-src 'none'",
       "object-src 'none'",
       "base-uri 'self'",

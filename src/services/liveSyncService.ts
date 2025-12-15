@@ -15,7 +15,10 @@ export class LiveSyncService {
   private lastSyncTime: Date = new Date();
 
   constructor() {
-    this.initializeWebSocket();
+    // Only initialize WebSocket if backend supports it
+    // For now, skip WebSocket initialization to avoid errors
+    // Uncomment when backend WebSocket endpoint is implemented
+    // this.initializeWebSocket();
     this.startPeriodicSync();
   }
 
@@ -25,7 +28,7 @@ export class LiveSyncService {
       // Check if backend is available before attempting WebSocket connection
       const isAvailable = await isBackendAvailable();
       if (!isAvailable) {
-        console.log('LiveSync: Backend not available, skipping WebSocket connection');
+        // Silently skip WebSocket connection when backend is not available
         this.emit('connection', { status: 'disconnected', reason: 'backend_unavailable' });
         return;
       }
@@ -34,7 +37,7 @@ export class LiveSyncService {
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log('LiveSync: WebSocket connected');
+        // Silently handle connection - don't log
         this.reconnectAttempts = 0;
         this.emit('connection', { status: 'connected' });
       };
@@ -44,22 +47,24 @@ export class LiveSyncService {
           const data = JSON.parse(event.data);
           this.handleWebSocketMessage(data);
         } catch (error) {
-          console.error('LiveSync: Failed to parse WebSocket message', error);
+          // Silently handle parse errors
+          this.emit('error', error);
         }
       };
 
       this.ws.onclose = () => {
-        console.log('LiveSync: WebSocket disconnected');
+        // Silently handle disconnection
         this.emit('connection', { status: 'disconnected' });
         this.handleReconnect();
       };
 
       this.ws.onerror = (error) => {
-        console.error('LiveSync: WebSocket error', error);
+        // Completely suppress WebSocket errors - expected when endpoint doesn't exist
         this.emit('error', error);
       };
     } catch (error) {
-      console.error('LiveSync: Failed to initialize WebSocket', error);
+      // Silently handle initialization errors
+      this.emit('error', error);
     }
   }
 
@@ -82,7 +87,8 @@ export class LiveSyncService {
         this.emit('error', data.error);
         break;
       default:
-        console.log('LiveSync: Unknown message type', data.type);
+        // Silently handle unknown message types
+        this.emit('unknown_message', data);
     }
   }
 
@@ -90,7 +96,7 @@ export class LiveSyncService {
   private handleDeviceConnected(device: DeviceInfo) {
     this.connectedDevices.set(device.id, device);
     this.emit('device_connected', device);
-    console.log('LiveSync: Device connected', device.name);
+    // Silently handle - don't log
   }
 
   // Handle device disconnection
@@ -98,14 +104,14 @@ export class LiveSyncService {
     const device = this.connectedDevices.get(deviceId);
     this.connectedDevices.delete(deviceId);
     this.emit('device_disconnected', device);
-    console.log('LiveSync: Device disconnected', device?.name);
+    // Silently handle - don't log
   }
 
   // Handle fitness data updates
   private handleFitnessDataUpdate(data: FitnessDataUpdate) {
     this.lastSyncTime = new Date();
     this.emit('data_update', data);
-    console.log('LiveSync: Fitness data updated', data);
+    // Silently handle - don't log
   }
 
   // Handle sync progress updates
@@ -117,13 +123,13 @@ export class LiveSyncService {
   private handleReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      console.log(`LiveSync: Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+      // Silently attempt reconnection - don't log
       
       setTimeout(() => {
         this.initializeWebSocket();
       }, this.reconnectDelay * this.reconnectAttempts);
     } else {
-      console.error('LiveSync: Max reconnection attempts reached');
+      // Silently handle max attempts - don't log errors
       this.emit('connection_failed', { attempts: this.reconnectAttempts });
     }
   }
@@ -146,7 +152,8 @@ export class LiveSyncService {
         await this.syncDeviceData(device);
       }
     } catch (error) {
-      console.error('LiveSync: Failed to sync with devices', error);
+      // Silently handle sync errors
+      this.emit('error', error);
     }
   }
 
@@ -164,7 +171,8 @@ export class LiveSyncService {
       device.lastSync = new Date();
       this.connectedDevices.set(device.id, device);
     } catch (error) {
-      console.error(`LiveSync: Failed to sync with device ${device.name}`, error);
+      // Silently handle device sync errors
+      this.emit('error', error);
     }
   }
 
@@ -173,7 +181,7 @@ export class LiveSyncService {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
     } else {
-      console.warn('LiveSync: WebSocket not connected, message not sent', message);
+      // Silently handle - WebSocket not connected (expected when endpoint doesn't exist)
     }
   }
 
@@ -203,8 +211,8 @@ export class LiveSyncService {
         this.addListener('device_connected', handleConnection);
       });
     } catch (error) {
-      console.error('LiveSync: Failed to connect device', error);
-      return { success: false, error: error.message };
+      // Silently handle connection errors
+      return { success: false, error: error instanceof Error ? error.message : 'Connection failed' };
     }
   }
 
@@ -220,7 +228,7 @@ export class LiveSyncService {
       this.emit('device_disconnected', { id: deviceId });
       return true;
     } catch (error) {
-      console.error('LiveSync: Failed to disconnect device', error);
+      // Silently handle disconnection errors
       return false;
     }
   }
@@ -235,7 +243,7 @@ export class LiveSyncService {
       });
       return true;
     } catch (error) {
-      console.error('LiveSync: Failed to request data sync', error);
+      // Silently handle sync request errors
       return false;
     }
   }
@@ -282,7 +290,7 @@ export class LiveSyncService {
         try {
           callback(data);
         } catch (error) {
-          console.error(`LiveSync: Error in event listener for ${event}`, error);
+          // Silently handle event listener errors
         }
       });
     }

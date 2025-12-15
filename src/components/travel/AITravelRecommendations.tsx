@@ -470,7 +470,7 @@ const TripPlanningModal: React.FC<TripPlanningModalProps> = ({
   isOpen,
   onClose
 }) => {
-  const { success, error } = useToastHelpers();
+  const { success, error: showError } = useToastHelpers();
   const { user } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [tripDetails, setTripDetails] = useState({
@@ -519,8 +519,8 @@ const TripPlanningModal: React.FC<TripPlanningModalProps> = ({
       setBookingComplete(true);
       setCurrentStep(4);
       success('Trip booked successfully!');
-         } catch (error: any) {
-       error('Booking failed. Please try again.');
+         } catch (err: any) {
+       showError('Booking failed. Please try again.');
      }
   };
 
@@ -581,10 +581,10 @@ const TripPlanningModal: React.FC<TripPlanningModalProps> = ({
       
       // Show success message
       success('Trip ticket downloaded successfully!');
-    } catch (error: any) {
-      console.error('Download failed:', error);
-      console.error('Error details:', error.message, error.stack);
-      error('Failed to download trip ticket. Please try again.');
+    } catch (err: any) {
+      console.error('Download failed:', err);
+      console.error('Error details:', err.message, err.stack);
+      showError('Failed to download trip ticket. Please try again.');
     }
   };
 
@@ -666,8 +666,11 @@ const TripPlanningModal: React.FC<TripPlanningModalProps> = ({
                     type="number"
                     min="1"
                     max="10"
-                    value={tripDetails.travelers}
-                    onChange={(e) => handleTripDetailsChange('travelers', parseInt(e.target.value))}
+                    value={tripDetails.travelers || 1}
+                    onChange={(e) => {
+                      const value = e.target.value ? parseInt(e.target.value, 10) : 1;
+                      handleTripDetailsChange('travelers', isNaN(value) ? 1 : value);
+                    }}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>

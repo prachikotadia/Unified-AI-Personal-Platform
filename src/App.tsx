@@ -7,9 +7,6 @@ import { useEffect } from 'react'
 // Security
 import { initializeSecurity } from './utils/security'
 
-// Performance
-import { performanceManager } from './utils/performance'
-
 // UI Components
 import { ToastProvider } from './components/ui/Toast'
 import { PageErrorBoundary } from './components/ui/ErrorBoundary'
@@ -30,6 +27,9 @@ import TransactionsPage from './pages/finance/TransactionsPage'
 import BudgetsPage from './pages/finance/BudgetsPage'
 import ForecastPage from './pages/finance/ForecastPage'
 import ReportsPage from './pages/finance/ReportsPage'
+import GoalsPage from './pages/finance/GoalsPage'
+import InvestmentsPage from './pages/finance/InvestmentsPage'
+import DebtTrackerPage from './pages/finance/DebtTrackerPage'
 import MarketplacePage from './pages/marketplace/MarketplacePage'
 import ProductPage from './pages/marketplace/ProductPage'
 import CartPage from './pages/marketplace/CartPage'
@@ -49,6 +49,8 @@ import ItineraryPage from './pages/travel/ItineraryPage'
 import SocialPage from './pages/social/SocialPage'
 import SocialFeedPage from './pages/social/SocialFeedPage'
 import SharedItemsPage from './pages/social/SharedItemsPage'
+import UserProfilePage from './pages/social/UserProfilePage'
+import FriendRequestsPage from './pages/social/FriendRequestsPage'
 import ChatPage from './pages/chat/ChatPage'
 import ChatRoomPage from './pages/chat/ChatRoomPage'
 import ProfilePage from './pages/ProfilePage'
@@ -69,18 +71,15 @@ import PriceAlertsPage from './pages/marketplace/PriceAlertsPage'
 import ProductComparisonPage from './pages/marketplace/ProductComparisonPage'
 import RecentlyViewedPage from './pages/marketplace/RecentlyViewedPage'
 import QAModerationPage from './pages/marketplace/QAModerationPage'
-import TestPage from './pages/marketplace/TestPage'
-import DebugCheckoutPage from './pages/marketplace/DebugCheckoutPage'
-import SimplePaymentTest from './pages/marketplace/SimplePaymentTest'
 import MinimalPaymentPage from './pages/marketplace/MinimalPaymentPage'
-import AIInsightsDemo from './pages/AIInsightsDemo'
-import DatabaseAdmin from './pages/DatabaseAdmin'
 
-// Protected Route Component
+/**
+ * Route guard component that enforces authentication.
+ * Redirects unauthenticated users to login while preserving intended destination.
+ */
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuthStore()
   
-  // Show loading while checking authentication
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -96,33 +95,27 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>
 }
 
+/**
+ * Root application component.
+ * Orchestrates routing, theme management, security, and performance optimizations.
+ */
 function App() {
   const { theme } = useThemeStore()
 
   useEffect(() => {
-    // Apply theme class to document
     document.documentElement.classList.remove('light', 'dark')
     document.documentElement.classList.add(theme)
   }, [theme])
 
   useEffect(() => {
-    // Initialize security features
     initializeSecurity()
-    
-    // Initialize performance features
-    // Note: Preloading disabled since we're using mock API
-    // performanceManager.preloadResources([
-    //   '/api/products',
-    //   '/api/categories',
-    //   '/api/user/profile'
-    // ])
   }, [])
 
   return (
     <PageErrorBoundary>
       <ToastProvider>
         <NotificationProvider>
-          <div className="min-h-screen bg-gradient-to-br from-light-grey to-white dark:from-charcoal-grey dark:to-black">
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <Routes>
         {/* Auth Routes */}
         <Route path="/login" element={
@@ -148,6 +141,9 @@ function App() {
         <Route path="finance" element={<FinancePage />} />
         <Route path="finance/transactions" element={<TransactionsPage />} />
         <Route path="finance/budgets" element={<BudgetsPage />} />
+        <Route path="finance/goals" element={<GoalsPage />} />
+        <Route path="finance/investments" element={<InvestmentsPage />} />
+        <Route path="finance/debt" element={<DebtTrackerPage />} />
         <Route path="finance/forecast" element={<ForecastPage />} />
         <Route path="finance/reports" element={<ReportsPage />} />
           
@@ -171,9 +167,6 @@ function App() {
                 <Route path="marketplace/compare" element={<ProductComparisonPage />} />
                 <Route path="marketplace/recently-viewed" element={<RecentlyViewedPage />} />
                 <Route path="marketplace/qa-moderation" element={<QAModerationPage />} />
-                <Route path="marketplace/test" element={<TestPage />} />
-                <Route path="marketplace/debug-checkout" element={<DebugCheckoutPage />} />
-                <Route path="marketplace/simple-payment" element={<SimplePaymentTest />} />
                 <Route path="marketplace/minimal-payment" element={<MinimalPaymentPage />} />
           
           {/* Fitness Routes */}
@@ -197,6 +190,8 @@ function App() {
           <Route path="social" element={<SocialPage />} />
           <Route path="social/feed" element={<SocialFeedPage />} />
           <Route path="social/shared" element={<SharedItemsPage />} />
+          <Route path="social/profile/:userId" element={<UserProfilePage />} />
+          <Route path="social/requests" element={<FriendRequestsPage />} />
           
           {/* Chat Routes */}
           <Route path="chat" element={<ChatPage />} />
@@ -205,13 +200,7 @@ function App() {
           {/* Profile Routes */}
           <Route path="profile" element={<ProfilePage />} />
           <Route path="settings" element={<SettingsPage />} />
-          
-          {/* AI Insights Demo Route */}
-          <Route path="ai-insights-demo" element={<AIInsightsDemo />} />
         </Route>
-
-        {/* Public Admin Routes */}
-        <Route path="database-admin" element={<DatabaseAdmin />} />
 
         {/* Catch all route */}
         <Route path="*" element={<Navigate to="/" replace />} />

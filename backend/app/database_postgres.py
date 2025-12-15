@@ -1,6 +1,6 @@
 import os
 import asyncio
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import create_engine, MetaData, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -103,7 +103,7 @@ def test_database_connection():
     """Test database connection"""
     try:
         with engine.connect() as connection:
-            result = connection.execute("SELECT 1")
+            result = connection.execute(text("SELECT 1"))
             logger.info("Database connection successful")
             return True
     except Exception as e:

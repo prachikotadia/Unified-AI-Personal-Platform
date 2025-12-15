@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from datetime import datetime, timedelta
 import jwt
 from typing import Optional, Dict, Any
@@ -17,12 +18,18 @@ from app.schemas import auth_schemas
 from app.schemas import data_schemas
 from app.services import auth_service
 from app.services import data_service
-from app.services.ai_insights_service import ai_insights_service
 from app.config import settings
 
 load_dotenv()
 
 logger = structlog.get_logger()
+
+# AI services - optional, import with error handling
+try:
+    from app.services.ai_insights_service import ai_insights_service
+except ImportError as e:
+    logger.warning(f"AI services not available: {e}")
+    ai_insights_service = None
 
 # Create database tables
 user.Base.metadata.create_all(bind=engine)
@@ -35,13 +42,42 @@ app = FastAPI(
 )
 
 # CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.allowed_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# In development, allow all localhost origins for easier testing
+if settings.ENVIRONMENT == "development" or settings.DEBUG:
+    # Allow all origins in development for easier testing
+    logger.info("CORS: Allowing all origins in development mode")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Allow all origins in development
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+    )
+else:
+    # Production: use configured origins
+    allowed_origins = settings.allowed_origins_list
+    # Add common localhost variations
+    allowed_origins.extend([
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:5000",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000"
+    ])
+    # Remove duplicates
+    allowed_origins = list(set(allowed_origins))
+    logger.info(f"CORS: Allowing origins: {allowed_origins}")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+    )
 
 # Security
 security = HTTPBearer()
@@ -121,7 +157,8 @@ async def health_check():
     try:
         # Check database connection
         db = next(get_db())
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
+        db.close()
         
         # Check Redis connection (optional)
         redis_status = "disconnected"
@@ -134,7 +171,7 @@ async def health_check():
         
         return {
             "status": "healthy",
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.utcnow().isoformat(),
             "service": "main-api",
             "version": "1.0.0",
             "database": "connected",
@@ -291,9 +328,22 @@ async def create_finance_account(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# Include AI insights router
+# Include routers
 from app.routers.ai_insights import router as ai_insights_router
+from app.routers.ai import router as ai_router
+from app.routers.finance import router as finance_router
+from app.routers.marketplace_db import router as marketplace_router
+from app.routers.travel import router as travel_router
+from app.routers.health import router as fitness_router
+from app.routers.dashboard import router as dashboard_router
+
 app.include_router(ai_insights_router)
+app.include_router(ai_router, prefix="/api/ai", tags=["ai"])
+app.include_router(finance_router, prefix="/api/finance", tags=["finance"])
+app.include_router(marketplace_router, prefix="/api/marketplace", tags=["marketplace"])
+app.include_router(travel_router, prefix="/api/travel", tags=["travel"])
+app.include_router(fitness_router, prefix="/api/fitness", tags=["fitness"])
+app.include_router(dashboard_router, prefix="/api/dashboard", tags=["dashboard"])
 
 if __name__ == "__main__":
     import uvicorn

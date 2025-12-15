@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   Heart, 
   MessageCircle, 
@@ -10,8 +11,14 @@ import {
   TrendingUp,
   Users,
   Calendar,
-  MapPin
+  MapPin,
+  Eye,
+  Filter,
+  X,
+  User
 } from 'lucide-react';
+import CommentModal from '../../components/social/CommentModal';
+import { useToastHelpers } from '../../components/ui/Toast';
 
 interface SharedItem {
   id: string;
@@ -30,8 +37,14 @@ interface SharedItem {
 }
 
 const SharedItemsPage = () => {
+  const navigate = useNavigate();
+  const { success } = useToastHelpers();
   const [sharedItems, setSharedItems] = useState<SharedItem[]>([]);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'finance' | 'travel' | 'fitness' | 'achievement'>('all');
+  const [selectedUserFilter, setSelectedUserFilter] = useState<string>('all');
+  const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<SharedItem | null>(null);
 
   useEffect(() => {
     // Mock data
@@ -128,9 +141,35 @@ const SharedItemsPage = () => {
     }
   };
 
-  const filteredItems = selectedFilter === 'all' 
-    ? sharedItems 
-    : sharedItems.filter(item => item.type === selectedFilter);
+  const uniqueUsers = Array.from(new Set(sharedItems.map(item => item.author.name)));
+
+  const filteredItems = sharedItems.filter(item => {
+    const matchesType = selectedFilter === 'all' || item.type === selectedFilter;
+    const matchesUser = selectedUserFilter === 'all' || item.author.name === selectedUserFilter;
+    return matchesType && matchesUser;
+  });
+
+  const handleLike = (itemId: string) => {
+    setLikedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleShare = (item: SharedItem) => {
+    console.log('Share item:', item.id);
+    success('Item Shared', 'Item has been shared successfully!');
+  };
+
+  const handleClearFilters = () => {
+    setSelectedFilter('all');
+    setSelectedUserFilter('all');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
@@ -151,26 +190,61 @@ const SharedItemsPage = () => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-xl shadow-lg p-4 mb-8"
         >
-          <div className="flex flex-wrap gap-2">
-            {[
-              { value: 'all', label: 'All Items' },
-              { value: 'finance', label: 'Finance' },
-              { value: 'travel', label: 'Travel' },
-              { value: 'fitness', label: 'Fitness' },
-              { value: 'achievement', label: 'Achievements' }
-            ].map((filter) => (
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-gray-500" />
+              <h3 className="font-semibold">Filters</h3>
+            </div>
+            {(selectedFilter !== 'all' || selectedUserFilter !== 'all') && (
               <button
-                key={filter.value}
-                onClick={() => setSelectedFilter(filter.value as any)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedFilter === filter.value
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                onClick={handleClearFilters}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800"
               >
-                {filter.label}
+                <X className="w-4 h-4" />
+                Clear Filters
               </button>
-            ))}
+            )}
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Filter by Type</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: 'all', label: 'All Items' },
+                  { value: 'finance', label: 'Finance' },
+                  { value: 'travel', label: 'Travel' },
+                  { value: 'fitness', label: 'Fitness' },
+                  { value: 'achievement', label: 'Achievements' }
+                ].map((filter) => (
+                  <button
+                    key={filter.value}
+                    onClick={() => setSelectedFilter(filter.value as any)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      selectedFilter === filter.value
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Filter by User</label>
+              <select
+                value={selectedUserFilter}
+                onChange={(e) => setSelectedUserFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm"
+              >
+                <option value="all">All Users</option>
+                {uniqueUsers.map((user) => (
+                  <option key={user} value={user}>{user}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </motion.div>
 
@@ -229,19 +303,40 @@ const SharedItemsPage = () => {
                 {/* Actions */}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                   <div className="flex items-center space-x-6">
-                    <button className="flex items-center space-x-2 text-gray-500 hover:text-red-500 transition-colors">
-                      <Heart size={16} />
-                      <span className="text-sm">{item.likes}</span>
+                    <button
+                      onClick={() => handleLike(item.id)}
+                      className={`flex items-center space-x-2 transition-colors ${
+                        likedItems.has(item.id) ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
+                      }`}
+                    >
+                      <Heart size={16} className={likedItems.has(item.id) ? 'fill-current' : ''} />
+                      <span className="text-sm">{item.likes + (likedItems.has(item.id) ? 1 : 0)}</span>
                     </button>
-                    <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors">
+                    <button
+                      onClick={() => {
+                        setSelectedItem(item);
+                        setShowCommentModal(true);
+                      }}
+                      className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors"
+                    >
                       <MessageCircle size={16} />
                       <span className="text-sm">{item.comments}</span>
                     </button>
-                    <button className="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition-colors">
+                    <button
+                      onClick={() => handleShare(item)}
+                      className="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition-colors"
+                    >
                       <Share2 size={16} />
                       <span className="text-sm">{item.shares}</span>
                     </button>
                   </div>
+                  <button
+                    onClick={() => navigate(`/social/shared/${item.id}`)}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:text-blue-600"
+                  >
+                    <Eye size={14} />
+                    View Details
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -262,6 +357,34 @@ const SharedItemsPage = () => {
           </motion.div>
         )}
       </div>
+
+      {/* Comment Modal */}
+      {selectedItem && (
+        <CommentModal
+          isOpen={showCommentModal}
+          onClose={() => {
+            setShowCommentModal(false);
+            setSelectedItem(null);
+          }}
+          postId={selectedItem.id}
+          comments={[]}
+          onAddComment={(content) => {
+            console.log('Add comment:', content);
+            success('Comment Added', 'Your comment has been posted!');
+          }}
+          onLikeComment={(commentId) => {
+            console.log('Like comment:', commentId);
+          }}
+          onReplyComment={(commentId, content) => {
+            console.log('Reply to comment:', commentId, content);
+            success('Reply Posted', 'Your reply has been posted!');
+          }}
+          onDeleteComment={(commentId) => {
+            console.log('Delete comment:', commentId);
+            success('Comment Deleted', 'Your comment has been deleted');
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-gradient-to-br from-light-grey to-white dark:from-charcoal-grey dark:to-black text-black dark:text-white;
+    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100;
     font-feature-settings: "rlig" 1, "calt" 1;
     min-height: 100vh;
   }
@@ -21,6 +21,23 @@
 
   .glass-card-hover {
     @apply glass-card hover:bg-white/20 dark:hover:bg-black/30 transition-all duration-300 hover:shadow-soft;
+  }
+
+  /* Neomorphism styles */
+  .neo-card {
+    @apply bg-white dark:bg-gray-800 rounded-2xl shadow-[8px_8px_16px_#d1d5db,-8px_-8px_16px_#ffffff] dark:shadow-[8px_8px_16px_#111827,-8px_-8px_16px_#374151] transition-all duration-300;
+  }
+
+  .neo-card-inset {
+    @apply bg-gray-50 dark:bg-gray-900 rounded-xl shadow-[inset_4px_4px_8px_#d1d5db,inset_-4px_-4px_8px_#ffffff] dark:shadow-[inset_4px_4px_8px_#111827,inset_-4px_-4px_8px_#374151];
+  }
+
+  .neo-button {
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-[4px_4px_8px_#d1d5db,-4px_-4px_8px_#ffffff] dark:shadow-[4px_4px_8px_#111827,-4px_-4px_8px_#374151] px-4 py-2 text-gray-700 dark:text-gray-300 transition-all duration-300 active:shadow-[inset_2px_2px_4px_#d1d5db,inset_-2px_-2px_4px_#ffffff] dark:active:shadow-[inset_2px_2px_4px_#111827,inset_-2px_-2px_4px_#374151] hover:shadow-[6px_6px_12px_#d1d5db,-6px_-6px_12px_#ffffff] dark:hover:shadow-[6px_6px_12px_#111827,-6px_-6px_12px_#374151];
+  }
+
+  .neo-button-primary {
+    @apply neo-button bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-700 text-gray-900 dark:text-white font-medium;
   }
 
   .gradient-text {
@@ -69,6 +86,15 @@
 
   .scale-in {
     @apply animate-scale-in;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }
 

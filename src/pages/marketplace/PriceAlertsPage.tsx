@@ -49,6 +49,7 @@ const PriceAlertsPage: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'triggered' | 'expired'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [allAlertsEnabled, setAllAlertsEnabled] = useState(true);
 
   useEffect(() => {
     fetchAlerts();
@@ -145,6 +146,19 @@ const PriceAlertsPage: React.FC = () => {
       brand: alert.brand
     });
     setShowCreateModal(true);
+  };
+
+  const handleToggleAllAlerts = (enabled: boolean) => {
+    setAllAlertsEnabled(enabled);
+    // In a real app, this would update all alerts' enabled status
+    setAlerts(prev => prev.map(alert => ({
+      ...alert,
+      status: enabled && alert.status !== 'expired' && alert.status !== 'cancelled' 
+        ? 'active' 
+        : alert.status === 'active' 
+          ? 'cancelled' 
+          : alert.status
+    })));
   };
 
   const getFilteredAlerts = () => {
@@ -247,16 +261,29 @@ const PriceAlertsPage: React.FC = () => {
               </div>
               <div className="flex items-center space-x-1 text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded-full">
                 <Bell className="w-3 h-3" />
-                <span>{alerts.length} Active</span>
+                <span>{alerts.filter(a => a.status === 'active').length} Active</span>
               </div>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span>New Alert</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allAlertsEnabled}
+                    onChange={(e) => handleToggleAllAlerts(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <span>Enable All Alerts</span>
+                </label>
+              </div>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Alert</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

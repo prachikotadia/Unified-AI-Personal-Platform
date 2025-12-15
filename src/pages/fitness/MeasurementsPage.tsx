@@ -11,15 +11,24 @@ import {
   LineChart,
   Target,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Edit,
+  Trash2,
+  Download
 } from 'lucide-react';
 import { useFitness } from '../../hooks/useFitness';
+import { useToastHelpers } from '../../components/ui/Toast';
 import MeasurementModal from '../../components/fitness/MeasurementModal';
 
 const MeasurementsPage = () => {
-  const { healthMetrics, isLoading, error } = useFitness();
+  const { success, error: showError } = useToastHelpers();
+  const { healthMetrics, isLoading, errors } = useFitness();
+  const error = errors.healthMetrics || null;
   const [showMeasurementModal, setShowMeasurementModal] = useState(false);
+  const [editingMeasurement, setEditingMeasurement] = useState<any>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState('month');
+  const [showCharts, setShowCharts] = useState(false);
+  const [showTargetsModal, setShowTargetsModal] = useState(false);
 
   // Mock measurements data
   const mockMeasurements = [
@@ -155,7 +164,7 @@ const MeasurementsPage = () => {
               Track your body composition and physical measurements
             </p>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-2 flex-wrap">
             <select
               value={selectedTimeframe}
               onChange={(e) => setSelectedTimeframe(e.target.value)}
@@ -167,11 +176,35 @@ const MeasurementsPage = () => {
               <option value="year">This Year</option>
             </select>
             <button 
-              onClick={() => setShowMeasurementModal(true)}
+              onClick={() => {
+                setEditingMeasurement(null)
+                setShowMeasurementModal(true)
+              }}
               className="btn-primary flex items-center space-x-2"
             >
               <Plus className="w-4 h-4" />
-              <span>Log Measurement</span>
+              <span>Add Measurement</span>
+            </button>
+            <button
+              onClick={() => setShowCharts(!showCharts)}
+              className="btn-secondary flex items-center space-x-2"
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>View Charts</span>
+            </button>
+            <button
+              onClick={() => setShowTargetsModal(true)}
+              className="btn-secondary flex items-center space-x-2"
+            >
+              <Target className="w-4 h-4" />
+              <span>Set Targets</span>
+            </button>
+            <button
+              onClick={() => success('Export Started', 'Your measurements are being exported')}
+              className="btn-secondary flex items-center space-x-2"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export</span>
             </button>
           </div>
         </div>
@@ -273,10 +306,35 @@ const MeasurementsPage = () => {
           
           <div className="space-y-4">
             {measurements.map((measurement, index) => (
-              <div key={measurement.id} className="p-3 border border-white/10 rounded-lg">
+              <div key={measurement.id} className="p-3 border border-white/10 rounded-lg group">
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium">{measurement.date}</span>
-                  <span className="text-sm text-gray-500">{measurement.weight} kg</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">{measurement.weight} kg</span>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => {
+                          setEditingMeasurement(measurement)
+                          setShowMeasurementModal(true)
+                        }}
+                        className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                        title="Edit"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Are you sure you want to delete this measurement?')) {
+                            success('Measurement Deleted', 'Measurement has been removed')
+                          }
+                        }}
+                        className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div>
@@ -382,11 +440,62 @@ const MeasurementsPage = () => {
         </div>
       </motion.div>
 
-      {/* Measurement Modal */}
-      <MeasurementModal 
-        isOpen={showMeasurementModal} 
-        onClose={() => setShowMeasurementModal(false)}
+      {/* Modals */}
+      <MeasurementModal
+        isOpen={showMeasurementModal}
+        onClose={() => {
+          setShowMeasurementModal(false)
+          setEditingMeasurement(null)
+        }}
+        measurement={editingMeasurement}
       />
+
+      {/* Charts Modal */}
+      {showCharts && (
+        <div className="glass-card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Measurement Charts</h2>
+            <button
+              onClick={() => setShowCharts(false)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            >
+              <span className="text-xl">×</span>
+            </button>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-8 text-center">
+            <p className="text-gray-600 dark:text-gray-400">
+              Chart visualizations would be displayed here
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Set Targets Modal Placeholder */}
+      {showTargetsModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Set Measurement Targets</h2>
+              <button
+                onClick={() => setShowTargetsModal(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <span className="text-xl">×</span>
+              </button>
+            </div>
+            <div className="text-center py-8">
+              <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">
+                Set target functionality would be implemented here
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };
