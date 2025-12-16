@@ -187,21 +187,21 @@ const DashboardPage = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900 dark:text-white">
               Welcome back, {user?.displayName?.split(' ')[0]}!
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
               Here's what's happening with your AI-powered lifestyle today
             </p>
           </div>
           <div className="hidden md:block">
             <div className="text-right">
-              <p className="text-sm text-gray-500">Today's Date</p>
-              <p className="text-lg font-semibold">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Today's Date</p>
+              <p className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                 {new Date().toLocaleDateString('en-US', { 
                   weekday: 'long', 
                   year: 'numeric', 
@@ -222,34 +222,34 @@ const DashboardPage = () => {
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
       >
         {/* Finance Card */}
-        <motion.div variants={itemVariants} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700">
+        <motion.div variants={itemVariants} className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-green-200 dark:ring-green-800">
-                <DollarSign className="w-7 h-7 text-white font-bold" strokeWidth={2.5} />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-green-200 dark:ring-green-800">
+                <DollarSign className="w-5 h-5 sm:w-7 sm:h-7 text-white font-bold" strokeWidth={2.5} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Finance</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Finance</h3>
             </div>
-            <Link to="/finance" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+            <Link to="/finance" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
               <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
           
           <div className="space-y-3">
             <div>
-              <p className="text-sm text-gray-500">Monthly Income</p>
-              <p className="text-2xl font-bold text-emerald-600">{formatCurrency(financeData.monthlyIncome)}</p>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Monthly Income</p>
+              <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(financeData.monthlyIncome)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Monthly Expenses</p>
-              <p className="text-2xl font-bold">{formatCurrency(financeData.monthlySpend)}</p>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Monthly Expenses</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(financeData.monthlySpend)}</p>
               <div className="flex items-center space-x-2 mt-1">
                 {financeData.change > 0 ? (
                   <TrendingUp className="w-4 h-4 text-green-500" />
                 ) : (
                   <TrendingDown className="w-4 h-4 text-red-500" />
                 )}
-                <span className={`text-sm ${financeData.change > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <span className={`text-xs sm:text-sm ${financeData.change > 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {financeData.change > 0 ? '+' : ''}{financeData.change}% from last month
                 </span>
               </div>
@@ -257,13 +257,13 @@ const DashboardPage = () => {
             
             {financeData.monthlyBudget > 0 && (
               <>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 sm:h-3">
                   <div 
-                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-3 rounded-full transition-all duration-500"
+                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2.5 sm:h-3 rounded-full transition-all duration-500"
                     style={{ width: `${Math.min((financeData.monthlySpend / financeData.monthlyBudget) * 100, 100)}%` }}
                   />
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   {formatCurrency(financeData.monthlySpend)} of {formatCurrency(financeData.monthlyBudget)} budget
                 </p>
               </>
@@ -272,36 +272,36 @@ const DashboardPage = () => {
         </motion.div>
 
         {/* Marketplace Card */}
-        <motion.div variants={itemVariants} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700">
+        <motion.div variants={itemVariants} className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
-              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-orange-200 dark:ring-orange-800">
-                <ShoppingCart className="w-7 h-7 text-white font-bold" strokeWidth={2.5} />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-orange-200 dark:ring-orange-800">
+                <ShoppingCart className="w-5 h-5 sm:w-7 sm:h-7 text-white font-bold" strokeWidth={2.5} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Marketplace</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Marketplace</h3>
             </div>
-            <Link to="/marketplace" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+            <Link to="/marketplace" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
               <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
           
           <div className="space-y-3">
             <div>
-              <p className="text-sm text-gray-500">Cart Items</p>
-              <p className="text-2xl font-bold">{marketplaceData.cartItems} items</p>
-              <p className="text-sm text-gray-600">{formatCurrency(marketplaceData.totalValue)}</p>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Cart Items</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{marketplaceData.cartItems} items</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{formatCurrency(marketplaceData.totalValue)}</p>
             </div>
             
             {marketplaceData.recommendations.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Recently Viewed</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">Recently Viewed</p>
                 <div className="flex space-x-2">
                   {marketplaceData.recommendations.slice(0, 3).map((item) => (
                     <div key={item.id} className="flex-shrink-0">
                       <img 
                         src={item.image} 
                         alt={item.name}
-                        className="w-12 h-12 rounded-lg object-cover"
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover"
                       />
                     </div>
                   ))}
@@ -312,75 +312,75 @@ const DashboardPage = () => {
         </motion.div>
 
         {/* Fitness Card */}
-        <motion.div variants={itemVariants} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700">
+        <motion.div variants={itemVariants} className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-purple-200 dark:ring-purple-800">
-                <Activity className="w-7 h-7 text-white font-bold" strokeWidth={2.5} />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-purple-200 dark:ring-purple-800">
+                <Activity className="w-5 h-5 sm:w-7 sm:h-7 text-white font-bold" strokeWidth={2.5} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Fitness</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Fitness</h3>
             </div>
-            <Link to="/fitness" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+            <Link to="/fitness" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
               <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
           
           <div className="space-y-3">
             <div>
-              <p className="text-sm text-gray-500">Today's Steps</p>
-              <p className="text-2xl font-bold">{fitnessData.stepsToday.toLocaleString()}</p>
-              <p className="text-sm text-gray-600">{fitnessData.caloriesBurned} calories burned</p>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Today's Steps</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{fitnessData.stepsToday.toLocaleString()}</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{fitnessData.caloriesBurned} calories burned</p>
             </div>
             
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 sm:h-3">
               <div 
-                className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-3 rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-2.5 sm:h-3 rounded-full transition-all duration-500"
                 style={{ width: `${Math.min((fitnessData.stepsToday / fitnessData.goalSteps) * 100, 100)}%` }}
               />
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {fitnessData.stepsToday.toLocaleString()} of {fitnessData.goalSteps.toLocaleString()} goal
             </p>
             
-            <div className="flex items-center justify-between text-sm">
-              <span>{fitnessData.workoutsThisWeek} workouts this week</span>
-                              <span className="text-green-500 flex items-center gap-1"><Flame size={16} /> {fitnessData.streak} day streak</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm">
+              <span className="text-gray-700 dark:text-gray-300">{fitnessData.workoutsThisWeek} workouts this week</span>
+              <span className="text-green-500 dark:text-green-400 flex items-center gap-1"><Flame size={14} /> {fitnessData.streak} day streak</span>
             </div>
           </div>
         </motion.div>
 
         {/* Travel Card */}
-        <motion.div variants={itemVariants} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700">
+        <motion.div variants={itemVariants} className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-200 dark:ring-blue-800">
-                <Plane className="w-7 h-7 text-white font-bold" strokeWidth={2.5} />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-200 dark:ring-blue-800">
+                <Plane className="w-5 h-5 sm:w-7 sm:h-7 text-white font-bold" strokeWidth={2.5} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Travel</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Travel</h3>
             </div>
-            <Link to="/travel" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+            <Link to="/travel" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
               <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
           
           <div className="space-y-3">
             <div>
-              <p className="text-sm text-gray-500">Upcoming Trips</p>
-              <p className="text-2xl font-bold">{travelData.upcomingTrips}</p>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Upcoming Trips</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{travelData.upcomingTrips}</p>
             </div>
             
             {travelData.nextTrip && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Next Trip</p>
-                <div className="flex items-center space-x-3">
+                <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">Next Trip</p>
+                <div className="flex items-center space-x-2 sm:space-x-3">
                   <img 
                     src={travelData.nextTrip.image} 
                     alt={travelData.nextTrip.destination}
-                    className="w-12 h-12 rounded-lg object-cover"
+                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover flex-shrink-0"
                   />
-                  <div>
-                    <p className="font-medium">{travelData.nextTrip.destination}</p>
-                    <p className="text-sm text-gray-500">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">{travelData.nextTrip.destination}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                       {new Date(travelData.nextTrip.date).toLocaleDateString()}
                     </p>
                   </div>
@@ -391,34 +391,34 @@ const DashboardPage = () => {
         </motion.div>
 
         {/* Social Card */}
-        <motion.div variants={itemVariants} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700">
+        <motion.div variants={itemVariants} className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
-              <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-pink-200 dark:ring-pink-800">
-                <Users className="w-7 h-7 text-white font-bold" strokeWidth={2.5} />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-pink-200 dark:ring-pink-800">
+                <Users className="w-5 h-5 sm:w-7 sm:h-7 text-white font-bold" strokeWidth={2.5} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Social</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Social</h3>
             </div>
-            <Link to="/social" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+            <Link to="/social" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
               <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
           
           <div className="space-y-3">
             <div>
-              <p className="text-sm text-gray-500">Connections</p>
-              <p className="text-2xl font-bold">{socialData.connections}</p>
-              <p className="text-sm text-gray-600">{socialData.sharedItems} shared items</p>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Connections</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{socialData.connections}</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{socialData.sharedItems} shared items</p>
             </div>
             
             <div className="space-y-2">
-              <p className="text-sm font-medium">Recent Activity</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">Recent Activity</p>
               <div className="space-y-1">
                 {socialData.recentActivity.slice(0, 2).map((activity, index) => (
-                  <div key={index} className="flex items-center space-x-2 text-sm">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                    <span className="font-medium">{activity.user}</span>
-                    <span className="text-gray-500">{activity.action}</span>
+                  <div key={index} className="flex items-center space-x-2 text-xs sm:text-sm">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
+                    <span className="font-medium text-gray-900 dark:text-white">{activity.user}</span>
+                    <span className="text-gray-500 dark:text-gray-400 truncate">{activity.action}</span>
                   </div>
                 ))}
               </div>
@@ -427,34 +427,34 @@ const DashboardPage = () => {
         </motion.div>
 
         {/* Chat Card */}
-        <motion.div variants={itemVariants} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700">
+        <motion.div variants={itemVariants} className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
-              <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-teal-200 dark:ring-teal-800">
-                <MessageCircle className="w-7 h-7 text-white font-bold" strokeWidth={2.5} />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-teal-200 dark:ring-teal-800">
+                <MessageCircle className="w-5 h-5 sm:w-7 sm:h-7 text-white font-bold" strokeWidth={2.5} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Chat</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Chat</h3>
             </div>
-            <Link to="/chat" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+            <Link to="/chat" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
               <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
           
           <div className="space-y-3">
             <div>
-              <p className="text-sm text-gray-500">Active Conversations</p>
-              <p className="text-2xl font-bold">{chatData.activeConversations}</p>
-              <p className="text-sm text-gray-600">{chatData.unreadMessages} unread messages</p>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Active Conversations</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{chatData.activeConversations}</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{chatData.unreadMessages} unread messages</p>
             </div>
             
             {rooms.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Recent Chats</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">Recent Chats</p>
                 <div className="space-y-1">
                   {rooms.slice(0, 2).map((room) => (
-                    <div key={room.id} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-700 dark:text-gray-300">{room.name}</span>
-                      <div className={`w-2 h-2 rounded-full ${room.isOnline ? 'bg-emerald-500' : 'bg-gray-400'}`}></div>
+                    <div key={room.id} className="flex items-center justify-between text-xs sm:text-sm">
+                      <span className="text-gray-700 dark:text-gray-300 truncate flex-1 min-w-0">{room.name}</span>
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ml-2 ${room.isOnline ? 'bg-emerald-500' : 'bg-gray-400'}`}></div>
                     </div>
                   ))}
                 </div>
@@ -469,48 +469,48 @@ const DashboardPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700"
       >
-        <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <h3 className="text-base sm:text-lg font-semibold mb-4 text-gray-900 dark:text-white">Quick Actions</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Link
             to="/finance/transactions"
-            className="flex items-center space-x-3 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-transparent hover:border-green-200 dark:hover:border-green-800"
+            className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 p-3 sm:p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-transparent hover:border-green-200 dark:hover:border-green-800 min-h-[80px] sm:min-h-[auto]"
           >
-            <div className="w-10 h-10 bg-green-500 dark:bg-green-600 rounded-lg flex items-center justify-center shadow-md ring-2 ring-green-200 dark:ring-green-800">
+            <div className="w-10 h-10 bg-green-500 dark:bg-green-600 rounded-lg flex items-center justify-center shadow-md ring-2 ring-green-200 dark:ring-green-800 flex-shrink-0">
               <Plus className="w-5 h-5 text-white font-bold" strokeWidth={2.5} />
             </div>
-            <span className="font-medium text-gray-900 dark:text-white">Add Expense</span>
+            <span className="font-medium text-sm sm:text-base text-gray-900 dark:text-white text-center sm:text-left">Add Expense</span>
           </Link>
           
           <Link
             to="/fitness/workouts"
-            className="flex items-center space-x-3 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-transparent hover:border-blue-200 dark:hover:border-blue-800"
+            className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 p-3 sm:p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-transparent hover:border-blue-200 dark:hover:border-blue-800 min-h-[80px] sm:min-h-[auto]"
           >
-            <div className="w-10 h-10 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center shadow-md ring-2 ring-blue-200 dark:ring-blue-800">
+            <div className="w-10 h-10 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center shadow-md ring-2 ring-blue-200 dark:ring-blue-800 flex-shrink-0">
               <Activity className="w-5 h-5 text-white font-bold" strokeWidth={2.5} />
             </div>
-            <span className="font-medium text-gray-900 dark:text-white">Log Workout</span>
+            <span className="font-medium text-sm sm:text-base text-gray-900 dark:text-white text-center sm:text-left">Log Workout</span>
           </Link>
           
           <Link
             to="/travel/search"
-            className="flex items-center space-x-3 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-transparent hover:border-purple-200 dark:hover:border-purple-800"
+            className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 p-3 sm:p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-transparent hover:border-purple-200 dark:hover:border-purple-800 min-h-[80px] sm:min-h-[auto]"
           >
-            <div className="w-10 h-10 bg-purple-500 dark:bg-purple-600 rounded-lg flex items-center justify-center shadow-md ring-2 ring-purple-200 dark:ring-purple-800">
+            <div className="w-10 h-10 bg-purple-500 dark:bg-purple-600 rounded-lg flex items-center justify-center shadow-md ring-2 ring-purple-200 dark:ring-purple-800 flex-shrink-0">
               <Plane className="w-5 h-5 text-white font-bold" strokeWidth={2.5} />
             </div>
-            <span className="font-medium text-gray-900 dark:text-white">Plan Trip</span>
+            <span className="font-medium text-sm sm:text-base text-gray-900 dark:text-white text-center sm:text-left">Plan Trip</span>
           </Link>
           
           <Link
             to="/chat"
-            className="flex items-center space-x-3 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-transparent hover:border-teal-200 dark:hover:border-teal-800"
+            className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 p-3 sm:p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-transparent hover:border-teal-200 dark:hover:border-teal-800 min-h-[80px] sm:min-h-[auto]"
           >
-            <div className="w-10 h-10 bg-teal-500 dark:bg-teal-600 rounded-lg flex items-center justify-center shadow-md ring-2 ring-teal-200 dark:ring-teal-800">
+            <div className="w-10 h-10 bg-teal-500 dark:bg-teal-600 rounded-lg flex items-center justify-center shadow-md ring-2 ring-teal-200 dark:ring-teal-800 flex-shrink-0">
               <MessageCircle className="w-5 h-5 text-white font-bold" strokeWidth={2.5} />
             </div>
-            <span className="font-medium text-gray-900 dark:text-white">New Chat</span>
+            <span className="font-medium text-sm sm:text-base text-gray-900 dark:text-white text-center sm:text-left">New Chat</span>
           </Link>
         </div>
       </motion.div>
@@ -520,14 +520,14 @@ const DashboardPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700"
       >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
-            <Sparkles className="w-8 h-8 text-purple-500" />
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-purple-500 flex-shrink-0" />
             <div>
-              <h2 className="text-2xl font-bold mb-1">AI Insights</h2>
-              <p className="text-gray-600 dark:text-gray-400">
+              <h2 className="text-xl sm:text-2xl font-bold mb-1 text-gray-900 dark:text-white">AI Insights</h2>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                 Personalized recommendations and predictions
               </p>
             </div>

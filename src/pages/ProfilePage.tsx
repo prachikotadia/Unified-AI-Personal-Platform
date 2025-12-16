@@ -89,20 +89,20 @@ const ProfilePage = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-md border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 md:p-8 shadow-md border border-gray-100 dark:border-gray-700"
       >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold mb-2 text-gray-900 dark:text-white">Profile</h1>
-            <p className="text-gray-600 dark:text-gray-400 text-lg">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 text-gray-900 dark:text-white">Profile</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base md:text-lg">
               Manage your account and preferences
             </p>
           </div>
           <button 
             onClick={() => setShowEditModal(true)}
-            className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-cyan-600 text-white rounded-xl hover:from-sky-600 hover:to-cyan-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+            className="flex items-center justify-center space-x-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-sky-500 to-cyan-600 text-white rounded-xl hover:from-sky-600 hover:to-cyan-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium min-h-[44px] text-sm sm:text-base"
           >
-            <Edit className="w-5 h-5" />
+            <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>Edit Profile</span>
           </button>
         </div>
@@ -113,68 +113,68 @@ const ProfilePage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-md border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 md:p-8 shadow-md border border-gray-100 dark:border-gray-700"
       >
-        <div className="flex flex-col md:flex-row items-start md:items-center space-y-6 md:space-y-0 md:space-x-8">
-          <div className="relative flex-shrink-0">
+        <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 sm:space-y-6 md:space-y-0 md:space-x-8">
+          <div className="relative flex-shrink-0 mx-auto md:mx-0">
             <img
               src={user?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face'}
               alt={user?.displayName}
-              className="w-32 h-32 rounded-full object-cover border-4 border-gray-200 dark:border-gray-700 shadow-lg"
+              className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-gray-200 dark:border-gray-700 shadow-lg"
             />
-            <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-gradient-to-br from-sky-500 to-cyan-600 rounded-full flex items-center justify-center border-4 border-white dark:border-gray-800 shadow-lg">
-              <User className="w-5 h-5 text-white" />
+            <div className="absolute -bottom-2 -right-2 w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-sky-500 to-cyan-600 rounded-full flex items-center justify-center border-4 border-white dark:border-gray-800 shadow-lg">
+              <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
           </div>
           
-          <div className="flex-1 w-full">
-            <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">{user?.displayName || 'Guest User'}</h2>
-            <p className="text-lg text-gray-600 dark:text-gray-400 mb-3">@{user?.username || 'guest_user'}</p>
-            <p className="text-gray-700 dark:text-gray-300 mb-6">{user?.bio || 'Demo user - explore OmniLife features.'}</p>
+          <div className="flex-1 w-full text-center md:text-left">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900 dark:text-white">{user?.displayName || 'Guest User'}</h2>
+            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-3">@{user?.username || 'guest_user'}</p>
+            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4 sm:mb-6">{user?.bio || 'Demo user - explore OmniLife features.'}</p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <div className="w-10 h-10 bg-gradient-to-br from-sky-100 to-cyan-100 dark:from-sky-900/30 dark:to-cyan-900/30 rounded-lg flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <div className="flex items-center space-x-2 sm:space-x-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-sky-100 to-cyan-100 dark:from-sky-900/30 dark:to-cyan-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-sky-600 dark:text-sky-400" />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Location</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{user?.location || 'Demo Mode'}</p>
+                  <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate">{user?.location || 'Demo Mode'}</p>
                 </div>
               </div>
               
-              <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <div className="w-10 h-10 bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/30 dark:to-purple-900/30 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+              <div className="flex items-center space-x-2 sm:space-x-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/30 dark:to-purple-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-violet-600 dark:text-violet-400" />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Joined</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                     {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '12/8/2025'}
                   </p>
                 </div>
               </div>
 
               {user?.preferences?.occupation && (
-                <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 rounded-lg flex items-center justify-center">
-                    <Briefcase className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <div className="flex items-center space-x-2 sm:space-x-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Occupation</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{user.preferences.occupation}</p>
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate">{user.preferences.occupation}</p>
                   </div>
                 </div>
               )}
 
               {user?.preferences?.education && (
-                <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                  <div className="w-10 h-10 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 rounded-lg flex items-center justify-center">
-                    <GraduationCap className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                <div className="flex items-center space-x-2 sm:space-x-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-400" />
                   </div>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Education</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{user.preferences.education}</p>
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate">{user.preferences.education}</p>
                   </div>
                 </div>
               )}
@@ -183,18 +183,18 @@ const ProfilePage = () => {
             {/* Contact Information */}
             {(user?.email || user?.preferences?.phone || user?.preferences?.website) && (
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Contact Information</h3>
-                <div className="flex flex-wrap gap-3">
+                <h3 className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Contact Information</h3>
+                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
                   {user?.email && (
-                    <div className="flex items-center space-x-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                      <Mail className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{user.email}</span>
+                    <div className="flex items-center space-x-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg min-h-[44px]">
+                      <Mail className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 truncate">{user.email}</span>
                     </div>
                   )}
                   {user?.preferences?.phone && (
-                    <div className="flex items-center space-x-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                      <Phone className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{user.preferences.phone}</span>
+                    <div className="flex items-center space-x-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg min-h-[44px]">
+                      <Phone className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{user.preferences.phone}</span>
                     </div>
                   )}
                   {user?.preferences?.website && (
@@ -202,10 +202,10 @@ const ProfilePage = () => {
                       href={user.preferences.website} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="flex items-center space-x-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      className="flex items-center space-x-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-h-[44px]"
                     >
-                      <Globe className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Website</span>
+                      <Globe className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">Website</span>
                     </a>
                   )}
                 </div>
@@ -216,20 +216,20 @@ const ProfilePage = () => {
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-gradient-to-br from-sky-50 to-cyan-50 dark:from-sky-900/20 dark:to-cyan-900/20 rounded-xl p-6 border border-sky-200 dark:border-sky-800"
+          className="bg-gradient-to-br from-sky-50 to-cyan-50 dark:from-sky-900/20 dark:to-cyan-900/20 rounded-xl p-4 sm:p-6 border border-sky-200 dark:border-sky-800"
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-cyan-600 rounded-lg flex items-center justify-center shadow-lg">
-              <Activity className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-sky-500 to-cyan-600 rounded-lg flex items-center justify-center shadow-lg">
+              <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
           </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{profileData.stats.totalWorkouts}</div>
-          <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Workouts</div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">{profileData.stats.totalWorkouts}</div>
+          <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Workouts</div>
         </motion.div>
 
         <motion.div
@@ -243,38 +243,38 @@ const ProfilePage = () => {
               <Plane className="w-6 h-6 text-white" />
             </div>
           </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{profileData.stats.totalTrips}</div>
-          <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Trips</div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">{profileData.stats.totalTrips}</div>
+          <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Trips</div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl p-6 border border-violet-200 dark:border-violet-800"
+          className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl p-4 sm:p-6 border border-violet-200 dark:border-violet-800"
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-              <DollarSign className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+              <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
           </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">${profileData.stats.totalBudget.toLocaleString()}</div>
-          <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Budget Saved</div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">${profileData.stats.totalBudget.toLocaleString()}</div>
+          <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Budget Saved</div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-6 border border-amber-200 dark:border-amber-800"
+          className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-4 sm:p-6 border border-amber-200 dark:border-amber-800"
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg">
-              <Users className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
           </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{profileData.stats.connections}</div>
-          <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Connections</div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">{profileData.stats.connections}</div>
+          <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Connections</div>
         </motion.div>
       </div>
 
