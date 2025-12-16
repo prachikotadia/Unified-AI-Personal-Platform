@@ -264,7 +264,7 @@ class User(Base):
     
     # Relationships
     orders = relationship("Order", back_populates="user")
-    cart_items = relationship("CartItem", back_populates="user")
+    cart = relationship("Cart", back_populates="user", uselist=False)
     wishlist_items = relationship("WishlistItem", back_populates="user")
     reviews = relationship("Review", back_populates="user")
     price_alerts = relationship("PriceAlert", back_populates="user")

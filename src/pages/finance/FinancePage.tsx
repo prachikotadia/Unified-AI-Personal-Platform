@@ -1237,16 +1237,17 @@ const FinancePage: React.FC = () => {
           )}
 
           {activeTab === 'transactions' && (
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">All Transactions</h3>
-                <div className="flex items-center gap-2 flex-wrap">
+            <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">All Transactions</h3>
+                <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
                   {/* Search */}
-                  <div className="relative">
+                  <div className="relative flex-1 md:flex-none min-w-0">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                     <input
                       type="text"
                       placeholder="Search transactions..."
+                      className="w-full md:w-64 pl-10 pr-4 py-2.5 sm:py-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1378,16 +1379,17 @@ const FinancePage: React.FC = () => {
           )}
 
           {activeTab === 'accounts' && (
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Bank Accounts</h3>
-                <div className="flex items-center gap-2">
+            <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Bank Accounts</h3>
+                <div className="flex items-center gap-2 flex-wrap">
                 <button 
                     onClick={() => setShowBankModal(true)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                    className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 min-h-[44px]"
                   >
                     <Wallet size={16} />
-                    Connect Bank
+                    <span className="hidden sm:inline">Connect Bank</span>
+                    <span className="sm:hidden">Connect</span>
                   </button>
                   <button 
                     onClick={() => {
@@ -1395,54 +1397,54 @@ const FinancePage: React.FC = () => {
                       setSelectedAccount(null);
                       setShowBankAccountModal(true);
                     }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 min-h-[44px]"
                   >
                     <Plus size={16} />
-                  Add Account
+                  <span>Add Account</span>
                 </button>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {bankAccounts.map((account) => (
-                  <div key={account.id} className="p-6 border border-gray-200 rounded-xl hover:shadow-md transition-shadow group">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="text-blue-600" size={20} />
-                        <span className="font-semibold text-gray-900">{account.account_name}</span>
+                  <div key={account.id} className="p-4 sm:p-6 border border-gray-200 dark:border-gray-700 rounded-xl hover:shadow-md transition-shadow group bg-white dark:bg-gray-800">
+                    <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <CreditCard className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
+                        <span className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white truncate">{account.account_name}</span>
+                        {account.is_primary && (
+                          <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs rounded-full flex-shrink-0">Primary</span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
                         <button
                           onClick={() => handleEditBankAccount(account)}
-                          className="p-1.5 text-gray-600 hover:bg-gray-200 rounded transition-colors"
+                          className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
                           title="Edit"
                         >
                           <Edit size={16} />
                         </button>
                         <button
                           onClick={() => handleDeleteBankAccount(account.id)}
-                          className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
                           title="Delete"
                         >
                           <Trash2 size={16} />
                         </button>
                       </div>
-                      {account.is_primary && (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full">Primary</span>
-                      )}
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">{account.bank_name}</p>
-                    <p className="text-sm text-gray-600 mb-4 capitalize">{account.account_type.replace('_', ' ')}</p>
-                    <p className="text-2xl font-bold text-gray-900 mb-4">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1 sm:mb-2">{account.bank_name}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 sm:mb-4 capitalize">{account.account_type.replace('_', ' ')}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
                       ${account.balance.toLocaleString()}
                     </p>
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleViewAccountTransactions(account.id)}
-                        className="flex-1 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                        className="flex-1 px-3 py-2.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-h-[44px]"
                       >
                         View Transactions
                       </button>
-                      <button className="flex-1 px-3 py-2 text-sm bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors">
+                      <button className="flex-1 px-3 py-2.5 text-xs sm:text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors min-h-[44px]">
                         Transfer
                       </button>
                     </div>
@@ -1453,16 +1455,17 @@ const FinancePage: React.FC = () => {
           )}
 
           {activeTab === 'budgets' && (
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Budgets</h3>
-                <div className="flex items-center gap-2">
+            <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Budgets</h3>
+                <div className="flex items-center gap-2 flex-wrap">
                 <button 
                     onClick={() => setShowAIBudgetModal(true)}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                    className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 min-h-[44px]"
                   >
                     <Brain size={16} />
-                    AI Recommendations
+                    <span className="hidden sm:inline">AI Recommendations</span>
+                    <span className="sm:hidden">AI Budget</span>
                   </button>
                   <button 
                     onClick={() => {
@@ -1470,14 +1473,14 @@ const FinancePage: React.FC = () => {
                       setSelectedBudget(null);
                       setShowBudgetModal(true);
                     }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 min-h-[44px]"
                   >
                     <Plus size={16} />
-                  Create Budget
+                  <span>Create Budget</span>
                 </button>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {budgets.length === 0 ? (
                   <div className="col-span-full text-center py-12">
                     <p className="text-gray-500">No budgets created yet</p>
