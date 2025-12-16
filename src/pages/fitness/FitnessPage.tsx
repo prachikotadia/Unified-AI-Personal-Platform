@@ -174,37 +174,39 @@ const FitnessPage = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-md border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 md:p-8 shadow-md border border-gray-100 dark:border-gray-700"
       >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold mb-2 text-gray-900 dark:text-white">Fitness Dashboard</h1>
-            <p className="text-gray-600 dark:text-gray-400 text-lg">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 text-gray-900 dark:text-white">Fitness Dashboard</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base md:text-lg">
               Track your health and fitness progress
             </p>
           </div>
-          <div className="flex items-center space-x-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 px-5 py-3 rounded-xl border border-amber-200 dark:border-amber-800">
-            <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center shadow-md">
-              <Award className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex flex-col flex-1">
-              <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Current Streak</span>
-              <div className="flex items-center space-x-2">
-                <span className="text-lg font-bold text-gray-900 dark:text-white flex items-center space-x-1">
-                  <Flame className={`w-5 h-5 ${streakInfo.isActive ? 'text-orange-500 animate-pulse' : 'text-gray-400'}`} />
-                  <span>{streak} days</span>
-                </span>
-                {streakInfo.longest > streak && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    (Best: {streakInfo.longest})
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 px-4 sm:px-5 py-3 rounded-xl border border-amber-200 dark:border-amber-800">
+            <div className="flex items-center space-x-3 flex-1">
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
+                <Award className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Current Streak</span>
+                <div className="flex items-center space-x-2 flex-wrap">
+                  <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center space-x-1">
+                    <Flame className={`w-4 h-4 sm:w-5 sm:h-5 ${streakInfo.isActive ? 'text-orange-500 animate-pulse' : 'text-gray-400'}`} />
+                    <span>{streak} days</span>
+                  </span>
+                  {streakInfo.longest > streak && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      (Best: {streakInfo.longest})
+                    </span>
+                  )}
+                </div>
+                {streakInfo.daysUntilNextMilestone && (
+                  <span className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-0.5">
+                    {streakInfo.daysUntilNextMilestone} days until {streakInfo.nextMilestone} milestone! 🎯
                   </span>
                 )}
               </div>
-              {streakInfo.daysUntilNextMilestone && (
-                <span className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-0.5">
-                  {streakInfo.daysUntilNextMilestone} days until {streakInfo.nextMilestone} milestone! 🎯
-                </span>
-              )}
             </div>
             <button
               onClick={() => {
@@ -224,7 +226,7 @@ const FitnessPage = () => {
                 }
               }}
               disabled={isTodayMarked}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+              className={`px-4 py-2.5 rounded-lg font-semibold text-sm transition-all min-h-[44px] ${
                 isTodayMarked
                   ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                   : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95'
@@ -247,58 +249,58 @@ const FitnessPage = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="mt-6 sm:mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
           <button
             onClick={() => setShowWorkoutModal(true)}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Plus className="w-6 h-6" />
-            <span className="text-sm font-medium">Log Workout</span>
+            <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">Log Workout</span>
           </button>
           
           <button
             onClick={() => setShowNutritionModal(true)}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Plus className="w-6 h-6" />
-            <span className="text-sm font-medium">Log Meal</span>
+            <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">Log Meal</span>
           </button>
           
           <button
             onClick={() => setShowGoalModal(true)}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-violet-500 to-violet-600 text-white rounded-xl hover:from-violet-600 hover:to-violet-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-violet-500 to-violet-600 text-white rounded-xl hover:from-violet-600 hover:to-violet-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Target className="w-6 h-6" />
-            <span className="text-sm font-medium">Set Goal</span>
+            <Target className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">Set Goal</span>
           </button>
 
           <button
             onClick={() => setShowMeasurementModal(true)}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Ruler className="w-6 h-6" />
-            <span className="text-sm font-medium">Log Measurements</span>
+            <Ruler className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">Log Measurements</span>
           </button>
 
           <button
             onClick={() => navigate('/fitness/exercises')}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-slate-500 to-slate-600 text-white rounded-xl hover:from-slate-600 hover:to-slate-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-slate-500 to-slate-600 text-white rounded-xl hover:from-slate-600 hover:to-slate-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Dumbbell className="w-6 h-6" />
-            <span className="text-sm font-medium">Exercise Library</span>
+            <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">Exercise Library</span>
           </button>
         </div>
 
         {/* Mobile Connectivity Section */}
-        <div className="mt-8 p-6 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800/50 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
+        <div className="mt-6 sm:mt-8 p-4 sm:p-6 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800/50 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Smartphone className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">Mobile Device Connection</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">Mobile Device Connection</h3>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   {hasConnectedDevices 
                     ? `${getConnectedDevicesCount()} device${getConnectedDevicesCount() !== 1 ? 's' : ''} connected`
                     : 'No devices connected'
@@ -307,28 +309,28 @@ const FitnessPage = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <div className={`w-3 h-3 rounded-full ${
+              <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
                 connectionStatus === 'connected' ? 'bg-emerald-500' : 
                 connectionStatus === 'connecting' ? 'bg-amber-500' : 'bg-red-500'
               }`} />
-              <span className="text-sm text-gray-600 dark:text-gray-400 capitalize font-medium">{connectionStatus}</span>
+              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 capitalize font-medium">{connectionStatus}</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
             <button
               onClick={() => setShowMobileConnectModal(true)}
-              className="flex items-center justify-center space-x-2 p-4 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center justify-center space-x-1.5 sm:space-x-2 p-3 sm:p-4 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg min-h-[44px] text-sm"
             >
-              <Bluetooth className="w-5 h-5" />
+              <Bluetooth className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="font-medium">Connect Device</span>
             </button>
             
             <button
               onClick={() => setShowFitnessShareModal(true)}
-              className="flex items-center justify-center space-x-2 p-4 bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-lg hover:from-violet-600 hover:to-violet-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center justify-center space-x-1.5 sm:space-x-2 p-3 sm:p-4 bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-lg hover:from-violet-600 hover:to-violet-700 transition-all duration-200 shadow-md hover:shadow-lg min-h-[44px] text-sm"
             >
-              <Share2 className="w-5 h-5" />
+              <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="font-medium">Share Data</span>
             </button>
 
@@ -337,14 +339,14 @@ const FitnessPage = () => {
                 setLiveSyncEnabled(!liveSyncEnabled)
                 success('Live Sync', liveSyncEnabled ? 'Live sync disabled' : 'Live sync enabled')
               }}
-              className="flex items-center justify-center space-x-2 p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 bg-white dark:bg-gray-800"
+              className="flex items-center justify-center space-x-1.5 sm:space-x-2 p-3 sm:p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 bg-white dark:bg-gray-800 min-h-[44px] text-sm"
             >
-              <Wifi className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              <Wifi className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700 dark:text-gray-300" />
               <span className="font-medium text-gray-700 dark:text-gray-300">Live Sync</span>
               {liveSyncEnabled ? (
-                <ToggleRight className="w-5 h-5 text-emerald-500" />
+                <ToggleRight className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
               ) : (
-                <ToggleLeft className="w-5 h-5 text-gray-400" />
+                <ToggleLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
               )}
             </button>
           </div>
@@ -375,30 +377,30 @@ const FitnessPage = () => {
       </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-100 dark:border-gray-700"
+          className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-100 dark:border-gray-700"
         >
-          <div className="flex items-center justify-between mb-5">
-            <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Activity className="w-7 h-7 text-white" />
+          <div className="flex items-center justify-between mb-4 sm:mb-5">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Activity className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
             </div>
             <button
               onClick={() => navigate('/fitness/progress')}
-              className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 font-medium"
+              className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 font-medium min-w-[44px] min-h-[44px] justify-center"
             >
               <Eye className="w-4 h-4" />
-              View Details
+              <span className="hidden sm:inline">View Details</span>
             </button>
           </div>
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Today's Steps</h3>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white mb-4">{stepsToday.toLocaleString()}</p>
-          <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2.5 mb-2">
+          <h3 className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Today's Steps</h3>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">{stepsToday.toLocaleString()}</p>
+          <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 sm:h-2.5 mb-2">
             <div 
-              className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-2.5 rounded-full transition-all duration-500"
+              className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-2 sm:h-2.5 rounded-full transition-all duration-500"
               style={{ width: `${Math.min((stepsToday / goalSteps) * 100, 100)}%` }}
             />
           </div>
@@ -411,64 +413,64 @@ const FitnessPage = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-100 dark:border-gray-700"
+          className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-100 dark:border-gray-700"
         >
-          <div className="flex items-center justify-between mb-5">
-            <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Target className="w-7 h-7 text-white" />
+          <div className="flex items-center justify-between mb-4 sm:mb-5">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Target className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
             </div>
             <button
               onClick={() => navigate('/fitness/progress')}
-              className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 font-medium"
+              className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 font-medium min-w-[44px] min-h-[44px] justify-center"
             >
               <Eye className="w-4 h-4" />
-              View Details
+              <span className="hidden sm:inline">View Details</span>
             </button>
           </div>
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Calories Burned</h3>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{caloriesBurned}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Today</p>
+          <h3 className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Calories Burned</h3>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">{caloriesBurned}</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Today</p>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-100 dark:border-gray-700"
+          className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-100 dark:border-gray-700"
         >
-          <div className="flex items-center justify-between mb-5">
-            <div className="w-14 h-14 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
-              <TrendingUp className="w-7 h-7 text-white" />
+          <div className="flex items-center justify-between mb-4 sm:mb-5">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
+              <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
             </div>
             <button
               onClick={() => navigate('/fitness/workouts')}
-              className="text-xs text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 flex items-center gap-1 font-medium"
+              className="text-xs text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 flex items-center gap-1 font-medium min-w-[44px] min-h-[44px] justify-center"
             >
               <Eye className="w-4 h-4" />
-              View Details
+              <span className="hidden sm:inline">View Details</span>
             </button>
           </div>
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Workouts This Week</h3>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{workoutsThisWeek}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Goal: 5</p>
+          <h3 className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Workouts This Week</h3>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">{workoutsThisWeek}</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Goal: 5</p>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-100 dark:border-gray-700"
+          className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-100 dark:border-gray-700"
         >
-          <div className="flex items-center justify-between mb-5">
-            <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Award className="w-7 h-7 text-white" />
+          <div className="flex items-center justify-between mb-4 sm:mb-5">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Award className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
             </div>
             <button
               onClick={() => navigate('/fitness/achievements')}
-              className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 flex items-center gap-1 font-medium"
+              className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 flex items-center gap-1 font-medium min-w-[44px] min-h-[44px] justify-center"
             >
               <Eye className="w-4 h-4" />
-              View Details
+              <span className="hidden sm:inline">View Details</span>
             </button>
           </div>
           <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Current Streak</h3>
@@ -538,28 +540,28 @@ const FitnessPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700"
       >
-        <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Weekly Progress</h2>
+        <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-900 dark:text-white">Weekly Progress</h2>
         
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {weeklyStats.map((day, index) => {
             const maxSteps = Math.max(...weeklyStats.map(d => d.steps), 10000);
             const percentage = (day.steps / maxSteps) * 100;
             
             return (
               <div key={index} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white w-12">{day.day}</p>
-                  <div className="flex-1 mx-4">
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-6 relative overflow-hidden">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white w-10 sm:w-12 flex-shrink-0">{day.day}</p>
+                  <div className="flex-1 mx-2 sm:mx-4 min-w-0">
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-5 sm:h-6 relative overflow-hidden">
                       <div 
                         className="absolute left-0 top-0 h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-500"
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 w-20 text-right">
+                  <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 w-16 sm:w-20 text-right flex-shrink-0">
                     {day.steps.toLocaleString()}
                   </p>
                 </div>
@@ -574,82 +576,84 @@ const FitnessPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700"
       >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Quick Actions</h2>
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Quick Actions</h2>
+          <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setShowAIWorkoutPlanModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-lg hover:from-indigo-600 hover:to-violet-700 transition-all duration-200 shadow-md hover:shadow-lg text-sm font-medium"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-lg hover:from-indigo-600 hover:to-violet-700 transition-all duration-200 shadow-md hover:shadow-lg text-xs sm:text-sm font-medium min-h-[44px]"
             >
               <Brain className="w-4 h-4" />
-              AI Workout Plan
+              <span className="hidden sm:inline">AI Workout Plan</span>
+              <span className="sm:hidden">AI Plan</span>
             </button>
             <button
               onClick={() => setShowAINutritionPlanModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all duration-200 shadow-md hover:shadow-lg text-sm font-medium"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all duration-200 shadow-md hover:shadow-lg text-xs sm:text-sm font-medium min-h-[44px]"
             >
               <Brain className="w-4 h-4" />
-              AI Nutrition Plan
+              <span className="hidden sm:inline">AI Nutrition Plan</span>
+              <span className="sm:hidden">AI Nutrition</span>
             </button>
           </div>
         </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <button
             onClick={() => navigate('/fitness/workouts')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 hover:scale-105 transition-all duration-300 flex items-center space-x-3 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg"
+            className="bg-white dark:bg-gray-800 rounded-xl p-3 sm:p-4 hover:scale-105 transition-all duration-300 flex items-center space-x-2 sm:space-x-3 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg min-h-[80px] sm:min-h-[auto]"
           >
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
-              <Activity className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg flex-shrink-0">
+              <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div className="flex-1 text-left">
-              <h3 className="font-semibold text-gray-900 dark:text-white">View All Workouts</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">See all your workouts</p>
+            <div className="flex-1 text-left min-w-0">
+              <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">View All Workouts</h3>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">See all your workouts</p>
             </div>
-            <ArrowRight className="w-5 h-5 text-gray-400" />
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
           </button>
 
           <button
             onClick={() => navigate('/fitness/nutrition')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 hover:scale-105 transition-all duration-300 flex items-center space-x-3 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg"
+            className="bg-white dark:bg-gray-800 rounded-xl p-3 sm:p-4 hover:scale-105 transition-all duration-300 flex items-center space-x-2 sm:space-x-3 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg min-h-[80px] sm:min-h-[auto]"
           >
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg">
-              <Heart className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg flex-shrink-0">
+              <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div className="flex-1 text-left">
-              <h3 className="font-semibold text-gray-900 dark:text-white">View All Nutrition</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Track your meals</p>
+            <div className="flex-1 text-left min-w-0">
+              <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">View All Nutrition</h3>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Track your meals</p>
             </div>
-            <ArrowRight className="w-5 h-5 text-gray-400" />
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
           </button>
 
           <button
             onClick={() => navigate('/fitness/progress')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 hover:scale-105 transition-all duration-300 flex items-center space-x-3 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg"
+            className="bg-white dark:bg-gray-800 rounded-xl p-3 sm:p-4 hover:scale-105 transition-all duration-300 flex items-center space-x-2 sm:space-x-3 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg min-h-[80px] sm:min-h-[auto]"
           >
-            <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-              <TrendingUp className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg flex-shrink-0">
+              <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div className="flex-1 text-left">
-              <h3 className="font-semibold text-gray-900 dark:text-white">View Progress</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Track your progress</p>
+            <div className="flex-1 text-left min-w-0">
+              <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">View Progress</h3>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Track your progress</p>
             </div>
-            <ArrowRight className="w-5 h-5 text-gray-400" />
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
           </button>
 
           <button
             onClick={() => navigate('/fitness/achievements')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 hover:scale-105 transition-all duration-300 flex items-center space-x-3 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg"
+            className="bg-white dark:bg-gray-800 rounded-xl p-3 sm:p-4 hover:scale-105 transition-all duration-300 flex items-center space-x-2 sm:space-x-3 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg min-h-[80px] sm:min-h-[auto]"
           >
-            <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg">
-              <Trophy className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg flex-shrink-0">
+              <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div className="flex-1 text-left">
-              <h3 className="font-semibold text-gray-900 dark:text-white">View Achievements</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">See your achievements</p>
+            <div className="flex-1 text-left min-w-0">
+              <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">View Achievements</h3>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">See your achievements</p>
             </div>
-            <ArrowRight className="w-5 h-5 text-gray-400" />
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
           </button>
         </div>
       </motion.div>

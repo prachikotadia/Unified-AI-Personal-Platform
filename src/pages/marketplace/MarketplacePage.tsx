@@ -677,14 +677,14 @@ const MarketplacePage: React.FC = () => {
         <div className="absolute top-2 left-2 z-10">
             <button
               onClick={() => handleCompareToggle(product)}
-              className={`p-1.5 rounded-full ${
+              className={`p-2 rounded-full min-w-[36px] min-h-[36px] flex items-center justify-center ${
                 productInCompare 
                   ? 'bg-blue-600 text-white' 
                   : 'bg-white/90 dark:bg-gray-800/90 text-gray-600 dark:text-gray-400'
               } hover:bg-blue-600 hover:text-white transition-colors`}
               title={productInCompare ? 'Remove from comparison' : 'Add to comparison'}
             >
-              {productInCompare ? <CheckSquare size={16} /> : <Square size={16} />}
+              {productInCompare ? <CheckSquare size={18} /> : <Square size={18} />}
             </button>
         </div>
 
@@ -714,9 +714,9 @@ const MarketplacePage: React.FC = () => {
           </div>
         </Link>
         
-        <div className="p-4">
+        <div className="p-3 sm:p-4">
           <Link to={`/marketplace/product/${product.id}`}>
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm line-clamp-2 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            <h3 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm line-clamp-2 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
               {product.name}
             </h3>
           </Link>
@@ -729,11 +729,11 @@ const MarketplacePage: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-lg font-bold text-gray-900 dark:text-white">
+            <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
               ${product.price.toFixed(2)}
             </span>
             {product.originalPrice && (
-              <span className="text-sm text-gray-500 line-through">
+              <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 line-through">
                 ${product.originalPrice.toFixed(2)}
               </span>
             )}
@@ -742,7 +742,7 @@ const MarketplacePage: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleAddToCart(product)}
-              className={`flex-1 text-sm font-medium py-2 px-3 rounded-md transition-colors ${
+              className={`flex-1 text-xs sm:text-sm font-medium py-2.5 px-3 rounded-md transition-colors min-h-[44px] ${
                 inCart
                   ? 'bg-green-600 hover:bg-green-700 text-white'
                   : 'bg-blue-600 hover:bg-blue-700 text-white'
@@ -752,10 +752,10 @@ const MarketplacePage: React.FC = () => {
             </button>
             <button
               onClick={() => productInWishlist ? handleRemoveFromWishlist(product) : handleAddToWishlist(product)}
-              className={`p-2 rounded-md transition-colors ${
+              className={`p-2.5 rounded-md transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${
                 productInWishlist
                   ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
-                  : 'text-gray-400 hover:text-red-500 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  : 'text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
               title={productInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
             >
@@ -763,7 +763,7 @@ const MarketplacePage: React.FC = () => {
             </button>
             <button
               onClick={() => handleQuickView(product)}
-              className="p-2 text-gray-400 hover:text-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors"
+              className="p-2.5 text-gray-400 dark:text-gray-500 hover:text-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               title="Quick View"
             >
               <Eye size={18} />
@@ -810,41 +810,43 @@ const MarketplacePage: React.FC = () => {
           </div>
         )}
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            {isBackendOnline !== null && (
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${
-                isBackendOnline 
-                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' 
-                  : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
-              }`}>
-                {isBackendOnline ? (
-                  <>
-                    <Wifi className="w-4 h-4" />
-                    <span>Online</span>
-                  </>
-                ) : (
-                  <>
-                    <WifiOff className="w-4 h-4" />
-                    <span>Offline</span>
-                  </>
-                )}
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div className="flex items-center justify-between sm:justify-start gap-4 flex-1">
+              {isBackendOnline !== null && (
+                <div className={`flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium ${
+                  isBackendOnline 
+                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' 
+                    : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                }`}>
+                  {isBackendOnline ? (
+                    <>
+                      <Wifi className="w-4 h-4" />
+                      <span className="hidden sm:inline">Online</span>
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="w-4 h-4" />
+                      <span className="hidden sm:inline">Offline</span>
+                    </>
+                  )}
+                </div>
+              )}
+              <div className="flex-1">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  OmniLife Marketplace
+                </h1>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                  Discover amazing products with AI-powered recommendations
+                </p>
               </div>
-            )}
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                OmniLife Marketplace
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Discover amazing products with AI-powered recommendations
-              </p>
             </div>
             <div className="flex items-center gap-2">
               <Link
                 to="/marketplace/cart"
-                className="relative flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] text-sm sm:text-base"
+                className="relative flex items-center justify-center space-x-1 sm:space-x-2 px-3 sm:px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] min-w-[44px] text-sm sm:text-base"
               >
-                <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+                <ShoppingCart className="w-5 h-5" />
                 <span className="hidden sm:inline">Cart</span>
                 {getCartItemCount() > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
@@ -856,58 +858,64 @@ const MarketplacePage: React.FC = () => {
           </div>
           
           {/* Navigation Buttons */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-4 overflow-x-auto pb-2">
             <Link
               to="/marketplace/recommendations"
-              className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              className="flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors min-h-[44px] text-xs sm:text-sm whitespace-nowrap"
             >
               <Brain className="w-4 h-4" />
-              <span>AI Recommendations</span>
+              <span className="hidden sm:inline">AI Recommendations</span>
+              <span className="sm:hidden">AI</span>
             </Link>
             <Link
               to="/marketplace/price-alerts"
-              className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              className="flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors min-h-[44px] text-xs sm:text-sm whitespace-nowrap"
             >
               <Bell className="w-4 h-4" />
-              <span>Price Alerts</span>
+              <span className="hidden sm:inline">Price Alerts</span>
+              <span className="sm:hidden">Alerts</span>
             </Link>
             <Link
               to="/marketplace/recently-viewed"
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors min-h-[44px] text-xs sm:text-sm whitespace-nowrap"
             >
               <Eye className="w-4 h-4" />
-              <span>Recently Viewed</span>
+              <span className="hidden sm:inline">Recently Viewed</span>
+              <span className="sm:hidden">Recent</span>
             </Link>
             <Link
               to="/marketplace/compare"
-              className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              className="flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors min-h-[44px] text-xs sm:text-sm whitespace-nowrap"
             >
               <GitCompare className="w-4 h-4" />
-              <span>Compare Products</span>
+              <span className="hidden sm:inline">Compare Products</span>
+              <span className="sm:hidden">Compare</span>
               {compareList.length > 0 && (
-                <span className="bg-white text-indigo-600 text-xs font-bold rounded-full px-2 py-0.5">
+                <span className="bg-white text-indigo-600 text-xs font-bold rounded-full px-1.5 sm:px-2 py-0.5">
                   {compareList.length}
                 </span>
               )}
             </Link>
             <Link
               to="/marketplace/wishlist"
-              className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              className="flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors min-h-[44px] text-xs sm:text-sm whitespace-nowrap"
             >
               <Heart className="w-4 h-4" />
-              <span>My Wishlist</span>
+              <span className="hidden sm:inline">My Wishlist</span>
+              <span className="sm:hidden">Wishlist</span>
               {wishlistItems.length > 0 && (
-                <span className="bg-white text-red-600 text-xs font-bold rounded-full px-2 py-0.5">
+                <span className="bg-white text-red-600 text-xs font-bold rounded-full px-1.5 sm:px-2 py-0.5">
                   {wishlistItems.length}
                 </span>
               )}
             </Link>
             <Link
               to="/marketplace/orders"
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              className="flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors min-h-[44px] text-xs sm:text-sm whitespace-nowrap"
             >
               <Package className="w-4 h-4" />
-              <span>My Orders</span>
+              <span className="hidden sm:inline">My Orders</span>
+              <span className="sm:hidden">Orders</span>
             </Link>
           </div>
         </div>
@@ -919,11 +927,11 @@ const MarketplacePage: React.FC = () => {
         <RecentlyViewed limit={6} />
 
         {/* Search and Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 sm:p-6 mb-6 sm:mb-8">
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search Bar */}
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
               <form onSubmit={(e) => {
                 e.preventDefault();
                 if (searchQuery.trim()) {
@@ -935,12 +943,12 @@ const MarketplacePage: React.FC = () => {
                   placeholder="Search products..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-20 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  className="w-full pl-9 sm:pl-10 pr-16 sm:pr-20 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 />
                 <button
                   type="button"
                   onClick={() => setShowAIFinder(true)}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
                   title="AI Product Finder"
                 >
                   <Brain size={18} />
@@ -951,7 +959,7 @@ const MarketplacePage: React.FC = () => {
             {/* Filter Button */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`px-4 py-3 border rounded-lg transition-colors flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg transition-colors flex items-center gap-2 min-h-[44px] text-sm ${
                 showFilters
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -970,7 +978,7 @@ const MarketplacePage: React.FC = () => {
                   navigate(`/marketplace/category/${e.target.value}`);
                 }
               }}
-              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white min-h-[44px]"
             >
               <option value="">All Categories</option>
               {categories.map(category => (
@@ -984,7 +992,7 @@ const MarketplacePage: React.FC = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white min-h-[44px]"
             >
               <option value="relevance">Relevance</option>
               <option value="price-low">Price: Low to High</option>
@@ -997,7 +1005,7 @@ const MarketplacePage: React.FC = () => {
             <div className="flex border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`px-3 py-3 transition-colors ${
+                className={`px-3 py-2.5 sm:py-3 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center ${
                   viewMode === 'grid'
                     ? 'bg-blue-500 text-white'
                     : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600'
@@ -1008,7 +1016,7 @@ const MarketplacePage: React.FC = () => {
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`px-3 py-3 transition-colors ${
+                className={`px-3 py-2.5 sm:py-3 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center ${
                   viewMode === 'list'
                     ? 'bg-blue-500 text-white'
                     : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600'
@@ -1024,24 +1032,24 @@ const MarketplacePage: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               onClick={handleClearFilters}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="flex items-center gap-2 px-3 py-2.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors min-h-[44px]"
             >
               <RefreshCw size={16} />
-              Clear Filters
+              <span>Clear Filters</span>
             </button>
             <button
               onClick={handleSaveSearch}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="flex items-center gap-2 px-3 py-2.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors min-h-[44px]"
             >
               <Save size={16} />
-              Save Search
+              <span>Save Search</span>
             </button>
             <button
               onClick={handleShareSearch}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="flex items-center gap-2 px-3 py-2.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors min-h-[44px]"
             >
               <Share2 size={16} />
-              Share Search
+              <span>Share Search</span>
             </button>
           </div>
 
@@ -1096,12 +1104,12 @@ const MarketplacePage: React.FC = () => {
 
         {/* Featured Sections */}
         {featuredProducts.length > 0 && (
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="text-yellow-500" size={24} />
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Featured Products</h2>
+              <Sparkles className="text-yellow-500" size={20} />
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Featured Products</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {featuredProducts.slice(0, 4).map(product => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -1110,12 +1118,12 @@ const MarketplacePage: React.FC = () => {
         )}
 
         {deals.length > 0 && (
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <div className="flex items-center gap-2 mb-4">
-              <Zap className="text-orange-500" size={24} />
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Today's Deals</h2>
+              <Zap className="text-orange-500" size={20} />
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Today's Deals</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {deals.slice(0, 4).map(product => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -1124,12 +1132,12 @@ const MarketplacePage: React.FC = () => {
         )}
 
         {trendingProducts.length > 0 && (
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="text-green-500" size={24} />
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Trending Now</h2>
+              <TrendingUp className="text-green-500" size={20} />
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Trending Now</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {trendingProducts.slice(0, 4).map(product => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -1138,9 +1146,9 @@ const MarketplacePage: React.FC = () => {
         )}
 
         {/* All Products */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               All Products ({sortedProducts.length})
             </h2>
           </div>
@@ -1159,7 +1167,7 @@ const MarketplacePage: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className={`grid gap-6 ${
+              <div className={`grid gap-4 sm:gap-6 ${
                 viewMode === 'grid' 
                   ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' 
                   : 'grid-cols-1'
@@ -1170,10 +1178,10 @@ const MarketplacePage: React.FC = () => {
               </div>
               
               {sortedProducts.length > displayedProducts && (
-                <div className="mt-8 text-center">
+                <div className="mt-6 sm:mt-8 text-center">
                   <button
                     onClick={handleLoadMore}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 sm:px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] text-sm sm:text-base"
                   >
                     Load More ({sortedProducts.length - displayedProducts} remaining)
                   </button>
@@ -1188,7 +1196,7 @@ const MarketplacePage: React.FC = () => {
           <div className="fixed bottom-4 right-4 z-40">
             <Link
               to="/marketplace/compare"
-              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 transition-colors"
+              className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 transition-colors min-h-[44px] text-sm sm:text-base"
             >
               <GitCompare size={20} />
               <span>Compare ({compareList.length})</span>

@@ -136,99 +136,99 @@ const SocialPage = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-md border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 md:p-8 shadow-md border border-gray-100 dark:border-gray-700"
       >
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 sm:mb-6">
           <div>
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 text-gray-900 dark:text-white">Social Dashboard</h1>
                 <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base md:text-lg">
                   Connect with friends and share your lifestyle
                 </p>
-            <div className="flex items-center space-x-3 mt-3">
+            <div className="flex items-center flex-wrap gap-2 sm:gap-3 mt-3">
               {isConnected ? (
-                <div className="flex items-center space-x-2 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <div className="flex items-center space-x-2 bg-emerald-50 dark:bg-emerald-900/20 px-2 sm:px-3 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800">
                   <Wifi className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Online</span>
+                  <span className="text-xs sm:text-sm font-medium text-emerald-700 dark:text-emerald-400">Online</span>
                 </div>
               ) : (
-                <div className="flex items-center space-x-2 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800" title="Backend unavailable - using local data">
+                <div className="flex items-center space-x-2 bg-amber-50 dark:bg-amber-900/20 px-2 sm:px-3 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800" title="Backend unavailable - using local data">
                   <WifiOff className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  <span className="text-sm font-medium text-amber-700 dark:text-amber-400">Offline</span>
+                  <span className="text-xs sm:text-sm font-medium text-amber-700 dark:text-amber-400">Offline</span>
                 </div>
               )}
               {isLoading && (
-                <div className="flex items-center space-x-2 bg-sky-50 dark:bg-sky-900/20 px-3 py-1.5 rounded-lg border border-sky-200 dark:border-sky-800">
+                <div className="flex items-center space-x-2 bg-sky-50 dark:bg-sky-900/20 px-2 sm:px-3 py-1.5 rounded-lg border border-sky-200 dark:border-sky-800">
                   <div className="w-4 h-4 border-2 border-sky-600 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm font-medium text-sky-700 dark:text-sky-400">Syncing...</span>
+                  <span className="text-xs sm:text-sm font-medium text-sky-700 dark:text-sky-400">Syncing...</span>
                 </div>
               )}
               {error && (
-                <div className="flex items-center space-x-2 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800">
+                <div className="flex items-center space-x-2 bg-red-50 dark:bg-red-900/20 px-2 sm:px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800">
                   <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
-                  <span className="text-sm font-medium text-red-700 dark:text-red-400">{error}</span>
+                  <span className="text-xs sm:text-sm font-medium text-red-700 dark:text-red-400 truncate">{error}</span>
                 </div>
               )}
             </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
           <button
             onClick={() => setShowFindFriendsModal(true)}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <UserPlus className="w-6 h-6" />
-            <span className="text-sm font-medium">Find Friends</span>
+            <UserPlus className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">Find Friends</span>
           </button>
           <button
             onClick={() => setShowCreatePostModal(true)}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-sky-500 to-cyan-600 text-white rounded-xl hover:from-sky-600 hover:to-cyan-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-sky-500 to-cyan-600 text-white rounded-xl hover:from-sky-600 hover:to-cyan-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Plus className="w-6 h-6" />
-            <span className="text-sm font-medium">Create Post</span>
+            <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">Create Post</span>
           </button>
           <button
             onClick={() => navigate('/social/feed')}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Eye className="w-6 h-6" />
-            <span className="text-sm font-medium">View Feed</span>
+            <Eye className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">View Feed</span>
           </button>
           <button
             onClick={() => navigate('/social/shared')}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-violet-500 to-violet-600 text-white rounded-xl hover:from-violet-600 hover:to-violet-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-violet-500 to-violet-600 text-white rounded-xl hover:from-violet-600 hover:to-violet-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Share2 className="w-6 h-6" />
-            <span className="text-sm font-medium">Shared Items</span>
+            <Share2 className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">Shared Items</span>
           </button>
           <button
             onClick={() => setShowAISocialInsightsModal(true)}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Brain className="w-6 h-6" />
-            <span className="text-sm font-medium">AI Insights</span>
+            <Brain className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">AI Insights</span>
           </button>
           <button
             onClick={() => setShowAISocialAssistant(true)}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-r from-sky-500 to-violet-600 text-white rounded-xl hover:from-sky-600 hover:to-violet-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-r from-sky-500 to-violet-600 text-white rounded-xl hover:from-sky-600 hover:to-violet-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Brain className="w-6 h-6" />
-            <span className="text-sm font-medium">AI Assistant</span>
+            <Brain className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">AI Assistant</span>
           </button>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Connections */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700"
+          className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Connections</h2>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Connections</h2>
+            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               {connections.length} {connections.length === 1 ? 'connection' : 'connections'}
             </span>
           </div>

@@ -395,61 +395,61 @@ const TravelPage = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-md border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 md:p-8 shadow-md border border-gray-100 dark:border-gray-700"
       >
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 sm:mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 text-gray-900 dark:text-white">Travel Dashboard</h1>
-            <p className="text-gray-600 dark:text-gray-400 text-lg">
+            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base md:text-lg">
               Plan your next adventure with AI-powered recommendations
             </p>
           </div>
-          <div className="flex items-center space-x-3 bg-gradient-to-r from-sky-50 to-cyan-50 dark:from-sky-900/20 dark:to-cyan-900/20 px-5 py-3 rounded-xl border border-sky-200 dark:border-sky-800">
-            <div className="w-10 h-10 bg-gradient-to-br from-sky-400 to-cyan-500 rounded-lg flex items-center justify-center shadow-md">
-              <Plane className="w-6 h-6 text-white" />
+          <div className="flex items-center space-x-3 bg-gradient-to-r from-sky-50 to-cyan-50 dark:from-sky-900/20 dark:to-cyan-900/20 px-4 sm:px-5 py-3 rounded-xl border border-sky-200 dark:border-sky-800">
+            <div className="w-10 h-10 bg-gradient-to-br from-sky-400 to-cyan-500 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
+              <Plane className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0">
               <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Total Trips</span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">{stats.totalTrips}</span>
+              <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{stats.totalTrips}</span>
             </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
           <button
             onClick={handleNewTrip}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-sky-500 to-cyan-600 text-white rounded-xl hover:from-sky-600 hover:to-cyan-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-sky-500 to-cyan-600 text-white rounded-xl hover:from-sky-600 hover:to-cyan-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Plus className="w-6 h-6" />
-            <span className="text-sm font-medium">New Trip</span>
+            <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">New Trip</span>
           </button>
           <button
             onClick={() => setShowFlightSearchModal(true)}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Plane className="w-6 h-6" />
-            <span className="text-sm font-medium">Search Flights</span>
+            <Plane className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">Search Flights</span>
           </button>
           <button
             onClick={() => setShowFlightSearchModal(true)}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-violet-500 to-violet-600 text-white rounded-xl hover:from-violet-600 hover:to-violet-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-violet-500 to-violet-600 text-white rounded-xl hover:from-violet-600 hover:to-violet-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <BookOpen className="w-6 h-6" />
-            <span className="text-sm font-medium">Book Flight</span>
+            <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">Book Flight</span>
           </button>
           <Link 
             to="/travel/search" 
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Search className="w-6 h-6" />
-            <span className="text-sm font-medium">Search Destinations</span>
+            <Search className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">Search Destinations</span>
           </Link>
           <Link 
             to="/travel/alerts" 
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-rose-500 to-rose-600 text-white rounded-xl hover:from-rose-600 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 relative"
+            className="flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-rose-500 to-rose-600 text-white rounded-xl hover:from-rose-600 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 relative min-h-[80px] sm:min-h-[100px]"
           >
-            <Heart className="w-6 h-6" />
-            <span className="text-sm font-medium">Price Alerts</span>
+            <Heart className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">Price Alerts</span>
             {stats.activePriceAlerts > 0 && (
               <span className="absolute -top-1 -right-1 bg-white text-rose-600 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                 {stats.activePriceAlerts}
@@ -518,48 +518,48 @@ const TravelPage = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700"
+          className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700"
         >
-          <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Travel Overview</h2>
+          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-900 dark:text-white">Travel Overview</h2>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-            <div className="bg-gradient-to-br from-sky-50 to-cyan-50 dark:from-sky-900/20 dark:to-cyan-900/20 rounded-xl p-6 border border-sky-200 dark:border-sky-800">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-cyan-600 rounded-lg flex items-center justify-center shadow-lg">
-                  <Calendar className="w-6 h-6 text-white" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+            <div className="bg-gradient-to-br from-sky-50 to-cyan-50 dark:from-sky-900/20 dark:to-cyan-900/20 rounded-xl p-4 sm:p-6 border border-sky-200 dark:border-sky-800">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-sky-500 to-cyan-600 rounded-lg flex items-center justify-center shadow-lg">
+                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
               </div>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{stats.upcomingTrips}</div>
-              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Upcoming Trips</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">{stats.upcomingTrips}</div>
+              <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Upcoming Trips</div>
             </div>
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl p-6 border border-emerald-200 dark:border-emerald-800">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center shadow-lg">
-                  <Plane className="w-6 h-6 text-white" />
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl p-4 sm:p-6 border border-emerald-200 dark:border-emerald-800">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center shadow-lg">
+                  <Plane className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
               </div>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{stats.activeTrips}</div>
-              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Trips</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">{stats.activeTrips}</div>
+              <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Active Trips</div>
             </div>
-            <div className="bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900/20 dark:to-gray-900/20 rounded-xl p-6 border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-slate-500 to-gray-600 rounded-lg flex items-center justify-center shadow-lg">
-                  <CheckCircle className="w-6 h-6 text-white" />
+            <div className="bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900/20 dark:to-gray-900/20 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-slate-500 to-gray-600 rounded-lg flex items-center justify-center shadow-lg">
+                  <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
               </div>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{stats.completedTrips}</div>
-              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Completed</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">{stats.completedTrips}</div>
+              <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Completed</div>
             </div>
-            <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl p-6 border border-violet-200 dark:border-violet-800">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-                  <DollarSign className="w-6 h-6 text-white" />
+            <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl p-4 sm:p-6 border border-violet-200 dark:border-violet-800">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+                  <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
               </div>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">
                 ${dashboard.total_spent?.toLocaleString() || '0'}
               </div>
-              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Spent</div>
+              <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Total Spent</div>
             </div>
           </div>
         </motion.div>
@@ -570,13 +570,13 @@ const TravelPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700"
       >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Upcoming Trips</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Upcoming Trips</h2>
           <button
             onClick={handleNewTrip}
-            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-cyan-600 text-white rounded-lg hover:from-sky-600 hover:to-cyan-700 transition-all duration-200 shadow-md hover:shadow-lg text-sm font-medium"
+            className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 text-white rounded-lg hover:from-sky-600 hover:to-cyan-700 transition-all duration-200 shadow-md hover:shadow-lg text-sm font-medium min-h-[44px]"
           >
             <Plus className="w-4 h-4" />
             <span>Add Trip</span>
@@ -588,24 +588,24 @@ const TravelPage = () => {
             <div className="w-20 h-20 bg-gradient-to-br from-sky-100 to-cyan-100 dark:from-sky-900/30 dark:to-cyan-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
               <Plane className="w-10 h-10 text-sky-600 dark:text-sky-400" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No upcoming trips</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">Start planning your next adventure!</p>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">No upcoming trips</h3>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4 sm:mb-6">Start planning your next adventure!</p>
             <button
               onClick={handleNewTrip}
-              className="px-6 py-3 bg-gradient-to-r from-sky-500 to-cyan-600 text-white rounded-lg hover:from-sky-600 hover:to-cyan-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+              className="px-4 sm:px-6 py-3 bg-gradient-to-r from-sky-500 to-cyan-600 text-white rounded-lg hover:from-sky-600 hover:to-cyan-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium text-sm sm:text-base min-h-[44px]"
             >
               Plan Your First Trip
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {upcomingTrips.map((trip, index) => (
               <motion.div
                 key={trip.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 + index * 0.1 }}
-                className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 dark:border-gray-700 overflow-hidden group"
+                className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 dark:border-gray-700 overflow-hidden group"
               >
                 <SafeImage
                   src={`https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=300&h=200&fit=crop`}
@@ -614,33 +614,33 @@ const TravelPage = () => {
                   className="w-full h-40 object-cover rounded-xl mb-4 group-hover:scale-105 transition-transform duration-300"
                 />
                 
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-lg text-gray-900 dark:text-white">{trip.title}</h3>
-                    {getTripTypeIcon(trip.trip_type)}
+                    <h3 className="font-bold text-base sm:text-lg text-gray-900 dark:text-white truncate flex-1 min-w-0">{trip.title}</h3>
+                    <div className="flex-shrink-0 ml-2">{getTripTypeIcon(trip.trip_type)}</div>
                   </div>
                   
-                  <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                    <MapPin className="w-4 h-4 text-sky-500" />
-                    <span className="font-medium">{trip.destination}</span>
+                  <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                    <MapPin className="w-4 h-4 text-sky-500 flex-shrink-0" />
+                    <span className="font-medium truncate">{trip.destination}</span>
                   </div>
                   
-                  <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                    <Calendar className="w-4 h-4 text-indigo-500" />
-                    <span>
+                  <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                    <Calendar className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                    <span className="truncate">
                       {new Date(trip.start_date).toLocaleDateString()} - {new Date(trip.end_date).toLocaleDateString()}
                     </span>
                   </div>
                   
                   {trip.budget && (
-                    <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                      <DollarSign className="w-4 h-4 text-emerald-500" />
-                      <span className="font-semibold">${trip.budget.toLocaleString()} {trip.currency}</span>
+                    <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      <DollarSign className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                      <span className="font-semibold truncate">${trip.budget.toLocaleString()} {trip.currency}</span>
                     </div>
                   )}
                   
                   <div className="flex items-center justify-between pt-2">
-                    <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${getStatusColor(trip.status)}`}>
+                    <span className={`text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full font-medium ${getStatusColor(trip.status)}`}>
                       {trip.status}
                     </span>
                   </div>
@@ -652,18 +652,19 @@ const TravelPage = () => {
                         e.stopPropagation()
                         handleViewItinerary(trip)
                       }}
-                      className="flex-1 px-3 py-2 bg-gradient-to-r from-sky-500 to-cyan-600 text-white rounded-lg hover:from-sky-600 hover:to-cyan-700 transition-all duration-200 text-xs font-medium flex items-center justify-center gap-1 shadow-sm"
+                      className="flex-1 px-3 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 text-white rounded-lg hover:from-sky-600 hover:to-cyan-700 transition-all duration-200 text-xs sm:text-sm font-medium flex items-center justify-center gap-1 shadow-sm min-h-[44px]"
                       title="View Itinerary"
                     >
-                      <Eye className="w-3.5 h-3.5" />
-                      Itinerary
+                      <Eye className="w-4 h-4" />
+                      <span className="hidden sm:inline">Itinerary</span>
+                      <span className="sm:hidden">View</span>
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         handleEditTrip(trip)
                       }}
-                      className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200"
+                      className="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center"
                       title="Edit Trip"
                     >
                       <Edit className="w-4 h-4" />
@@ -673,7 +674,7 @@ const TravelPage = () => {
                         e.stopPropagation()
                         handleShareTrip(trip)
                       }}
-                      className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200"
+                      className="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center"
                       title="Share Trip"
                     >
                       <Share2 className="w-4 h-4" />
@@ -683,7 +684,7 @@ const TravelPage = () => {
                         e.stopPropagation()
                         handleDuplicateTrip(trip)
                       }}
-                      className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200"
+                      className="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center"
                       title="Duplicate Trip"
                     >
                       <Copy className="w-4 h-4" />
@@ -693,7 +694,7 @@ const TravelPage = () => {
                         e.stopPropagation()
                         handleDeleteTrip(trip)
                       }}
-                      className="px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200"
+                      className="px-3 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center"
                       title="Delete Trip"
                     >
                       <Trash2 className="w-4 h-4" />

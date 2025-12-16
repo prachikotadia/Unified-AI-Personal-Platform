@@ -228,25 +228,25 @@ const ChatPage = () => {
           </button>
           <button 
             onClick={() => setShowNewGroupModal(true)}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="flex flex-col items-center justify-center space-y-1 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none min-h-[80px] sm:min-h-[100px]"
             disabled={!isConnected}
           >
-            <Users className="w-6 h-6" />
-            <span className="text-sm font-medium">New Group</span>
+            <Users className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">New Group</span>
           </button>
           <button 
             onClick={() => setShowChatSettings(true)}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-br from-violet-500 to-violet-600 text-white rounded-xl hover:from-violet-600 hover:to-violet-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-br from-violet-500 to-violet-600 text-white rounded-xl hover:from-violet-600 hover:to-violet-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Settings className="w-6 h-6" />
-            <span className="text-sm font-medium">Settings</span>
+            <Settings className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">Settings</span>
           </button>
           <button 
             onClick={() => setShowAIChatAssistant(true)}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl hover:from-indigo-600 hover:to-violet-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center space-y-1 sm:space-y-2 p-3 sm:p-5 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl hover:from-indigo-600 hover:to-violet-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-h-[80px] sm:min-h-[100px]"
           >
-            <Brain className="w-6 h-6" />
-            <span className="text-sm font-medium">AI Assistant</span>
+            <Brain className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium text-center">AI Assistant</span>
           </button>
         </div>
       </motion.div>
@@ -256,27 +256,27 @@ const ChatPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700"
       >
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-3 sm:gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             <input
               type="text"
               placeholder="Search conversations..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900 dark:text-white"
+              className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 text-sm sm:text-base bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900 dark:text-white"
             />
           </div>
-          <div className="flex items-center gap-3">
-            <Filter className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-            <div className="flex gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+            <div className="flex gap-1.5 sm:gap-2 flex-1">
               {(['all', 'direct', 'group'] as const).map((type) => (
                 <button
                   key={type}
                   onClick={() => setFilterType(type)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 min-h-[44px] flex-1 ${
                     filterType === type
                       ? 'bg-gradient-to-r from-sky-500 to-cyan-600 text-white shadow-md'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -295,11 +295,11 @@ const ChatPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700"
       >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Recent Conversations</h2>
-          <span className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Recent Conversations</h2>
+          <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
             {filteredRooms.length} {filteredRooms.length === 1 ? 'conversation' : 'conversations'}
           </span>
         </div>
@@ -334,7 +334,7 @@ const ChatPage = () => {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 + index * 0.05 }}
-                    className={`flex items-center space-x-4 p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-600 ${
+                    className={`flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-600 ${
                       pinnedRooms.has(room.id) ? 'bg-gradient-to-r from-sky-50 to-cyan-50 dark:from-sky-900/20 dark:to-cyan-900/20 border-l-4 border-sky-500' : 'bg-white dark:bg-gray-800'
                     }`}
                   >
@@ -342,41 +342,41 @@ const ChatPage = () => {
                       <img
                         src={room.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(room.name)}&background=random`}
                         alt={room.name}
-                        className="w-14 h-14 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+                        className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement
                           target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(room.name)}&background=random`
                         }}
                       />
                       {room.isOnline && (
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800" />
+                        <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800" />
                       )}
                       {pinnedRooms.has(room.id) && (
-                        <div className="absolute -top-1 -left-1 w-5 h-5 bg-sky-500 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800">
-                          <Pin className="w-3 h-3 text-white fill-white" />
+                        <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-sky-500 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800">
+                          <Pin className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white fill-white" />
                         </div>
                       )}
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <h3 className="font-bold text-gray-900 dark:text-white truncate">{room.name}</h3>
+                      <div className="flex items-center justify-between mb-1 gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                          <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-white truncate">{room.name}</h3>
                           {mutedRooms.has(room.id) && (
-                            <BellOff className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <BellOff className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
                           )}
                         </div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
                           {room.lastMessage ? formatDateTime(room.lastMessage.timestamp) : ''}
                         </span>
                       </div>
                       
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate flex-1">
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate flex-1">
                           {room.lastMessage?.content || 'No messages yet'}
                         </p>
                         {room.unreadCount > 0 && (
-                          <span className="bg-gradient-to-r from-sky-500 to-cyan-600 text-white text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0 min-w-[24px] text-center">
+                          <span className="bg-gradient-to-r from-sky-500 to-cyan-600 text-white text-xs font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full flex-shrink-0 min-w-[20px] sm:min-w-[24px] text-center">
                             {room.unreadCount}
                           </span>
                         )}
@@ -386,15 +386,15 @@ const ChatPage = () => {
                 </Link>
                 
                 {/* Room Actions */}
-                <div className="absolute right-4 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                  <div className="flex gap-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-1">
+                <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <div className="flex gap-0.5 sm:gap-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1">
                     <button
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
                         handlePinRoom(room.id)
                       }}
-                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
                       title={pinnedRooms.has(room.id) ? "Unpin" : "Pin"}
                     >
                       <Pin className={`w-4 h-4 ${pinnedRooms.has(room.id) ? 'text-sky-600 fill-sky-600' : 'text-gray-400'}`} />
@@ -405,7 +405,7 @@ const ChatPage = () => {
                         e.stopPropagation()
                         handleMuteRoom(room.id)
                       }}
-                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
                       title={mutedRooms.has(room.id) ? "Unmute" : "Mute"}
                     >
                       {mutedRooms.has(room.id) ? (
@@ -420,7 +420,7 @@ const ChatPage = () => {
                         e.stopPropagation()
                         handleArchiveRoom(room.id)
                       }}
-                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
                       title="Archive"
                     >
                       <Archive className="w-4 h-4 text-gray-400" />
@@ -431,7 +431,7 @@ const ChatPage = () => {
                         e.stopPropagation()
                         handleDeleteRoom(room.id)
                       }}
-                      className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                      className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
                       title="Delete"
                     >
                       <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
