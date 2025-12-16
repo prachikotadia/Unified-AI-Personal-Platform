@@ -7,7 +7,7 @@ interface PWAInstallPromptEvent extends Event {
 }
 
 const PWAServiceWorker: React.FC = () => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [isInstalled, setIsInstalled] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<PWAInstallPromptEvent | null>(null);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
@@ -15,7 +15,7 @@ const PWAServiceWorker: React.FC = () => {
 
   useEffect(() => {
     // Register service worker
-    if ('serviceWorker' in navigator) {
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js')
         .then((reg) => {
@@ -27,7 +27,7 @@ const PWAServiceWorker: React.FC = () => {
             const newWorker = reg.installing;
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                if (newWorker.state === 'installed' && typeof navigator !== 'undefined' && navigator.serviceWorker.controller) {
                   info('App Update Available', 'A new version is available. Refresh to update.');
                 }
               });
@@ -203,7 +203,7 @@ const PWAServiceWorker: React.FC = () => {
       )}
 
       {/* Notification Permission */}
-      {Notification.permission === 'default' && (
+      {typeof Notification !== 'undefined' && Notification.permission === 'default' && (
         <button
           onClick={requestNotificationPermission}
           className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg shadow-lg hover:bg-purple-700 transition-colors"
@@ -220,7 +220,7 @@ const PWAServiceWorker: React.FC = () => {
 
 // PWA utilities
 export const usePWA = () => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {

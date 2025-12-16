@@ -69,7 +69,7 @@ export function getStorageInfo(): StorageInfo[] {
  */
 export function getQuotaInfo(): QuotaInfo {
   try {
-    if ('storage' in navigator && 'estimate' in navigator.storage) {
+    if (typeof navigator !== 'undefined' && 'storage' in navigator && 'estimate' in navigator.storage) {
       // Modern browsers support quota estimation
       navigator.storage.estimate().then(estimate => {
         const used = estimate.usage || 0;
